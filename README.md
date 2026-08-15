@@ -77,6 +77,14 @@ Find both strings in the Supabase dashboard under **Connect → ORMs → Prisma*
 | `npm run db:migrate` | Create and apply a migration (development) |
 | `npm run db:deploy` | Apply pending migrations (production) |
 | `npm run db:studio` | Browse the database in Prisma Studio |
+| `npm run db:check` | Connection smoke test — verifies the app's pooled connection |
+
+`db:check` is worth knowing about. It tests `DATABASE_URL` (the pooled
+connection the application uses), which is a **different code path** from
+`prisma migrate` (which uses `DIRECT_URL`). A successful migration does not
+prove the app can reach the database. When a deploy builds but queries fail,
+run this first — it separates "the connection is wrong" from "the code is
+wrong". It never prints your password.
 
 `postinstall` runs `prisma generate` automatically, so the generated client is
 rebuilt on every `npm install` and on every Vercel deploy. The generated client
