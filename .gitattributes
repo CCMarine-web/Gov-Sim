@@ -1,0 +1,19 @@
+# Normalize line endings.
+#
+# Without this, files committed from Windows carry CRLF and files committed
+# from macOS/Linux carry LF, which produces diffs where every line appears
+# changed even though nothing did. Since this project is meant to be worked on
+# from more than one machine, we normalize to LF in the repository.
+
+* text=auto eol=lf
+
+# Binary files must never be line-ending converted.
+*.ico  binary
+*.png  binary
+*.jpg  binary
+*.jpeg binary
+*.gif  binary
+*.webp binary
+*.woff  binary
+*.woff2 binary
+*.pdf  binary

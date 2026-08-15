@@ -1,0 +1,147 @@
+@import "tailwindcss";
+
+/* ============================================================================
+   GOVERNMENT SIMULATOR — DESIGN TOKENS
+   Specification: docs/UI.md §2
+
+   Tailwind v4 is configured in CSS, not in tailwind.config.ts. Every token
+   below generates utilities automatically (--color-ink-800 -> bg-ink-800,
+   text-ink-800, border-ink-800, ...).
+
+   RULE: no arbitrary hex values in components. If a colour is needed that is
+   not here, add it here first. See docs/UI.md §2.1.
+
+   All contrast ratios noted below were computed, not estimated, and meet
+   WCAG AA for their stated use.
+   ========================================================================= */
+
+@theme {
+  /* --- Base: ink. Shell, chrome, structure. ------------------------------ */
+  --color-ink-900: #0d0f13; /* deepest recess; modal scrim base */
+  --color-ink-800: #12151a; /* app background */
+  --color-ink-700: #1a1e26; /* raised panel */
+  --color-ink-600: #232833; /* card on dark */
+  --color-ink-500: #2e3440; /* hover / active surface */
+  --color-ink-400: #3d4452; /* borders — DECORATIVE ONLY, 1.87:1 */
+
+  /* --- Parchment. Dense content surfaces. -------------------------------- */
+  --color-parchment-50: #f5f1e8;
+  --color-parchment-100: #ede7d9; /* primary parchment surface */
+  --color-parchment-200: #ded5c0; /* row banding */
+  --color-parchment-300: #c9bc9f; /* borders on parchment */
+
+  /* --- Text. Contrast measured against ink-800. -------------------------- */
+  --color-content-primary: #e8e4da; /* 14.41:1  AA body */
+  --color-content-secondary: #a8a396; /*  7.27:1  AA body */
+  --color-content-muted: #8a857a; /*  4.98:1  AA body */
+  --color-content-disabled: #6f6b61; /*  3.44:1  DISABLED STATES ONLY */
+
+  /* --- Brass. The player's authority; primary actions. ------------------- */
+  --color-brass-300: #d9b978; /*  9.72:1 on ink-800 */
+  --color-brass-400: #c9a227; /*  7.56:1 on ink-800 — primary accent */
+  --color-brass-700: #7d631f; /*  4.63:1 on parchment-100 */
+  --color-brass-focus: #e0c060; /* 10.35:1 on ink-800 — focus ring */
+
+  /* --- Oxblood. Danger, deficit, crisis. --------------------------------- */
+  --color-oxblood-300: #c86b60; /*  4.99:1 on ink-800 — danger TEXT */
+  --color-oxblood-400: #a34a42; /*  3.15:1 — fills/borders, NOT body text */
+  --color-oxblood-600: #6e2c26; /*  8.30:1 on parchment-100 */
+
+  /* --- Verdigris. Favourable, surplus. ----------------------------------- */
+  --color-verdigris-400: #6b9e78; /*  5.91:1 on ink-800 */
+  --color-verdigris-600: #3b6146; /*  5.71:1 on parchment-100 */
+
+  /* --- Steel. RESERVED FOR HISTORICAL/BENCHMARK DATA ONLY. --------------- */
+  /* No simulated value and no UI chrome may use these. See docs/UI.md §9.   */
+  --color-steel-400: #7a93b8; /*  5.83:1 on ink-800 */
+  --color-steel-600: #45597a; /*  5.75:1 on parchment-100 */
+
+  /* --- Typography. docs/UI.md §2.2 --------------------------------------- */
+  --font-serif: var(--font-garamond), Georgia, serif;
+  --font-sans: var(--font-inter), system-ui, sans-serif;
+
+  --text-display: 28px;
+  --text-display--line-height: 32px;
+  --text-h1: 22px;
+  --text-h1--line-height: 28px;
+  --text-h2: 17px;
+  --text-h2--line-height: 24px;
+  --text-label: 11px;
+  --text-label--line-height: 14px;
+  --text-label--letter-spacing: 0.08em;
+  --text-body: 14px;
+  --text-body--line-height: 20px;
+  --text-body-serif: 15px;
+  --text-body-serif--line-height: 24px;
+  --text-small: 12.5px;
+  --text-small--line-height: 16px;
+  --text-data-lg: 24px;
+  --text-data-lg--line-height: 28px;
+  --text-data-md: 17px;
+  --text-data-md--line-height: 20px;
+  --text-data-sm: 13px;
+  --text-data-sm--line-height: 16px;
+
+  /* --- Radii. Nothing softer; softness reads as consumer software. ------- */
+  --radius-DEFAULT: 2px;
+  --radius-card: 4px;
+
+  /* --- Motion. docs/UI.md §2.5 ------------------------------------------ */
+  --duration-panel: 160ms;
+  --duration-number: 300ms;
+  --duration-flash: 400ms;
+  --duration-popover: 100ms;
+  --duration-modal: 180ms;
+}
+
+/* ============================================================================
+   BASE LAYER
+   ========================================================================= */
+
+@layer base {
+  body {
+    background-color: var(--color-ink-800);
+    color: var(--color-content-primary);
+    font-family: var(--font-sans);
+    font-size: var(--text-body);
+    line-height: var(--text-body--line-height);
+  }
+
+  /* Focus is never removed. docs/UI.md §10 */
+  :focus-visible {
+    outline: 2px solid var(--color-brass-focus);
+    outline-offset: 2px;
+  }
+}
+
+/* ============================================================================
+   NUMERALS — NON-NEGOTIABLE
+
+   With a ticking clock, proportional numerals cause visible width jitter as
+   digits change. Every numeric display uses tabular figures. This utility is
+   applied by the shared <Stat> primitive so it cannot be forgotten per-call.
+   docs/UI.md §2.2
+   ========================================================================= */
+
+@utility tabular {
+  font-variant-numeric: tabular-nums;
+  font-feature-settings: "tnum";
+}
+
+/* ============================================================================
+   REDUCED MOTION
+   Number interpolation snaps, modals do not rise, transitions become
+   opacity-only. Nothing becomes unusable. docs/UI.md §2.5
+   ========================================================================= */
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 80ms !important;
+    transition-property: opacity !important;
+    scroll-behavior: auto !important;
+  }
+}

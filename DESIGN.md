@@ -1,0 +1,815 @@
+# DESIGN.md — Government Simulator
+
+**Status:** Draft for approval (Phase 1 not yet implemented)
+**Last updated:** 2026-08-15
+**Companion documents:** [`docs/ECONOMY.md`](docs/ECONOMY.md) (simulation model), [`docs/UI.md`](docs/UI.md) (interface specification)
+
+---
+
+## 0. How to use this document
+
+This is the orienting document for the project. Any future session — human or AI — should read this file first and treat it as authoritative on **vision, architecture, and data model**. It deliberately repeats some context so it can be read standalone.
+
+Where this document and the code disagree, that is a bug in one of them. Fix it in the same commit that caused the drift.
+
+Three documents own three concerns, and nothing is duplicated between them:
+
+| Document | Owns |
+|---|---|
+| `DESIGN.md` (this file) | Vision, architecture rules, data model, systems design, roadmap |
+| `docs/ECONOMY.md` | Every simulation variable, formula, causal claim, and calibration constant |
+| `docs/UI.md` | Screen-by-screen interface specification and the design token system |
+
+---
+
+## 1. Vision
+
+A real-time grand strategy game in which the player governs the United States from its founding to the present day.
+
+Structurally the reference is **Hearts of Iron IV**: a day-by-day clock running in real time with pause and speed controls, an event feed, and deep interlocking systems. The subject, though, is governing rather than commanding armies — closer in content to **Victoria 3** or **Democracy 4**, but with HOI4's pacing and feel.
+
+The player begins on **30 April 1789** — the day George Washington was inaugurated — founds the United States, chooses a form of government, and steers the nation forward. The objective is to make the USA the greatest country of all time, scored across economic, military, diplomatic, and domestic quality-of-life dimensions.
+
+### 1.1 Design pillars
+
+**1. Founding choice.**
+At game start the player founds the USA and chooses a government type. In a **monarchy** the player is king and their bloodline succeeds them. In a **republic** the player is president. Other forms — parliamentary, federal republic, one-party state — arrive in later phases. The choice must have real mechanical teeth, not just different flavor text. See §9.
+
+**2. Continuous authorship.**
+The player persists in power for the entire game regardless of who nominally holds office. Elections, successions, and cabinet turnover happen *around* the player and constrain them, but never remove them. The player is not one officeholder; the player is the enduring will of the office. This has a direct architectural consequence: **there is no game-over screen.** See §10.
+
+**3. Historical pressure, not historical rails.**
+The real spine of US history arrives as events and crises the player must navigate — assumption of state debts, the Louisiana Purchase, sectional conflict and Civil War risk, industrialization, WWI, the Depression, WWII, the Cold War. Outcomes can diverge sharply from real history based on player choices. **The game never forces an outcome.** It applies pressure and lets consequences follow.
+
+**4. Deep, interconnected simulation.**
+Real laws, real budgeting, real finance, taxation, debt service, trade, war, and administration. Economic variables must be genuinely causally linked. Changing a tariff must ripple through customs revenue, trade volume, regional prosperity, sectional tension, and political stability over subsequent months — not just move a single number. If a change only moves one number, the model is wrong.
+
+**5. Historical benchmarking.**
+At any moment the player can open a comparison view showing their USA against the real USA on that same date: GDP, population, federal debt, receipts and outlays, military size, and quality-of-life measures. Every real figure carries a source citation. See §12.
+
+**6. Objective.**
+Steer the USA to become the greatest country of all time. Full scoring lands in Phase 5; earlier phases surface the component dimensions without a composite score.
+
+### 1.2 Tone
+
+Serious and grounded. This is a simulation of governance, not a comedy.
+
+Historical events are presented factually with real context. Morally difficult decisions — slavery, removal, internment, segregation — are represented honestly as the consequential choices they were, without either sanitizing them or being gratuitous. When the game presents such a decision, it includes factual historical context so the player understands what actually happened.
+
+The practical test: **a history teacher should be able to look at any event card and find nothing false on it.** Narrative framing is allowed to be evocative; the `historicalContext` field is not allowed to be anything but accurate.
+
+---
+
+## 2. Phase roadmap
+
+Only Phase 1 is being built. Later phases are recorded here so that Phase 1 decisions don't foreclose them.
+
+| Phase | Period | Adds |
+|---|---|---|
+| **1** | 1789–1800 | Core loop, economy, treasury, legislation, events, regions-as-cards, history comparison, save/load, deployment |
+| **2** | 1800–1860 | SVG map layer, territorial expansion, elections and succession, sectional tension mechanics |
+| **3** | 1860–1900 | Civil War system, military and combat, industrialization |
+| **4** | 1900–1945 | Foreign diplomacy, WWI, the Depression, WWII |
+| **5** | 1945–present | Cold War through present, full scoring and "greatest country" endgame evaluation |
+
+**Forward-compatibility commitments made in Phase 1** (these exist to prevent Phase 2+ from becoming a rewrite):
+
+- Regions are modeled in data from day one, and each region contains a list of constituent states — so Phase 2's map attaches geometry to existing entities rather than introducing them (§8).
+- `Ruler` carries birth year and heir fields even though succession is inert in Phase 1 (§9.3).
+- The event and law systems are data-driven, so new periods are content additions rather than engine changes (§7).
+- `schemaVersion` and a migration path exist from the first save ever written (§11).
+
+---
+
+## 3. Phase 1 scope
+
+A vertical slice covering **1789-04-30 through 1800-12-31 only**. Its job is to prove the loop works end to end.
+
+### 3.1 Acceptance criteria
+
+Phase 1 is done when:
+
+1. I can create an account, start a new game, choose monarchy or republic, and name my ruler.
+2. The clock ticks day by day, pauses with spacebar, and runs at 1x/2x/5x without the UI stuttering or the browser tab pegging a CPU core.
+3. Setting tax rates and spending in the Treasury panel produces effects that propagate through the economy over subsequent weeks and months in ways I can trace.
+4. Every stat in the game can be hovered to reveal its full modifier breakdown, and the numbers add up.
+5. At least 6 real 1790s events fire on historically appropriate dates with genuine branching choices, each carrying factual historical context.
+6. The History view compares my run to real 1790s data with every figure cited, and honestly marks the years where we lack data.
+7. I can save to Supabase, close the browser, log back in on another machine, and resume exactly where I left off.
+8. The whole thing is deployed and playable on a Vercel URL.
+9. `README.md`, `DESIGN.md`, and `docs/ECONOMY.md` are accurate and current.
+
+### 3.2 Explicitly out of scope for Phase 1
+
+Any map. Military combat. Foreign diplomacy. Elections. AI opponents. Multiplayer. Anything after 1800.
+
+### 3.3 On the absence of a map
+
+Phase 1 deliberately has no map. Building a geographically accurate 1790 US map with evolving territorial boundaries is weeks of work that doesn't prove the core loop works. Regions are modeled in data from day one and presented as cards; an SVG map layer is skinned on top in Phase 2 **without touching the simulation**.
+
+This is a settled decision, and it is architecturally cheap precisely because regions are real simulation entities rather than a presentation convenience.
+
+---
+
+## 4. Tech stack
+
+| Layer | Choice | Notes |
+|---|---|---|
+| Framework | Next.js (App Router) + TypeScript | |
+| Styling | Tailwind CSS | All colors as theme tokens; no arbitrary hex in components |
+| UI state | Zustand | Selective re-rendering matters enormously for a ticking game |
+| Database | Supabase (Postgres) via Prisma | Accounts and save games |
+| Auth | Supabase Auth | |
+| Icons | Lucide | Consistent stroke weight throughout |
+| Fonts | `next/font` | Serif for headings and narrative, sans for UI chrome |
+| Version control | GitHub | |
+| Hosting | Vercel | |
+
+**Verified local toolchain:** Node 24.18.0, npm 11.16.0, Git 2.55.0 on Windows 11.
+
+### 4.1 Supabase / Prisma configuration requirements
+
+These are known failure modes. Set them up correctly the first time.
+
+- Prisma needs **both** connection URLs in `schema.prisma` under `datasource db`:
+  - `DATABASE_URL` → transaction pooler, port **6543**, with `?pgbouncer=true`
+  - `DIRECT_URL` → direct connection, port **5432**
+  Migrations run over `DIRECT_URL`; the app runs over the pooler.
+- If the database password contains special characters such as `!`, they **must be percent-encoded** in the connection string or the URL silently breaks (`!` → `%21`).
+- Vercel needs explicit permission to access the GitHub repo. Handle that at deploy time.
+- Never commit `.env`. `.env.example` is committed with placeholder values and is the documented list of required variables.
+
+---
+
+## 5. Architecture rules (non-negotiable)
+
+These matter more than any feature. A pull request that violates one of these is wrong even if it works.
+
+### Rule 1 — The simulation engine is pure TypeScript, fully isolated from React
+
+Everything in `/src/sim/` has **no React imports, no browser APIs, no network calls, no filesystem access**. It exports plain functions over plain data. The core entry point is:
+
+```ts
+advanceDay(state: GameState, content: ContentPack): TickResult
+```
+
+`TickResult` contains the new state plus a list of things that happened that day — events fired, modifiers applied, thresholds crossed.
+
+*Why:* the engine must be testable in isolation, runnable on a server for save validation, and replayable without a DOM. It also means simulation bugs can never be caused by a render.
+
+*Enforcement:* an ESLint rule bans importing `react`, `next/*`, and any DOM global from `/src/sim/**`. A unit test imports the whole sim module graph in a bare Node context and fails if anything touches `window` or `document`.
+
+### Rule 2 — Determinism
+
+Same state in, same state out, always. Any randomness uses a seeded PRNG whose state lives inside `GameState`, so a save can be replayed to an identical result. **No `Math.random()` anywhere in `/src/sim/`.**
+
+Also banned in `/src/sim/`: `Date.now()`, `new Date()` with no arguments, `Intl` formatting that depends on system locale, and iteration over object keys where insertion order isn't guaranteed to be stable.
+
+*Enforcement:* a determinism test runs the full 4,263-day Phase 1 span twice from an identical seed and deep-equals the resulting states. This test is the single most valuable one in the suite; it catches nondeterminism the moment it's introduced rather than months later when a save won't reload.
+
+### Rule 3 — One serializable state object
+
+`GameState` must `JSON.stringify` and round-trip losslessly. **No class instances, no `Date` objects, no functions, no `Map`, no `Set`, no `undefined` values, no `NaN`, no `Infinity`.**
+
+Dates are stored as either day-number integers (preferred, for anything the sim reasons about) or ISO 8601 strings (for wall-clock metadata only). Lookup tables use plain objects (`Record<string, T>`), which serialize cleanly.
+
+*Enforcement:* a round-trip test asserts `deepEqual(state, JSON.parse(JSON.stringify(state)))` after a long simulated run, plus a recursive scan rejecting `undefined`/`NaN`/non-finite numbers.
+
+### Rule 4 — Content is data, not code
+
+Adding a new historical event must require editing only a content file — never engine logic.
+
+This means trigger conditions and effects are **declarative data structures interpreted by the engine**, not TypeScript callbacks. It is tempting to let an event carry `apply: (state) => {...}`; that breaks serialization, breaks review-ability, and puts simulation logic in `/src/content/`. See §7 for the condition and effect grammars.
+
+The test: *could a non-programmer add an event by copying an existing file and editing the values?* If not, the content system is under-built.
+
+### Rule 5 — Modifier ledger: every number must explain itself
+
+Nothing mutates a stat directly. All changes flow through modifiers:
+
+```ts
+interface Modifier {
+  id: string;
+  source: string;            // "Whiskey Tax of 1791"
+  sourceType: 'law' | 'event' | 'policy' | 'structural' | 'crisis';
+  target: string;            // "nation.stability"
+  value: number;
+  isPercentage: boolean;
+  startDay: number;
+  endDay: number | null;     // null = permanent
+}
+```
+
+The state carries the full active modifier list, and the UI can show exactly which sources are pushing a stat up or down and by how much. **This is simultaneously the best feature in the game and the only way we will ever debug the economy.**
+
+Resolution order for any stat is fixed and documented: `base → sum of flat modifiers → apply percentage modifiers → clamp to range`. Percentages are additive with each other, not multiplicative, because additive percentages are the ones a player can reason about ("+10% and +15% is +25%").
+
+**Ledger hygiene** (added so the ledger stays useful rather than becoming a landfill over 4,263 days):
+
+- Expired modifiers are removed from `activeModifiers` on the tick they expire. Their historical record lives in `log`, so nothing is lost.
+- Repealing a law removes its permanent modifiers.
+- A single source emits **one aggregated modifier per target**, not many small ones.
+- A modifier's `id` is deterministic and derived from `${sourceType}:${sourceId}:${target}`, so re-application is idempotent and duplicates are impossible.
+
+*Enforcement:* a test asserts that for every displayed stat, `displayedValue === resolve(base, activeModifiers)` — the UI can never show a number the ledger can't account for.
+
+### Rule 6 — The tick loop lives outside React's render cycle
+
+The engine runs in a loop that writes to a Zustand store. The UI subscribes and re-renders at a **throttled cadence, maximum 4 times per second, independent of simulation speed.** At 5x speed the sim processes several days per second — React must not attempt to render each one.
+
+This is specified in full in §6. Get it right early; retrofitting it is painful.
+
+### Rule 7 — The UI is a renderer
+
+Components read state and dispatch player actions. **Zero simulation math in components.** If a component needs a derived number, the derivation lives in `/src/sim/` (if it's simulation truth) or `/src/lib/format.ts` (if it's presentation only, e.g. currency formatting).
+
+A component may not decide, for example, what the projected annual balance would be under a proposed tax rate. It calls `projectAnnualBalance(state, proposedPolicy, content)` from the sim and renders the answer.
+
+### Rule 8 — Schema versioning on saves
+
+`GameState` includes a `schemaVersion` integer. Saves record it. On load:
+
+- **Same version** → load directly.
+- **Older version with a registered migration path** → migrate forward through each step, then load, and tell the player it was upgraded.
+- **Older version with no path, or newer than the running build** → refuse cleanly with a readable message naming both versions.
+
+**Never crash, never silently load a broken state.** Migrations live in `/src/sim/migrations/` as pure functions `vN → vN+1` and are covered by tests using stored fixture saves.
+
+---
+
+## 6. The tick loop and performance architecture
+
+This is the part most likely to be got wrong, so it is specified concretely.
+
+### 6.1 The problem
+
+Three things run at different rates and must not be coupled:
+
+| Thing | Rate |
+|---|---|
+| Simulation | 1–5 in-game days per second, set by the speed control |
+| UI publication | Max 4 times per second, always |
+| Browser paint | Whatever the display does, typically 60Hz |
+
+Naively putting `GameState` in Zustand and calling `advanceDay` on an interval couples all three: every simulated day triggers a store write, which triggers subscriber notification, which triggers React renders. At 5x, that's a re-render storm of the entire dense information-heavy UI.
+
+### 6.2 The design
+
+```
+┌─────────────────────────────────────────────────────────────┐
+│  /src/sim/          PURE. No React. No DOM. No time.        │
+│  advanceDay(state, content) → TickResult                    │
+└────────────────────────┬────────────────────────────────────┘
+                         │ called by
+┌────────────────────────▼────────────────────────────────────┐
+│  /src/runtime/gameLoop.ts    THE ONLY MUTABLE OWNER         │
+│                                                              │
+│  • holds authoritative GameState in a plain module variable │
+│    (NOT in Zustand — no subscribers, no notifications)      │
+│  • requestAnimationFrame loop with a time accumulator       │
+│  • msPerDay = 1000 / speed                                  │
+│  • drains accumulated time, capped at MAX_DAYS_PER_FRAME    │
+│  • publishes to the store on a 250ms throttle               │
+└────────────────────────┬────────────────────────────────────┘
+                         │ publishes ≤4x/sec
+┌────────────────────────▼────────────────────────────────────┐
+│  /src/store/gameStore.ts     Zustand                        │
+│  Read-only snapshot + player action dispatchers             │
+└────────────────────────┬────────────────────────────────────┘
+                         │ selector subscriptions
+┌────────────────────────▼────────────────────────────────────┐
+│  /src/components/            Pure renderers                 │
+└─────────────────────────────────────────────────────────────┘
+```
+
+### 6.3 Specific requirements
+
+**Accumulator, not naive interval.** `requestAnimationFrame` fires at display rate. Each frame accumulates `elapsedMs * speed` and drains whole days out of it. This keeps in-game time proportional to real time even when frames are dropped.
+
+**Frame budget cap.** `MAX_DAYS_PER_FRAME = 10`. If the tab is backgrounded for thirty seconds, we do **not** simulate 150 days on the first frame back — that would freeze the tab and, worse, silently fast-forward past a decision the player should have seen. Excess accumulated time is discarded and the discard is logged. In-game time is allowed to fall behind real time; the simulation is never allowed to skip a day.
+
+**Background tabs.** `requestAnimationFrame` is throttled or halted when the tab is hidden. On `visibilitychange` to hidden the loop auto-pauses; on return it stays paused until the player resumes. This is honest and avoids the "came back to find the treasury empty" failure.
+
+**Publication throttle.** The store is written at most every 250ms. Between publications the engine may have advanced many days; the UI simply sees the newest state. The one exception is **pause-requesting effects**, which publish immediately (see below).
+
+**Immediate publication on pause.** When a `pausesGame: true` event fires, the loop halts *on that day*, does not advance further, and publishes synchronously. A decision must never be missed because the game was running at 5x. This is why `advanceDay` returns `pauseRequested` in its `TickResult` rather than the loop having to inspect state.
+
+**Selective subscription.** Components subscribe via narrow selectors with shallow equality. The command bar's date display re-renders on date change; the Treasury panel does not re-render because the date changed.
+
+**Number transitions are a UI concern, not a sim concern.** Displayed numbers interpolate over ~300ms toward the latest published value, using CSS/animation frames in the presentation layer. The simulation never emits intermediate values.
+
+**React Strict Mode.** Development double-invokes effects. The loop module is a singleton guarded against double-start; starting an already-running loop is a no-op.
+
+### 6.4 Performance targets
+
+- Idle CPU at 5x speed: well under one core on a mid-range laptop.
+- `advanceDay` on a typical day: sub-millisecond. Month-boundary days (which recompute the economy, §6.5) may be longer but must stay under ~5ms.
+- A full 4,263-day headless run in tests: a few seconds at most.
+
+### 6.5 Daily tick vs. monthly economy
+
+The clock ticks daily, but GDP and agricultural output do not meaningfully change day to day, and recomputing fourteen interlinked variables 4,263 times is both wasteful and physically odd.
+
+- **Every day:** advance the calendar, expire modifiers, evaluate event triggers, accrue treasury cash flows (receipts and outlays accrue daily at 1/365 of their annual rate), fire scheduled events, append log entries.
+- **On the 1st of each month:** recompute the economic aggregates — output, trade, GDP, prosperity, sentiment — applying the lagged responses documented in `docs/ECONOMY.md`.
+- **Display:** interpolates between monthly values so numbers move smoothly rather than stepping once a month.
+
+This remains fully deterministic: the recompute is triggered by calendar date derived from `day`, not by wall-clock timing. The exact cadence and lag structure are specified in `docs/ECONOMY.md`.
+
+### 6.6 The calendar
+
+`day` is an integer count of days since **1789-04-30 = day 0**. Phase 1 ends at **day 4262 = 1800-12-31**, a span of 4,263 days.
+
+Date conversion is a pure function in `/src/sim/calendar.ts` implementing the **proleptic Gregorian calendar** — Britain and its colonies adopted Gregorian in 1752, so Gregorian is correct throughout the game's range.
+
+> **Gotcha, verified:** **1800 was not a leap year.** The Gregorian rule excludes century years not divisible by 400. A naive `year % 4 === 0` check puts every date after February 1800 one day off — which would land the end of Phase 1, and every historical event in 1800, on the wrong date. The calendar module implements the full rule and is unit-tested against known dates including 1800-02-28 → 1800-03-01.
+
+---
+
+## 7. Content system
+
+Content lives in `/src/content/` and is interpreted by the engine. Per Rule 4, content contains **no executable logic**.
+
+### 7.1 Events
+
+```ts
+interface GameEvent {
+  id: string;
+  title: string;
+  historicalDate?: string;       // ISO date it happened in reality
+  triggerConditions: Condition[]; // all must be satisfied
+  body: string;                  // narrative framing
+  historicalContext: string;     // what actually happened, factually
+  sources: string[];             // citations for historicalContext
+  options: EventOption[];        // 2–4
+  pausesGame: boolean;
+  weight?: number;               // tie-break when several fire same day
+  oneShot: boolean;              // default true
+}
+
+interface EventOption {
+  id: string;
+  label: string;
+  description: string;
+  requirements?: Condition[];    // if unmet, option shown disabled with reason
+  disabledReason?: string;
+  effects: EffectSpec[];
+  previewedEffects: string[];    // plain-English effect summary shown on the card
+}
+```
+
+- Events with `pausesGame: true` **auto-pause the clock** when they fire.
+- Every option applies modifiers and may schedule follow-on events, so choices have downstream consequences rather than one-time hits.
+- Each event carries `historicalContext` explaining what actually occurred, shown alongside the choice. **This is the educational backbone of the game.**
+- `previewedEffects` is authored prose, not generated from `effects`. The player should see "Strengthens federal credit, angers frontier distillers" rather than a list of raw numbers.
+
+### 7.2 The condition grammar
+
+Declarative and serializable, so triggers can be authored, tested, and shown to the player as "why is this locked".
+
+```ts
+type Condition =
+  | { kind: 'dateOnOrAfter'; date: string }
+  | { kind: 'dateBefore'; date: string }
+  | { kind: 'stat'; path: string; op: '<' | '<=' | '>' | '>=' | '=='; value: number }
+  | { kind: 'regionStat'; regionId: string; path: string; op: string; value: number }
+  | { kind: 'flag'; key: string; equals: string | number | boolean }
+  | { kind: 'lawEnacted'; lawId: string }
+  | { kind: 'eventFired'; eventId: string }
+  | { kind: 'optionChosen'; eventId: string; optionId: string }
+  | { kind: 'governmentType'; is: 'monarchy' | 'republic' }
+  | { kind: 'not'; of: Condition }
+  | { kind: 'all'; of: Condition[] }
+  | { kind: 'any'; of: Condition[] };
+```
+
+Every condition kind has a `describe()` implementation producing plain English, which is how locked laws explain themselves (`docs/UI.md` §Legislation).
+
+### 7.3 The effect grammar
+
+```ts
+type EffectSpec =
+  | { kind: 'modifier'; source: string; sourceType: Modifier['sourceType'];
+      target: string; value: number; isPercentage: boolean; durationDays: number | null }
+  | { kind: 'treasuryDelta'; amount: number; reason: string }
+  | { kind: 'regionSentiment'; regionId: string | 'all'; delta: number }
+  | { kind: 'setFlag'; key: string; value: string | number | boolean }
+  | { kind: 'scheduleEvent'; eventId: string; inDays: number }
+  | { kind: 'unlockLaw'; lawId: string }
+  | { kind: 'repealLaw'; lawId: string }
+  | { kind: 'log'; tier: LogTier; title: string; body: string };
+```
+
+### 7.4 Laws
+
+```ts
+interface Law {
+  id: string;
+  title: string;
+  category: 'fiscal' | 'commercial' | 'military' | 'judicial' | 'civil';
+  enactmentCost: number;         // one-off treasury cost
+  requirements: Condition[];
+  effects: EffectSpec[];
+  historicalContext: string;
+  sources: string[];
+  repealable: boolean;
+}
+```
+
+Locked laws display *why* they are locked, generated from the failing conditions via `describe()`.
+
+### 7.5 Phase 1 event slate (proposed)
+
+Acceptance criterion 5 requires at least six. These are the candidates, all real, all falling inside 1789–1800, and all offering genuine branches. Final selection and full authoring happen at implementation time; this list is here for your review.
+
+| Event | Real date | Why it makes a good decision |
+|---|---|---|
+| Assumption of state debts / Compromise of 1790 | Jun–Jul 1790 | The foundational fiscal choice; trades Southern sentiment against federal credit |
+| First Bank of the United States | Feb 1791 | Constitutional-interpretation fork with long-run credit and legitimacy effects |
+| Whiskey excise enacted | Mar 1791 | Direct revenue-vs-frontier-sentiment tension; sets up 1794 |
+| Bill of Rights ratified | Dec 1791 | Legitimacy anchor; monarchy path frames it very differently |
+| Fugitive Slave Act | Feb 1793 | A genuine and consequential moral choice, presented factually |
+| Proclamation of Neutrality / Citizen Genêt | Apr–Aug 1793 | Foreign pressure without needing a diplomacy system |
+| Whiskey Rebellion | Jul–Nov 1794 | Payoff of the 1791 choice; force vs. conciliation, with real stability stakes |
+| Jay Treaty | Nov 1794 – Jun 1795 | Deeply unpopular, materially beneficial — the best kind of dilemma |
+| Pinckney's Treaty | Oct 1795 | Frontier prosperity via Mississippi navigation |
+| Alien and Sedition Acts | Jun–Jul 1798 | Stability purchased with legitimacy; a clean illustration of the tradeoff |
+| Quasi-War with France | 1798–1800 | Military spending pressure without a combat system |
+
+---
+
+## 8. Regions
+
+Even though Phase 1 has no map, the nation is modeled as regions from day one. **Regional divergence in economy, population, and sentiment is what makes sectional tension and eventually the Civil War possible.** Building it in later would be a rewrite.
+
+### 8.1 The four Phase 1 regions
+
+**New England**, **Mid-Atlantic**, **South**, **Frontier**.
+
+Each region contains a list of constituent states and territories with their 1790 census populations. The simulation operates at the **region** level in Phase 1 — there is no per-state math — but the data structure means Phase 2's map can attach geometry to states without a schema change.
+
+Exact state-to-region assignments and their sourced 1790 population figures are specified in `docs/ECONOMY.md`.
+
+### 8.2 What a region tracks
+
+Population, enslaved population, labor force, agricultural output, manufacturing output, trade volume, prosperity index, sentiment toward the federal government, dominant industry, and compliance (the degree to which the region actually remits federal revenue — the mechanism through which legitimacy collapse becomes materially painful, §10).
+
+### 8.3 Slavery in the model
+
+For 1789–1800 this is not avoidable: enslaved people were roughly a third of the South's population in the 1790 census, and slavery was both the engine of Southern agricultural output and the root of the sectional conflict the game is building toward.
+
+**Decision: it is modeled explicitly and factually.** Enslaved population is tracked per region from 1790 census figures, with real effects on agricultural output and on sectional sentiment. Related events — the 1790 Quaker antislavery petitions and the congressional gag rule that followed, the 1793 Fugitive Slave Act — present the conflict as the consequential political struggle it was, with sourced historical context.
+
+Representing it honestly in the model *is* the version that isn't sanitized. Omitting it would misrepresent both the economy and the politics of the period. The UI presents these figures as demographic and economic fact with historical context attached, never as a resource to be optimized in isolation.
+
+---
+
+## 9. Government types
+
+### 9.1 The problem this solves
+
+Elections and succession are out of scope for Phase 1, and 1789–1800 contains no succession on either path. Without deliberate design, the founding choice — which is supposed to feel weighty — would be cosmetic in the only phase being built.
+
+**Decision: the difference is real but non-electoral.** It shows up in starting conditions, in how legitimacy behaves over time, in the cost of action, and in which event options are available.
+
+### 9.2 The two paths
+
+| | **Republic** | **Monarchy** |
+|---|---|---|
+| Player title | President | King |
+| Starting legitimacy | Higher | Lower |
+| Legitimacy behavior | **Decays** over time unless renewed by popular consent — successful policies, crises averted, prosperity | **Stable**, does not decay |
+| Regional sentiment at start | Broadly positive | Notably negative in New England and the Mid-Atlantic (deeply anti-monarchical in 1789), more favorable in the South |
+| Cost of unilateral action | Higher — unpopular laws cost more political capital | Lower — the crown acts more cheaply |
+| Crisis mishandling | Absorbed more gracefully | Sharper legitimacy penalties |
+| Event options | Some options available only to a republic | Some options available only to a monarchy |
+| Succession (Phase 2) | Elections | Bloodline |
+
+The intent is two genuinely different failure modes rather than one being strictly better: the republic must keep earning consent; the monarchy has a freer hand but a harder floor and a worse fall.
+
+Exact starting values and the legitimacy decay/renewal formulas are in `docs/ECONOMY.md`.
+
+### 9.3 The ruler in Phase 1
+
+The ruler ages and their age is displayed, but **there is no death and no succession in Phase 1.** Succession is a Phase 2 system, and half-building it now would create exactly the kind of drift this project is trying to avoid.
+
+`Ruler` nonetheless carries `birthYear` and `heirName` from day one so that Phase 2 requires no schema migration.
+
+---
+
+## 10. Failure, and why there is no game over
+
+Pillar 2 says the player never leaves power. That is in direct tension with any conventional failure state, so failure is modeled differently.
+
+**There is no game-over screen.** Instead, failure is **degraded governance** — the player persists, but governs a wreck:
+
+- **Treasury insolvency** forces emergency borrowing at punitive interest rates, which compounds into debt service crowding out every other outlay.
+- **Legitimacy collapse** triggers **regional non-compliance**: a region's `compliance` falls, it remits less federal revenue, and its sentiment craters. This is the mechanism that makes legitimacy a material variable rather than a vibe.
+- **Constitutional crisis** is a state that locks certain actions until resolved.
+
+These are recoverable, but recovery is expensive and slow. If a hard loss condition is ever wanted, Phase 2's secession mechanics are its natural home — not Phase 1.
+
+---
+
+## 11. State, saves, and persistence
+
+### 11.1 What lives where
+
+| Concern | Owner | Why |
+|---|---|---|
+| Simulation logic & formulas | Versioned TS in `/src/sim/` | Must be deterministic and code-reviewable |
+| Game content (events, laws, policies) | Versioned data in `/src/content/` | Editable without touching engine logic |
+| Real historical benchmark data | Versioned data in `/src/content/history/` with citations | Git-tracked, diffable, reviewable — a changed historical number must show up in a pull request |
+| Player accounts | Supabase Auth | — |
+| Save games | Supabase Postgres via Prisma | Cross-device, survives browser clears |
+| In-progress session state | Browser memory + localStorage fallback | The tick loop cannot hit the network every day |
+
+Historical data stays in the repo rather than the database on purpose: it is reference data that should never change without a reviewed commit, and the game needs it instantly at every tick.
+
+**No fact is stored in two places where the copies can drift.** Where something must be derived, it is derived at read time, not duplicated at write time.
+
+### 11.2 Accounts
+
+**Guest play is allowed.** A player can reach the title screen, start a game, and play with the save held in `localStorage`, with a clear and persistent prompt that cloud save requires an account. Signing in **migrates the local save up** to Supabase.
+
+Acceptance criterion 7 — save, close the browser, resume on another machine — is still fully proven by the authenticated path.
+
+### 11.3 Save format and slots
+
+- **Three named save slots per account**, plus **one rolling autosave**.
+- Autosave is written **every in-game month and on every pause**.
+- A save stores the **full serialized `GameState` snapshot**, not an action log. This is simpler and more robust; determinism means replay-based saves can be added later if ever wanted.
+- Every save records `schemaVersion`, the content pack version, a real-world timestamp, and a short display summary (ruler name, in-game date, government type) so the load screen doesn't need to deserialize entire saves to render a list.
+
+### 11.4 Migration policy
+
+See Rule 8 (§5). Migrations are pure `vN → vN+1` functions in `/src/sim/migrations/`, tested against stored fixture saves. A fixture save is committed for every schema version ever released, and the migration test runs each one forward to current. This is cheap now and is the only way to avoid breaking saves later.
+
+---
+
+## 12. Historical data integrity
+
+This is a first-class requirement, not a nice-to-have. Dashboards showing invented numbers are worse than dashboards showing gaps.
+
+### 12.1 The rules
+
+- Benchmark data lives in `/src/content/history/` as typed data with **a source citation attached to every single figure**.
+- **Never fabricate a historical number.** If we lack a sourced figure for a year, the record is marked unavailable and the comparison UI shows "no verified data for this year" — never a guess, never a silently interpolated value presented as fact.
+- If a value is interpolated between known data points, it carries `isInterpolated: true` and the UI labels it visibly as an estimate.
+- Simulated and real values must be **visually distinguishable at all times** — different color treatment *plus* a text label, never color alone.
+
+### 12.2 The critical distinction: benchmark data vs. calibration constants
+
+The simulation needs starting values for quantities no one has a verified 1789 figure for. Resolving this without either fabricating history or leaving the engine without numbers requires two clearly separated categories:
+
+| | **Benchmark data** | **Calibration constants** |
+|---|---|---|
+| Lives in | `/src/content/history/` | `/src/sim/calibration.ts` |
+| Is | A claim about what really happened | A game-design parameter |
+| Requires | A precise source citation, or an explicit unavailable marker | Documentation of its reasoning in `docs/ECONOMY.md` |
+| Shown to the player as | Real history | Never presented as historical fact |
+| Used by | The History comparison view | The simulation |
+
+The History view draws **only** from benchmark data. A calibration constant may be *informed by* historical estimates — and where it is, that provenance is documented — but it is never displayed as a historical figure.
+
+This is what makes it possible to honor "never fabricate a number" while still having a running economy.
+
+### 12.3 Sources
+
+Starting points, each to be verified and cited precisely at the point of use:
+
+- Federal receipts, outlays, surplus/deficit: OMB Historical Tables; **note** — Table 1.1 aggregates 1789–1849 rather than providing annual figures, so annual 1790s data requires *Historical Statistics of the United States* series Y (see `docs/ECONOMY.md`)
+- Federal debt outstanding annually from 1790: US Treasury, "Historical Debt Outstanding"
+- Population: decennial US Census from 1790
+- GDP and price-level estimates: MeasuringWorth (Johnston & Williamson)
+- General reference: *Historical Statistics of the United States* (Cambridge / Census Bureau Bicentennial Edition)
+
+Every figure actually used, with its precise citation, is recorded in `docs/ECONOMY.md` and mirrored in the typed data files.
+
+### 12.4 Benchmark data granularity
+
+Benchmark data is annual at best — federal receipts and debt exist as year-end figures, and population exists only per decennial census (1790, 1800).
+
+**Decision: no interpolation for display in Phase 1.** The History view shows the most recent verified figure with its date, clearly labeled (e.g. "Federal debt, 31 December 1793"). The `isInterpolated` flag exists in the schema and the UI handles it, but Phase 1 does not use it: where a census gap exists, the chart shows a labeled gap rather than a line drawn through it.
+
+Honest beats smooth.
+
+---
+
+## 13. Core data model
+
+A refined version of the initial sketch. Full field-level definitions live in `/src/sim/types.ts`; this is the shape and the reasoning.
+
+```ts
+interface GameState {
+  // --- identity & versioning ---
+  schemaVersion: number;         // current: 1
+  gameId: string;
+  createdAtISO: string;          // wall-clock, set once; never read by the sim
+  contentVersion: string;
+
+  // --- determinism ---
+  seed: number;                  // immutable, set at game creation
+  rngState: number;              // current PRNG state — see note below
+  rngCalls: number;              // audit counter
+
+  // --- time ---
+  day: number;                   // integer days since 1789-04-30 (day 0)
+
+  // --- the polity ---
+  governmentType: 'monarchy' | 'republic';
+  ruler: Ruler;
+  nation: NationStats;
+  regions: Region[];
+  treasury: TreasuryState;
+  policies: PolicyState;
+
+  // --- the ledger ---
+  activeModifiers: Modifier[];
+
+  // --- content interaction ---
+  eventState: EventState;
+  flags: Record<string, string | number | boolean>;
+
+  // --- record ---
+  log: LogEntry[];
+  series: SeriesHistory;         // monthly samples for sparklines & History view
+
+  // --- bookkeeping ---
+  lastEconomyRecomputeDay: number;
+}
+```
+
+**Proposed refinement to flag for approval — `rngState`.** The brief specifies that the seed and call-count live in `GameState`. Reconstructing the generator from `seed` + `rngCalls` alone requires re-advancing it `rngCalls` times on every load, which is O(n) and grows through the run. Storing the PRNG's current state directly makes resume O(1). `seed` and `rngCalls` are both still stored — `seed` for provenance and reproducibility from scratch, `rngCalls` as an audit counter that the determinism test asserts against. This is a strict superset of what the brief asked for; flagging it because it is a change to a stated data model.
+
+Supporting types:
+
+```ts
+interface Ruler {
+  name: string;
+  houseName: string;             // dynasty (monarchy) or party (republic)
+  title: string;                 // "King" | "President", derived at creation
+  birthYear: number;
+  heirName: string | null;       // inert in Phase 1; present for Phase 2
+  portraitId: string | null;
+}
+
+interface NationStats {
+  population: number;
+  laborForce: number;
+  agriculturalOutput: number;    // annualised, nominal dollars
+  manufacturingOutput: number;
+  tradeVolume: number;
+  gdp: number;
+  stability: number;             // 0–100
+  legitimacy: number;            // 0–100
+  sectionalTension: number;      // 0–100
+}
+
+interface Region {
+  id: 'new_england' | 'mid_atlantic' | 'south' | 'frontier';
+  name: string;
+  states: Array<{ code: string; name: string; population1790: number }>;
+  population: number;
+  enslavedPopulation: number;
+  laborForce: number;
+  agriculturalOutput: number;
+  manufacturingOutput: number;
+  tradeVolume: number;
+  prosperity: number;            // 0–100 index
+  sentiment: number;             // -100..+100 toward the federal government
+  compliance: number;            // 0–100; revenue actually remitted
+  dominantIndustry: string;
+}
+
+interface TreasuryState {
+  balance: number;
+  debtPrincipal: number;
+  debtWeightedRate: number;      // effective annual interest rate
+  creditRating: number;          // 0–100; drives new borrowing cost
+  emergencyBorrowing: boolean;
+  receiptsYTD: { customs: number; excise: number; land: number; other: number };
+  outlaysYTD: { debtService: number; military: number; civil: number; other: number };
+  lastYear: { receipts: number; outlays: number };
+}
+
+interface PolicyState {
+  taxRates: { tariffAvg: number; excise: number; landTax: number };
+  spending: { military: number; civil: number; infrastructure: number };
+  enactedLawIds: string[];
+}
+
+interface EventState {
+  firedEventIds: string[];
+  chosenOptions: Record<string, string>;      // eventId -> optionId
+  pendingDecisions: PendingEvent[];
+  scheduledEvents: Array<{ eventId: string; fireOnDay: number }>;
+}
+
+interface LogEntry {
+  id: string;
+  day: number;
+  tier: 'info' | 'decision' | 'crisis' | 'enactment';
+  category: 'treasury' | 'legislation' | 'region' | 'event' | 'system';
+  title: string;
+  body: string;
+  relatedEventId?: string;
+}
+
+interface TickResult {
+  state: GameState;
+  effects: TickEffect[];         // what happened, for the feed and for tests
+  pauseRequested: boolean;       // §6.3 — decision events halt the loop
+}
+```
+
+**On growth.** `log` is expected to reach only a few hundred entries across Phase 1 (roughly one to three per month plus events), which is well within a comfortable save size. A soft cap of 5,000 entries exists as a backstop; if it is ever hit, the oldest entries are dropped and a system log entry records the truncation rather than it happening silently. `series` stores monthly samples of a fixed metric set — about 141 months across Phase 1, which is trivial.
+
+---
+
+## 14. Repository layout
+
+```
+/
+├── DESIGN.md                  ← this file
+├── README.md                  ← setup, running, deploying
+├── docs/
+│   ├── ECONOMY.md             ← the simulation model, in prose
+│   └── UI.md                  ← screen specs and design tokens
+├── prisma/
+│   └── schema.prisma
+├── src/
+│   ├── app/                   ← Next.js App Router routes
+│   ├── components/            ← pure renderers (Rule 7)
+│   ├── sim/                   ← PURE TS, no React (Rule 1)
+│   │   ├── types.ts
+│   │   ├── advanceDay.ts
+│   │   ├── calendar.ts
+│   │   ├── rng.ts
+│   │   ├── modifiers.ts
+│   │   ├── conditions.ts
+│   │   ├── effects.ts
+│   │   ├── calibration.ts     ← game-design constants (§12.2)
+│   │   ├── economy/
+│   │   └── migrations/
+│   ├── content/               ← data only, no logic (Rule 4)
+│   │   ├── events/
+│   │   ├── laws/
+│   │   ├── regions/
+│   │   └── history/           ← benchmark data, every figure cited (§12)
+│   ├── runtime/               ← the tick loop (§6)
+│   ├── store/                 ← Zustand
+│   └── lib/                   ← formatting, supabase client, helpers
+└── tests/
+```
+
+---
+
+## 15. Testing strategy
+
+The tests that matter most are the ones protecting the architecture rules, because those failures are the expensive ones.
+
+| Test | Protects |
+|---|---|
+| **Determinism run** — 4,263 days twice from one seed, deep-equal | Rule 2 |
+| **Serialization round-trip** — after a long run, `JSON.parse(JSON.stringify(s))` deep-equals `s`; recursive scan for `undefined`/`NaN`/non-finite | Rule 3 |
+| **Purity check** — import the sim graph in bare Node; fail on any DOM/React reference | Rule 1 |
+| **Modifier accounting** — every displayed stat equals base plus its resolved ledger | Rule 5 |
+| **Migration fixtures** — every released schema version's fixture save loads and migrates forward | Rule 8 |
+| **Calendar** — known date conversions including the 1800 non-leap-year boundary | §6.6 |
+| **Content validation** — every event/law parses, every condition and effect kind is known, every `sources` array is non-empty, every referenced `eventId`/`lawId`/`regionId` resolves | Rule 4 |
+| **Benchmark integrity** — every historical figure has a citation; no figure is silently zero | §12 |
+| **Golden master** — a fixed seed and scripted action sequence produce a recorded end state; intentional balance changes update the snapshot deliberately | Everything |
+
+---
+
+## 16. Decisions on record
+
+Questions raised before implementation and their resolutions, so future sessions don't relitigate them.
+
+| # | Question | Decision |
+|---|---|---|
+| 1 | What differs between monarchy and republic in Phase 1, given no elections? | Real non-electoral differences: legitimacy decay vs. stability, regional sentiment split, cost of action, path-specific event options (§9.2) |
+| 2 | Can the player lose? | No game-over. Failure is degraded governance — insolvency, regional non-compliance, constitutional crisis (§10) |
+| 3 | Real-time pacing | 1x = 1 in-game day per second; 2x and 5x scale from it. Full Phase 1 ≈ 70 min at 1x (§6) |
+| 4 | Does the ruler die? | Ages and displays age; no death or succession in Phase 1. Schema carries Phase 2 fields (§9.3) |
+| 5 | Daily tick vs. monthly economy | Daily: calendar, events, cash flow, modifier expiry. Monthly: economic aggregates. Display interpolates (§6.5) |
+| 6 | Modifier ledger growth | Ledger kept exactly as specified, plus hygiene: expire, remove on repeal, aggregate per source-target, deterministic ids (§5 Rule 5) |
+| 7 | Do regions contain states? | Yes — states listed with 1790 populations from day one; sim operates at region level in Phase 1 (§8) |
+| 8 | How is slavery handled? | Modeled explicitly and factually — per-region enslaved population with real economic and sentiment effects, plus sourced events (§8.3) |
+| 9 | Sourced history vs. numbers the sim needs | Two separated categories: benchmark data (cited or marked unavailable) and calibration constants (documented, never shown as history) (§12.2) |
+| 10 | Interpolate annual benchmark data? | No, not in Phase 1. Show the most recent verified figure with its date; show labeled gaps, not drawn-through lines (§12.4) |
+| 11 | Is an account required to play? | No — guest play with localStorage; cloud save requires an account; signing in migrates the local save up (§11.2) |
+| 12 | Save slots and autosave | Three named slots plus a rolling autosave, written monthly and on pause. Full state snapshots (§11.3) |
+| 13 | Research historical figures live? | Yes — figures are researched and cited rather than written from memory (§12.3) |
+| 14 | Map in Phase 1? | No. Settled, and cheap to add later because regions are real simulation entities (§3.3) |
+| 15 | `rngState` added to `GameState` | Proposed refinement — O(1) resume instead of O(n) replay; `seed` and `rngCalls` both retained (§13) |
+
+---
+
+## 17. Open questions deferred to later phases
+
+- How elections interact with continuous authorship in mechanical detail (Phase 2).
+- Whether the monarchy path diverges into a separate content branch or shares the event slate with path-specific options — Phase 1 uses the shared-slate approach; revisit when the content volume grows.
+- Scoring formula for "greatest country of all time" (Phase 5).
+- Whether saves eventually move to replay-based storage now that determinism guarantees it is possible.
