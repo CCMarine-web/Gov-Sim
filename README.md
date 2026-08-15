@@ -45,16 +45,23 @@ Open <http://localhost:3000>.
 ### Environment variables
 
 Copy `.env.example` to `.env` and fill it in. That file documents every
-variable and why it exists; two points are worth repeating because they cause
+variable and why it exists; three points are worth repeating because they cause
 the most confusion:
 
 1. **Prisma needs both `DATABASE_URL` and `DIRECT_URL`.** The app talks to the
    transaction pooler on port **6543** with `?pgbouncer=true`; migrations need
    the direct connection on port **5432**, because migrations cannot run over a
    pooler.
-2. **Percent-encode special characters in the database password.** A `!` in a
+2. **In Prisma 7 these do not go in `schema.prisma`.** `DIRECT_URL` is read by
+   `prisma.config.ts` (CLI and migrations); `DATABASE_URL` is read by
+   `src/lib/prisma.ts` (the application). Putting either in the datasource
+   block is a hard validation error, not a warning. See
+   [DESIGN.md](DESIGN.md) §4.1.
+3. **Percent-encode special characters in the database password.** A `!` in a
    raw connection string silently breaks the URL and produces an error that
    does not mention the password at all. `!` becomes `%21`.
+
+Find both strings in the Supabase dashboard under **Connect → ORMs → Prisma**.
 
 ---
 
@@ -67,6 +74,13 @@ the most confusion:
 | `npm start` | Serve a production build locally |
 | `npm run lint` | ESLint |
 | `npm run typecheck` | TypeScript with no emit |
+| `npm run db:migrate` | Create and apply a migration (development) |
+| `npm run db:deploy` | Apply pending migrations (production) |
+| `npm run db:studio` | Browse the database in Prisma Studio |
+
+`postinstall` runs `prisma generate` automatically, so the generated client is
+rebuilt on every `npm install` and on every Vercel deploy. The generated client
+lives in `src/generated/prisma` and is git-ignored — it is a build artifact.
 
 ---
 

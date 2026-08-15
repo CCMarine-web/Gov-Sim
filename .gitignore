@@ -42,3 +42,7 @@ yarn-error.log*
 # typescript
 *.tsbuildinfo
 next-env.d.ts
+
+# prisma — generated client is a build artifact, rebuilt by `prisma generate`
+# (wired to postinstall, so Vercel regenerates it on every deploy)
+/src/generated

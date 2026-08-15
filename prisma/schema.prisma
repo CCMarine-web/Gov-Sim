@@ -1,0 +1,104 @@
+// ============================================================================
+// GOVERNMENT SIMULATOR — DATABASE SCHEMA
+//
+// Owns exactly one concern: persisted save games. (DESIGN.md §11.1)
+//
+// NOT stored here:
+//   - Simulation logic and formulas  -> src/sim/       (versioned TypeScript)
+//   - Game content (events, laws)    -> src/content/   (versioned data)
+//   - Historical benchmark data      -> src/content/history/  (git-tracked so
+//     a changed historical number shows up in a pull request)
+//   - Player accounts                -> Supabase Auth (auth.users)
+//
+// ============================================================================
+
+// ----------------------------------------------------------------------------
+// IMPORTANT — CONNECTION URLS ARE NOT IN THIS FILE.
+//
+// Prisma 7 removed `url` and `directUrl` from the datasource block. Putting
+// them here is a hard validation error (P1012), not a deprecation warning.
+//
+// Two connections are still required, they just live in two places now:
+//
+//   DIRECT_URL   port 5432, direct        -> prisma.config.ts
+//                Used by the Prisma CLI for `migrate`. Migrations take
+//                advisory locks and issue DDL, neither of which survives a
+//                transaction pooler, so they must bypass it.
+//
+//   DATABASE_URL port 6543, ?pgbouncer=true -> src/lib/prisma.ts
+//                Used by the running application through the PrismaPg driver
+//                adapter. Pooling is what lets a serverless deployment
+//                survive many short-lived connections.
+//
+// Percent-encode special characters in the password (! -> %21) or the URL
+// silently breaks. See .env.example.
+// ----------------------------------------------------------------------------
+
+datasource db {
+  provider = "postgresql"
+}
+
+generator client {
+  provider = "prisma-client"
+  output   = "../src/generated/prisma"
+}
+
+// ----------------------------------------------------------------------------
+// SaveGame
+//
+// One row per save slot per player. Three named slots plus one rolling
+// autosave, written every in-game month and on every pause. (DESIGN.md §11.3)
+//
+// The full GameState is stored as a JSON snapshot rather than as a replayable
+// action log. Snapshots are simpler and more robust; because the engine is
+// deterministic (DESIGN.md Rule 2) we can add replay-based saves later without
+// changing anything the player has already stored.
+// ----------------------------------------------------------------------------
+
+model SaveGame {
+  id String @id @default(uuid())
+
+  // Supabase Auth owns the user record. We store the UUID from auth.users but
+  // deliberately do not model that table in Prisma — it belongs to Supabase,
+  // and duplicating it here is exactly the kind of drift DESIGN.md §11.1
+  // exists to prevent.
+  userId String @map("user_id") @db.Uuid
+
+  // 0 = rolling autosave. 1..3 = the player's named slots.
+  slot Int
+  name String
+
+  // Versioning. On load, a mismatch is either migrated forward or refused
+  // cleanly with a readable message — never crashed, never silently loaded
+  // into a broken state. (DESIGN.md Rule 8)
+  schemaVersion  Int    @map("schema_version")
+  contentVersion String @map("content_version")
+
+  // --- Display summary -----------------------------------------------------
+  // Denormalised copies of a few fields from `state`, so the load screen can
+  // render a list of saves without deserialising and parsing every full
+  // GameState blob.
+  //
+  // This is the one deliberate exception to "no fact in two places"
+  // (DESIGN.md §11.1). It is safe only because these columns are written
+  // exclusively by the save routine, derived from `state` at the moment of
+  // writing, and never read by the simulation. They are a rendering cache.
+  // Nothing may ever edit them independently of `state`.
+  rulerName      String @map("ruler_name")
+  governmentType String @map("government_type")
+  inGameDay      Int    @map("in_game_day")
+  inGameDate     String @map("in_game_date") // ISO date, display only
+
+  // The authoritative serialized GameState. Round-trips through JSON
+  // losslessly by construction. (DESIGN.md Rule 3)
+  state Json
+
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  // A player holds at most one save per slot; saving to an occupied slot
+  // overwrites it.
+  @@unique([userId, slot])
+  @@index([userId, updatedAt])
+  @@map("save_games")
+}
