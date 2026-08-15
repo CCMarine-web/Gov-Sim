@@ -146,6 +146,40 @@ explicit permission to access the repo, and every environment variable in
 `.env` must also be set in the Vercel project settings — a local `.env` is not
 uploaded.
 
+### Health check
+
+```
+GET /api/health
+```
+
+Returns whether the **deployed** application can reach the database. That is a
+different question from whether a migration ran from your laptop: it exercises
+the platform's environment variables, the pooled connection, and the generated
+Prisma client from inside a serverless function.
+
+A healthy response:
+
+```json
+{ "status": "ok", "database": "connected", "saveGames": 0,
+  "latencyMs": 353, "commit": "1e8c4fe", "environment": "production" }
+```
+
+On failure it returns the **shape** of the connection strings — length, whether
+they are wrapped in quotes, scheme validity, detected port — but never their
+values. This exists because connection failures are otherwise near-impossible
+to diagnose remotely.
+
+### Two deployment traps, both already hit on this project
+
+1. **Do not paste the quotes.** `.env` requires values in double quotes because
+   the quotes delimit the value. Vercel's dashboard stores the field's literal
+   contents, so pasting a line straight from `.env` carries the quotes into the
+   value. The connection then fails instantly with an error that never mentions
+   quoting. The health endpoint's `wrappedInQuotes` field detects this.
+2. **Changing a variable does not update a running deployment.** After editing
+   environment variables, go to Deployments and redeploy explicitly. Until you
+   do, the new values exist but nothing is using them.
+
 ---
 
 ## License
