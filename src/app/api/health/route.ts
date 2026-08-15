@@ -25,6 +25,32 @@ export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
 export const revalidate = 0;
 
+/**
+ * Describes the SHAPE of a connection string without revealing it.
+ *
+ * A connection failure that happens in ~1ms never reached the network, which
+ * means the string itself was rejected. The usual cause is a value that was
+ * correct in .env but pasted into a hosting dashboard with its surrounding
+ * double quotes still attached, or with stray whitespace or a newline. None of
+ * the fields below expose the password.
+ */
+function describeConnectionString(raw: string | undefined) {
+  if (!raw) return { present: false };
+
+  return {
+    present: true,
+    length: raw.length,
+    // The high-signal checks for a paste that went wrong.
+    wrappedInQuotes: /^["']|["']$/.test(raw),
+    hasWhitespace: /\s/.test(raw),
+    validScheme: /^postgres(ql)?:\/\//.test(raw),
+    port: raw.match(/:(\d{4,5})\//)?.[1] ?? 'none detected',
+    hasPgbouncerParam: raw.includes('pgbouncer=true'),
+    // A password left as a literal placeholder.
+    looksUnsubstituted: /\[YOUR-PASSWORD\]|PROJECT_REF|:PASSWORD@/.test(raw),
+  };
+}
+
 export async function GET(): Promise<NextResponse> {
   const startedAt = Date.now();
 
@@ -37,6 +63,8 @@ export async function GET(): Promise<NextResponse> {
       process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY,
     ),
   };
+
+  const commit = process.env.VERCEL_GIT_COMMIT_SHA?.slice(0, 7) ?? 'local';
 
   if (!env.DATABASE_URL) {
     return NextResponse.json(
@@ -63,7 +91,7 @@ export async function GET(): Promise<NextResponse> {
       latencyMs: Date.now() - startedAt,
       env,
       // Set by Vercel. Lets us confirm which commit is answering.
-      commit: process.env.VERCEL_GIT_COMMIT_SHA?.slice(0, 7) ?? 'local',
+      commit,
       environment: process.env.VERCEL_ENV ?? process.env.NODE_ENV,
     });
   } catch (error) {
@@ -73,6 +101,11 @@ export async function GET(): Promise<NextResponse> {
         database: 'unreachable',
         latencyMs: Date.now() - startedAt,
         env,
+        commit,
+        environment: process.env.VERCEL_ENV ?? process.env.NODE_ENV,
+        // Shape diagnostics. Safe to expose: no values, only structure.
+        databaseUrlShape: describeConnectionString(process.env.DATABASE_URL),
+        directUrlShape: describeConnectionString(process.env.DIRECT_URL),
         // Error text can echo connection details, so it is withheld in
         // production and available locally where it is actually useful.
         message:
