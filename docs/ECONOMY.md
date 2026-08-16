@@ -186,7 +186,7 @@ This is the two-category distinction (`DESIGN.md` §12.2) doing real work: these
 | Federal debt | $71,060,508.50 | 1790-01-01 Treasury figure, earliest available |
 | Treasury balance | $0 | The Treasury Department was created 2 Sept 1789 — after day 0. Starting at zero is both defensible and dramatically correct. |
 | Weighted debt interest rate | 4.0% | Hamilton's funding plan carried much of the domestic debt at 6% with a deferred 3% tranche; 4% is a reasonable blended effective rate. **Flagged for refinement** once receipts/outlays data lands and debt service can be checked against actuals. |
-| Average tariff rate | 5.0% | Approximates the Tariff Act of 1789's modest ad valorem schedule. Player-adjustable from day 0. |
+| Average tariff rate | 10.0% | Tariff Act of 1789 schedules averaged roughly 8–10% ad valorem. **Revised up from an initial 5.0% during implementation:** at 10% the model produces $4.30M in customs revenue, against a real 1790s figure of roughly $4.4M. At 5% it produced barely half that. Player-adjustable from day 0. |
 | Excise rate | 0% | No federal excise existed until March 1791 — it arrives as an event. |
 | Land tax rate | 0% | No federal direct tax until 1798. |
 | Stability | 55 / 100 | Newly ratified constitution, functioning but untested |
@@ -673,19 +673,48 @@ Every `[CALIBRATION]` value in one table, so tuning is a single reviewable surfa
 | `FREE_PARTICIPATION` | 0.32 | Age structure of 1790 population; refine against census age data |
 | `COERCED_PARTICIPATION` | 0.55 | Forced labor including women and children; refine |
 | `START_DEBT_RATE` | 0.04 | Blended estimate of Hamilton funding plan tranches; **refine when receipts data lands** |
-| `START_TARIFF` | 0.05 | Approximates Tariff Act of 1789 schedule |
+| `START_TARIFF` | 0.10 | Tariff Act of 1789 schedule; yields $4.30M customs vs a real ~$4.4M |
 | `START_STABILITY` | 55 | Design judgment |
 | `START_LEGITIMACY` | 70 / 50 | Design judgment (republic / monarchy) |
 | `START_SECTIONAL_TENSION` | 20 | Design judgment |
 | Regional exposure vectors | §7.12 table | Economic geography of the period |
 | Regional prosperity / sentiment | §4.1 table | Economic geography of the period |
 | Lag constants τ | §7.1 table | Design judgment on plausible response times |
-| `EMERGENCY_BORROWING_PREMIUM` | TBD | Tune during balance pass |
-| `MIN_RATE` / `MAX_RATE` | TBD | Tune during balance pass |
-| `MIGRATION_RATE` | TBD | Tune to reproduce 1800 regional distribution (§10) |
-| `AG_PRODUCTIVITY` / `MAN_PRODUCTIVITY` | TBD | Solve so day-0 output composes to $193M |
+| `AG_PRODUCTIVITY` | **114.7013** | **Solved** so day-0 output composes to the verified $193M |
+| `MAN_PRODUCTIVITY` | **146.2268** | **Solved** as above, including the tariff protection factor |
+| `START_TRADE_CAPACITY` | **46,581,344** | **Solved** so trade volume ≈ $43M at a 10% tariff |
+| `TRADE_SERVICES_MULTIPLIER` | **0.6733** | **Solved** to close the GDP composition |
+| `EMERGENCY_BORROWING_PREMIUM` | 0.15 | Deficit borrowing costs more than the shortfall |
+| `MIN_BORROWING_RATE` / `MAX` | 0.03 / 0.14 | Provisional; revisit during the balance pass |
+| `MIGRATION_RATE` | 0.00035/month | Provisional; tune to reproduce the 1800 regional distribution (§10) |
 
-Constants marked TBD are set during the balance pass, once the engine runs and §10 can actually be measured.
+### 9.1 How the solved constants were derived
+
+`AG_PRODUCTIVITY`, `MAN_PRODUCTIVITY`, `START_TRADE_CAPACITY`, and
+`TRADE_SERVICES_MULTIPLIER` are not guesses. They were solved backwards from
+the **verified** 1790 nominal GDP of $193M, given the labor force implied by
+the census figures, with GDP apportioned as:
+
+| Component | Share | Day-0 value |
+|---|---:|---:|
+| Agriculture | 65% | $125.45M |
+| Manufacturing | 18% | $34.74M |
+| Trade services | 15% | $28.95M |
+| Government output | ~2% | $3.90M |
+
+The implemented engine reproduces **$193.04M**, a residual of 0.02% arising
+because government output uses actual computed outlays rather than the flat 2%
+used in the solve. GDP per capita comes to **$49.13**.
+
+> **A constant this anchoring catches things.** `MAN_PRODUCTIVITY` was first
+> solved without the tariff protection factor that §7.4 applies to
+> manufacturing, which overstated day-0 GDP by 0.74%. The `createGame` test
+> failed on it immediately. That is the whole argument for anchoring
+> calibration to a verified figure rather than to a number that merely looks
+> plausible — a plausible number cannot fail a test.
+
+Constants marked provisional are set during the balance pass, once the engine
+runs a full span and §10 can actually be measured.
 
 ---
 
