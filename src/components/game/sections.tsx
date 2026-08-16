@@ -14,7 +14,7 @@ import { PHASE_1_CONTENT } from '@/content';
 import { formatLongDate } from '@/sim/calendar';
 import { RANGES, TAU_MONTHS } from '@/sim/calibration';
 import { describeUnmet, evaluateAll } from '@/sim/conditions';
-import { explainStat } from '@/sim/modifiers';
+import { explainStat, type StatBreakdown } from '@/sim/modifiers';
 import { currentCrises, stateOfTheUnion } from '@/sim/narrative';
 import type { GameState, Region } from '@/sim/types';
 import {
@@ -230,13 +230,13 @@ export function Regions({ state }: { state: GameState }) {
   return (
     <div className="grid gap-3 lg:grid-cols-2">
       {state.regions.map((region) => (
-        <RegionCard key={region.id} region={region} />
+        <RegionCard key={region.id} region={region} state={state} />
       ))}
     </div>
   );
 }
 
-function RegionCard({ region }: { region: Region }) {
+function RegionCard({ region, state }: { region: Region; state: GameState }) {
   const enslavedShare = (region.enslavedPopulation / region.population) * 100;
 
   return (
@@ -266,18 +266,52 @@ function RegionCard({ region }: { region: Region }) {
         <Row label="Labor force" value={formatNumber(Math.round(region.laborForce))} />
       </div>
 
+      {/*
+        Each of these carries its full modifier breakdown, so acceptance
+        criterion 4 holds on regional stats too and not only on national ones.
+        The breakdown is built from the model's pre-modifier target, because
+        that is what the ledger actually acts on for a lagged stat.
+      */}
       <div className="mt-2 space-y-1.5 border-t border-ink-400 pt-2">
-        <Meter label="Prosperity" value={region.prosperity} word="" />
+        <Meter
+          label="Prosperity"
+          value={region.prosperity}
+          word=""
+          breakdown={explainStat(
+            `region.${region.id}.prosperity`,
+            region.modelTargets.prosperity,
+            state.activeModifiers,
+            state.day,
+            RANGES.percent,
+          )}
+          lag={{ target: region.modelTargets.prosperity, tauMonths: TAU_MONTHS.prosperity }}
+        />
         <Meter
           label="Sentiment"
           value={region.sentiment}
           word={sentimentWord(region.sentiment)}
           min={-100}
+          breakdown={explainStat(
+            `region.${region.id}.sentiment`,
+            region.modelTargets.sentiment,
+            state.activeModifiers,
+            state.day,
+            RANGES.sentiment,
+          )}
+          lag={{ target: region.modelTargets.sentiment, tauMonths: TAU_MONTHS.sentiment }}
         />
         <Meter
           label="Compliance"
           value={region.compliance}
           word={complianceWord(region.compliance)}
+          breakdown={explainStat(
+            `region.${region.id}.compliance`,
+            region.modelTargets.compliance,
+            state.activeModifiers,
+            state.day,
+            RANGES.percent,
+          )}
+          lag={{ target: region.modelTargets.compliance, tauMonths: TAU_MONTHS.compliance }}
         />
       </div>
 
@@ -303,34 +337,45 @@ function RegionCard({ region }: { region: Region }) {
   );
 }
 
-/** A bar always paired with its numeral and a word, never colour alone. */
+/**
+ * A bar always paired with its numeral and a word, never colour alone.
+ * The numeral carries the modifier breakdown when one is supplied.
+ */
 function Meter({
   label,
   value,
   word,
   min = 0,
   max = 100,
+  breakdown,
+  lag,
 }: {
   label: string;
   value: number;
   word: string;
   min?: number;
   max?: number;
+  breakdown?: StatBreakdown;
+  lag?: { target: number; tauMonths: number };
 }) {
   const pct = ((value - min) / (max - min)) * 100;
-  const tone =
-    value >= (max + min) / 2 ? 'bg-verdigris-400' : 'bg-oxblood-400';
+  const tone = value >= (max + min) / 2 ? 'bg-verdigris-400' : 'bg-oxblood-400';
 
   return (
     <div>
       <div className="flex items-baseline justify-between">
         <span className="text-small text-content-secondary">{label}</span>
-        <span className="tabular text-data-sm text-content-primary">
-          {value.toFixed(0)}
-          {word && (
-            <span className="ml-1.5 text-small text-content-muted">{word}</span>
-          )}
-        </span>
+        <div className="flex items-baseline gap-1.5">
+          <Stat
+            label=""
+            size="sm"
+            value={value.toFixed(0)}
+            breakdown={breakdown}
+            lag={lag}
+            className="!inline-flex"
+          />
+          {word && <span className="text-small text-content-muted">{word}</span>}
+        </div>
       </div>
       <div className="mt-0.5 h-1 w-full rounded bg-ink-500" aria-hidden>
         <div

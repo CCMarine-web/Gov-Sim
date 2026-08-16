@@ -211,6 +211,19 @@ export interface Region {
   baseProsperity: number;
   baseSentiment: number;
   baselineTaxBurden: number;
+  /**
+   * The model's targets for this region BEFORE the modifier ledger is applied.
+   *
+   * Same reasoning as `NationStats.modelTargets`: a lagged stat's modifiers act
+   * on the target it is moving toward, not on its current value, so the stat
+   * popover needs the unmodified target to show an honest breakdown. Without
+   * this the Regions view could not satisfy acceptance criterion 4.
+   */
+  modelTargets: {
+    prosperity: number;
+    sentiment: number;
+    compliance: number;
+  };
 }
 
 // ============================================================================

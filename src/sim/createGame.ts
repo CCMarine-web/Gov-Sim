@@ -116,6 +116,13 @@ export function createGame(options: NewGameOptions): GameState {
       // as neutral and the model responds to changes from it.
       baseProsperity: seedRegion.prosperity,
       baseSentiment: sentiment,
+      // Day 0 is an equilibrium by construction, so the targets equal the
+      // starting values until the first monthly recompute.
+      modelTargets: {
+        prosperity: seedRegion.prosperity,
+        sentiment,
+        compliance: 85,
+      },
       baselineTaxBurden: taxBurden({
         tariffRate: tariffRate,
         exciseRate: START.exciseRate,

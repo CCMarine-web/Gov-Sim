@@ -7,7 +7,7 @@ If you are resuming with no context: read `DESIGN.md` first, then this file,
 then `docs/DECISIONS.md` and `docs/BLOCKERS.md`. Then continue the queue in
 `gov-sim-autonomous-run.md` §5 without asking anything.
 
-**Last updated:** autonomous run of 2026-08-15, after Item 2.
+**Last updated:** autonomous run of 2026-08-15, after Item 5.
 
 ---
 
@@ -17,7 +17,7 @@ then `docs/DECISIONS.md` and `docs/BLOCKERS.md`. Then continue the queue in
 |---|---|
 | Production URL | <https://gov-sim.vercel.app> |
 | Deploy | auto-deploys from `main` on push |
-| Tests | 236 passing |
+| Tests | 282 passing |
 | Gates | tests, lint, typecheck, production build — all green |
 | Database | Supabase, `save_games` table migrated, verified reachable from production |
 
@@ -29,10 +29,13 @@ then `docs/DECISIONS.md` and `docs/BLOCKERS.md`. Then continue the queue in
 |---|---|
 | 1 — Treasury screen | **complete** |
 | 2 — Supabase auth and save/load | **built; cloud path awaits two env vars** |
-| 3 — History comparison view | not started |
-| 4 — Government screen | not started |
-| 5 — Full acceptance pass | not started |
-| Stretch 1–6 | not started |
+| 3 — History comparison view | **complete** |
+| 4 — Government screen | **complete** |
+| 5 — Full acceptance pass | **complete** — table below |
+| Stretch 1–6 | in progress |
+
+Every left-nav section is now built. The "not yet implemented" placeholder
+component has been deleted.
 
 ---
 
@@ -66,8 +69,16 @@ a module variable, NOT in Zustand. rAF accumulator, 10-day frame cap, publishes
 to the store at most 4×/second.
 
 **UI** (`src/components/`, `src/app/`) — title, founding, and the three-zone
-shell with Desk, Treasury, Legislation, Regions, and Chronicle. Government and
-History still render honest not-built states.
+shell. **All seven sections are built**: Desk, Treasury, Legislation, Regions,
+Government, History, Chronicle. Plus the event modal and the save menu.
+
+**Saves** (`src/lib/saves/`, `src/sim/migrations/`) — one interface, local and
+cloud backends, autosave off the tick path, and a load path that migrates or
+refuses readably but never crashes.
+
+**Historical benchmarks** (`src/content/history/`) — population, nominal GDP,
+federal debt and a consumer price index, every figure cited. Receipts, outlays
+and military size are declared gaps.
 
 ---
 
@@ -129,12 +140,41 @@ the cross-device half cannot be verified until those variables exist.
 
 ---
 
+## Acceptance criteria — honest status
+
+Assessed against §11 of the original brief. **A criterion that is 80% there is
+not met.** Where something cannot be proven without a browser, it is marked
+partial and the specific check is in `docs/MANUAL-QA.md`.
+
+| # | Criterion | Status | Evidence |
+|---|---|---|---|
+| 1 | Create an account, start a game, choose government, name ruler | ⚠️ **Partial** | Founding flow works and is tested (`createGame.test.ts`, 33 tests). **Account creation is built but inactive** — the two `NEXT_PUBLIC_SUPABASE_*` variables are unset. See B-004. |
+| 2 | Clock ticks, pauses with space, runs 1x/2x/5x without stutter or CPU peg | ⚠️ **Partial** | Accumulator, frame cap, speed mapping and pause-on-decision all unit-tested (`gameLoop.test.ts`). **Stutter and CPU cannot be measured without a browser** — MANUAL-QA §2.1–2.5. |
+| 3 | Tax and spending changes propagate traceably over weeks and months | ✅ **Met** | `projection.test.ts` asserts receipts move at the first monthly recompute while frontier sentiment shifts progressively at 1, 6 and 24 months. The Treasury projection is the engine itself, tested to equal a played-out run. |
+| 4 | Every stat hoverable, breakdown sums correctly | ⚠️ **Partial** | All **modifier-driven** stats have breakdowns that reconcile exactly — national stability, legitimacy, sectional tension, and per-region prosperity, sentiment, compliance. Tested for every one. **Purely computed figures — population, GDP, treasury balance, debt — have no breakdown**, because no modifier acts on them; they are outputs of formulas. Whether that satisfies "every stat" is a judgement call I could not ask about. |
+| 5 | At least 6 real events on historical dates with branching and factual context | ✅ **Met** | Nine events. `content.test.ts` plays the full span and asserts all fire, each on or after its historical date, each with sourced context, and that choices diverge. |
+| 6 | History view compares to real data, every figure cited, gaps marked honestly | ✅ **Met** | `history.test.ts` — every figure cited, no interpolation, gaps declared with what is missing, price index sourced so the comparison is real-terms. |
+| 7 | Save, close the browser, resume on another machine | ❌ **Not met** | Local save/load and schema migration work and are tested. **Cross-device requires the Supabase auth variables.** The code path is complete and dormant. See B-004 and `ENV-SETUP.md`. |
+| 8 | Deployed and playable on a Vercel URL | ✅ **Met** | <https://gov-sim.vercel.app>, auto-deploying from `main`. |
+| 9 | README, DESIGN.md and ECONOMY.md accurate and current | ✅ **Met** | Reconciled against the code during this run: `DESIGN.md` §13 data model updated for fields added since it was written; `UI.md` §5.4 corrected where it had become false; `ECONOMY.md` §9 and §11.7 updated with solved constants and the implemented real-terms decision. |
+
+**Four met, four partial, one not met.**
+
+The two hard blockers are both the same missing pair of environment variables.
+Setting them would move criterion 7 to met and criterion 1 to met, with no code
+change. That is the single highest-value action available.
+
+---
+
 ## What to do next
 
-Item 3: the History comparison view. It is **not blocked** — shipping the
-honest gap state is the deliverable. Build the full view, fill what is
-sourceable, and render the explicit unavailable state for the rest. See
-`BLOCKERS.md` B-001 and B-002 for what is missing and why.
+1. **Set `NEXT_PUBLIC_SUPABASE_URL` and `NEXT_PUBLIC_SUPABASE_ANON_KEY`** — see
+   `ENV-SETUP.md`. Clears two acceptance criteria at once.
+2. Work `docs/MANUAL-QA.md`, particularly §2 (clock and CPU) and §6 (history
+   gaps), which are the checks no test can make.
+3. Source the receipts and outlays figures (B-001), the last real data gap.
+4. Stretch queue: render-throttle instrumentation, more events, accessibility
+   audit, responsive check.
 
 ---
 

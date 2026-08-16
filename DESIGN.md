@@ -680,13 +680,19 @@ interface Ruler {
 interface NationStats {
   population: number;
   laborForce: number;
-  agriculturalOutput: number;    // annualised, nominal dollars
+  agriculturalOutput: number;    // annualised, constant dollars
   manufacturingOutput: number;
   tradeVolume: number;
+  tradeCapacity: number;         // latent, before tariff suppression; lagged
   gdp: number;
   stability: number;             // 0–100
-  legitimacy: number;            // 0–100
+  legitimacy: number;            // 0–100, RESOLVED (base + ledger)
+  legitimacyBase: number;        // 0–100, accumulated, before the ledger
   sectionalTension: number;      // 0–100
+  modelTargets: {                // pre-modifier targets, for the stat popover
+    stability: number;
+    sectionalTension: number;
+  };
 }
 
 interface Region {
@@ -700,9 +706,22 @@ interface Region {
   manufacturingOutput: number;
   tradeVolume: number;
   prosperity: number;            // 0–100 index
+  prosperityTrend: number;       // change at the last recompute; direction matters
   sentiment: number;             // -100..+100 toward the federal government
   compliance: number;            // 0–100; revenue actually remitted
   dominantIndustry: string;
+  tariffExposure: number;        // how heavily each tax falls on this region
+  exciseExposure: number;
+  landExposure: number;
+  baselineOutputPerCapita: number;
+  baseProsperity: number;        // day-0 equilibrium, so the founding is not
+  baseSentiment: number;         // a state the model immediately flees
+  baselineTaxBurden: number;
+  modelTargets: {                // pre-modifier targets, for the stat popover
+    prosperity: number;
+    sentiment: number;
+    compliance: number;
+  };
 }
 
 interface TreasuryState {

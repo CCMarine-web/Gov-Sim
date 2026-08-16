@@ -5,8 +5,19 @@ founding to the present day. Day-by-day clock with pause and speed controls, an
 event feed, and deeply interlocking economic and political systems — Hearts of
 Iron IV's pacing applied to governing rather than commanding armies.
 
-**Status:** Phase 1 in development. Deployment pipeline being established; no
-game logic written yet.
+**Status:** Phase 1 playable. Deployed at <https://gov-sim.vercel.app>.
+
+The simulation runs 1789–1800 end to end: a founding choice, a day-by-day
+clock, an interlinked economy, nine real historical events with sourced
+context, a budget screen whose projection is the engine itself, and a history
+comparison that shows honest gaps where no citable figure exists.
+
+Cloud saves await two environment variables — see
+[docs/ENV-SETUP.md](docs/ENV-SETUP.md). Local saves work now.
+
+For current state, decisions taken, and known gaps, read
+[docs/PROGRESS.md](docs/PROGRESS.md), [docs/DECISIONS.md](docs/DECISIONS.md),
+and [docs/BLOCKERS.md](docs/BLOCKERS.md).
 
 ---
 
@@ -20,6 +31,11 @@ kept current — a change that makes one of them wrong is incomplete.
 | **[DESIGN.md](DESIGN.md)** | Vision, architecture rules, data model, roadmap. **Start here.** |
 | **[docs/ECONOMY.md](docs/ECONOMY.md)** | Every simulation variable, formula, causal claim, and verified historical figure |
 | **[docs/UI.md](docs/UI.md)** | Screen specifications and the design token system |
+| [docs/PROGRESS.md](docs/PROGRESS.md) | What is built, what is next. Written to be read with no prior context |
+| [docs/DECISIONS.md](docs/DECISIONS.md) | Decisions taken and why, including alternatives rejected |
+| [docs/BLOCKERS.md](docs/BLOCKERS.md) | What is missing, what was tried, what would clear it |
+| [docs/MANUAL-QA.md](docs/MANUAL-QA.md) | Checks that need a human with a browser |
+| [docs/ENV-SETUP.md](docs/ENV-SETUP.md) | Every environment variable, where to get it, what breaks without it |
 
 ---
 
@@ -78,6 +94,8 @@ Find both strings in the Supabase dashboard under **Connect → ORMs → Prisma*
 | `npm run db:deploy` | Apply pending migrations (production) |
 | `npm run db:studio` | Browse the database in Prisma Studio |
 | `npm run db:check` | Connection smoke test — verifies the app's pooled connection |
+| `npm test` | Run the test suite once |
+| `npm run test:watch` | Test suite in watch mode |
 
 `db:check` is worth knowing about. It tests `DATABASE_URL` (the pooled
 connection the application uses), which is a **different code path** from

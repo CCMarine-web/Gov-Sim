@@ -142,17 +142,19 @@ export function recomputeEconomy(state: GameState): {
 
     // Sentiment: lags six months, and is pulled by the modifier ledger as well
     // as by the model.
+    const sentimentModelTarget = sentimentTarget({
+      baseSentiment: region.baseSentiment,
+      taxBurden: burden,
+      baselineTaxBurden: region.baselineTaxBurden,
+      prosperity,
+      baseProsperity: region.baseProsperity,
+      prosperityTrend,
+      governmentAffinity: 0,
+    });
+
     const sentimentGoal = resolveStat(
       `region.${region.id}.sentiment`,
-      sentimentTarget({
-        baseSentiment: region.baseSentiment,
-        taxBurden: burden,
-        baselineTaxBurden: region.baselineTaxBurden,
-        prosperity,
-        baseProsperity: region.baseProsperity,
-        prosperityTrend,
-        governmentAffinity: 0,
-      }),
+      sentimentModelTarget,
       state.activeModifiers,
       day,
       RANGES.sentiment,
@@ -161,9 +163,14 @@ export function recomputeEconomy(state: GameState): {
     const sentiment = lagToward(region.sentiment, sentimentGoal, TAU_MONTHS.sentiment);
 
     // Compliance: the loop that makes a tax worth only what people pay.
+    const complianceModelTarget = complianceTarget({
+      sentiment,
+      legitimacy: state.nation.legitimacy,
+    });
+
     const compliance = lagToward(
       region.compliance,
-      complianceTarget({ sentiment, legitimacy: state.nation.legitimacy }),
+      complianceModelTarget,
       TAU_MONTHS.compliance,
     );
 
@@ -176,6 +183,11 @@ export function recomputeEconomy(state: GameState): {
       prosperityTrend,
       sentiment,
       compliance,
+      modelTargets: {
+        prosperity: prosperityGoal,
+        sentiment: sentimentModelTarget,
+        compliance: complianceModelTarget,
+      },
     };
   });
 

@@ -2,7 +2,9 @@ import { describe, expect, it } from 'vitest';
 import { advanceDay } from './advanceDay';
 import { PHASE_1_END_DAY, isoToDay } from './calendar';
 import { createTestGame } from './createGame';
+import { RANGES } from './calibration';
 import { computeCustomsRevenue, computeTradeVolume } from './economy/production';
+import { explainStat } from './modifiers';
 import type { ContentPack, GameState } from './types';
 
 const EMPTY_CONTENT: ContentPack = { version: 'test', events: [], laws: [] };
@@ -218,6 +220,113 @@ describe('the founding choice diverges over time (ECONOMY.md §7.15)', () => {
     const after = run(start, 730);
     // Bounded well below the republic's ~4.3 point decay over two years.
     expect(start.nation.legitimacy - after.nation.legitimacy).toBeLessThan(0.5);
+  });
+});
+
+describe('every stat can explain itself (acceptance criterion 4)', () => {
+  /**
+   * The popover shows the modifiers acting on a lagged stat's TARGET, because
+   * that is what they actually act on. This requires the pre-modifier target
+   * to be stored rather than re-derived in the UI, and requires the breakdown
+   * to reconcile exactly.
+   */
+  const state = run(createTestGame(), 400);
+
+  it('stores the national model targets the breakdown is built from', () => {
+    expect(Number.isFinite(state.nation.modelTargets.stability)).toBe(true);
+    expect(Number.isFinite(state.nation.modelTargets.sectionalTension)).toBe(true);
+    expect(Number.isFinite(state.nation.legitimacyBase)).toBe(true);
+  });
+
+  it('stores the model targets for every region', () => {
+    for (const region of state.regions) {
+      for (const key of ['prosperity', 'sentiment', 'compliance'] as const) {
+        expect(
+          Number.isFinite(region.modelTargets[key]),
+          `${region.id}.${key}`,
+        ).toBe(true);
+      }
+    }
+  });
+
+  it('reconciles the breakdown for every national stat', () => {
+    const cases = [
+      ['nation.stability', state.nation.modelTargets.stability, RANGES.percent],
+      ['nation.legitimacy', state.nation.legitimacyBase, RANGES.percent],
+      [
+        'nation.sectionalTension',
+        state.nation.modelTargets.sectionalTension,
+        RANGES.percent,
+      ],
+    ] as const;
+
+    for (const [path, base, range] of cases) {
+      const breakdown = explainStat(path, base, state.activeModifiers, state.day, range);
+      const summed =
+        breakdown.base +
+        breakdown.contributions.reduce((acc, c) => acc + c.effect, 0) +
+        breakdown.clampAdjustment;
+      expect(summed, path).toBeCloseTo(breakdown.total, 8);
+    }
+  });
+
+  it('reconciles the breakdown for every regional stat', () => {
+    for (const region of state.regions) {
+      const cases = [
+        [`region.${region.id}.prosperity`, region.modelTargets.prosperity, RANGES.percent],
+        [`region.${region.id}.sentiment`, region.modelTargets.sentiment, RANGES.sentiment],
+        [`region.${region.id}.compliance`, region.modelTargets.compliance, RANGES.percent],
+      ] as const;
+
+      for (const [path, base, range] of cases) {
+        const breakdown = explainStat(path, base, state.activeModifiers, state.day, range);
+        const summed =
+          breakdown.base +
+          breakdown.contributions.reduce((acc, c) => acc + c.effect, 0) +
+          breakdown.clampAdjustment;
+        expect(summed, path).toBeCloseTo(breakdown.total, 8);
+      }
+    }
+  });
+
+  it('surfaces a region-targeted modifier in that region’s breakdown', () => {
+    const base = createTestGame();
+    base.activeModifiers = [
+      {
+        id: 'event:test:region.frontier.sentiment',
+        source: 'Test grievance',
+        sourceType: 'event',
+        target: 'region.frontier.sentiment',
+        value: -12,
+        isPercentage: false,
+        startDay: 0,
+        endDay: null,
+      },
+    ];
+
+    const frontier = base.regions.find((r) => r.id === 'frontier')!;
+    const breakdown = explainStat(
+      'region.frontier.sentiment',
+      frontier.modelTargets.sentiment,
+      base.activeModifiers,
+      0,
+      RANGES.sentiment,
+    );
+
+    expect(breakdown.contributions).toHaveLength(1);
+    expect(breakdown.contributions[0].source).toBe('Test grievance');
+    expect(breakdown.contributions[0].effect).toBe(-12);
+
+    // And it does not bleed into another region.
+    const south = base.regions.find((r) => r.id === 'south')!;
+    const southBreakdown = explainStat(
+      'region.south.sentiment',
+      south.modelTargets.sentiment,
+      base.activeModifiers,
+      0,
+      RANGES.sentiment,
+    );
+    expect(southBreakdown.contributions).toHaveLength(0);
   });
 });
 
