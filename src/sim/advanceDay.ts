@@ -35,6 +35,7 @@ import {
 } from './calendar';
 import { RANGES, TAU_MONTHS } from './calibration';
 import { evaluateAll } from './conditions';
+import { applyEffects } from './effects';
 import {
   borrow,
   complianceTarget,
@@ -298,18 +299,20 @@ export function recomputeEconomy(state: GameState): {
     eventDelta: 0,
   });
 
-  const legitimacy = Math.min(
+  // The BASE accumulates; the ledger is applied on top for the resolved value.
+  // Never fold the resolved value back into the base — that would re-add every
+  // permanent modifier on every recompute. (types.ts, NationStats.legitimacyBase)
+  const legitimacyBase = Math.min(
     100,
-    Math.max(
-      0,
-      resolveStat(
-        'nation.legitimacy',
-        state.nation.legitimacy + legitimacyDelta,
-        state.activeModifiers,
-        day,
-        RANGES.percent,
-      ),
-    ),
+    Math.max(0, state.nation.legitimacyBase + legitimacyDelta),
+  );
+
+  const legitimacy = resolveStat(
+    'nation.legitimacy',
+    legitimacyBase,
+    state.activeModifiers,
+    day,
+    RANGES.percent,
   );
 
   // --- Population ----------------------------------------------------------
@@ -360,6 +363,7 @@ export function recomputeEconomy(state: GameState): {
         gdp,
         stability,
         legitimacy,
+        legitimacyBase,
         sectionalTension,
       },
       treasury: {
@@ -411,12 +415,114 @@ function findFiringEvents(state: GameState, content: ContentPack): GameEvent[] {
     if (event.oneShot && state.eventState.firedEventIds.includes(event.id)) {
       return false;
     }
-    if (due.has(event.id)) return true;
+
+    // A scheduled event still has to satisfy its own trigger conditions. It
+    // fires on the LATER of its scheduled day and the day its conditions are
+    // met. Without this a follow-on scheduled `inDays` from its parent could
+    // fire before its own historical date — the Whiskey Rebellion arrived
+    // twelve days early exactly this way.
+    const conditionsMet =
+      event.triggerConditions.length === 0 ||
+      evaluateAll(event.triggerConditions, state);
+
+    if (due.has(event.id)) return conditionsMet;
+
+    // Unscheduled events need conditions to fire at all; an event with no
+    // conditions can only arrive by being scheduled.
     if (event.triggerConditions.length === 0) return false;
-    return evaluateAll(event.triggerConditions, state);
+    return conditionsMet;
   });
 
   return [...candidates].sort((a, b) => b.weight - a.weight);
+}
+
+// ============================================================================
+// RESOLVING A DECISION
+// ============================================================================
+
+/**
+ * Apply the player's answer to a pending decision.
+ *
+ * Time cannot advance while a decision is pending (see `advanceDay`), so this
+ * is the only way past one. Applying an option runs its effects, records the
+ * choice so later content can branch on it, and writes a chronicle entry
+ * naming what was chosen — the chronicle should read as an account of the
+ * player's run, not a system log.
+ *
+ * Throws rather than silently ignoring an unknown event or option. A typo in
+ * a UI call should surface immediately, not leave the game wedged behind a
+ * decision that can never be answered.
+ */
+export function resolveDecision(
+  state: GameState,
+  content: ContentPack,
+  eventId: string,
+  optionId: string,
+): { state: GameState; effects: TickEffect[] } {
+  const pending = state.eventState.pendingDecisions.find(
+    (p) => p.eventId === eventId,
+  );
+  if (!pending) {
+    throw new Error(`No pending decision for event "${eventId}"`);
+  }
+
+  const event = content.events.find((e) => e.id === eventId);
+  if (!event) {
+    throw new Error(`Unknown event "${eventId}" in content pack`);
+  }
+
+  const option = event.options.find((o) => o.id === optionId);
+  if (!option) {
+    throw new Error(
+      `Unknown option "${optionId}" for event "${eventId}". ` +
+        `Available: ${event.options.map((o) => o.id).join(', ')}`,
+    );
+  }
+
+  if (option.requirements.length > 0 && !evaluateAll(option.requirements, state)) {
+    throw new Error(
+      `Option "${optionId}" of event "${eventId}" does not meet its requirements`,
+    );
+  }
+
+  const applied = applyEffects(state, option.effects, {
+    day: state.day,
+    sourceId: eventId,
+    sourceName: event.title,
+  });
+
+  const remaining = applied.state.eventState.pendingDecisions.filter(
+    (p) => p.eventId !== eventId,
+  );
+
+  const next: GameState = {
+    ...applied.state,
+    eventState: {
+      ...applied.state.eventState,
+      pendingDecisions: remaining,
+      chosenOptions: {
+        ...applied.state.eventState.chosenOptions,
+        [eventId]: optionId,
+      },
+    },
+    // Stay paused until the player restarts time themselves. They decide when
+    // the clock resumes, not the game. (UI.md §5.10)
+    paused: remaining.length > 0 ? true : applied.state.paused,
+    log: [
+      ...applied.state.log,
+      {
+        id: `${state.day}:${eventId}:decision`,
+        day: state.day,
+        tier: 'decision',
+        category: 'event',
+        title: event.title,
+        body: `You chose: ${option.label}`,
+        relatedEventId: eventId,
+      },
+    ],
+  };
+
+  return { state: next, effects: applied.tickEffects };
 }
 
 // ============================================================================

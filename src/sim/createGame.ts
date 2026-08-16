@@ -199,6 +199,7 @@ export function createGame(options: NewGameOptions): GameState {
       gdp,
       stability,
       legitimacy,
+      legitimacyBase: legitimacy,
       sectionalTension: START.sectionalTension,
     },
 

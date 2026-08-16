@@ -115,8 +115,24 @@ export interface NationStats {
   gdp: number;
   /** 0–100. */
   stability: number;
-  /** 0–100. */
+  /**
+   * 0–100. The RESOLVED value: `legitimacyBase` with the modifier ledger
+   * applied. This is what conditions read and what the UI displays.
+   */
   legitimacy: number;
+  /**
+   * The accumulated base, before modifiers.
+   *
+   * Legitimacy is cumulative rather than target-seeking (ECONOMY.md §7.15), so
+   * the base and the resolved value must be stored separately. Folding
+   * modifiers back into the stored value would re-add every permanent modifier
+   * on every monthly recompute — a single +8 from the Bill of Rights would
+   * become +8 per month forever.
+   *
+   * Lagged stats (stability, sentiment, tension) do not need this: modifiers
+   * shift the target they converge toward, so they cannot compound.
+   */
+  legitimacyBase: number;
   /** 0–100. */
   sectionalTension: number;
 }

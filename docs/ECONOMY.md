@@ -784,6 +784,12 @@ Wide tolerances are intentional. The goal is a model that lands in the right *re
 
    **(c) Label the axis and move on.** Show both series, mark ours "real" and theirs "nominal", and let the player interpret. Honest but weak — it makes the signature feature harder to read, which defeats its purpose.
 
-   **Recommendation: (b) for Phase 1, (a) later.** It makes the comparison correct now at low cost and does not foreclose adding a price level when inflation becomes a system the player can act on.
+   **DECIDED 2026-08-15: option (b) for Phase 1, option (a) later.** It makes the comparison correct now at low cost and does not foreclose adding a price level when inflation becomes a system the player can act on.
 
-   Until this is resolved the null-run test asserts what the model actually claims — per-capita stability — and pins the known ratio against 1800 so the gap cannot silently drift.
+   **What (b) requires:**
+   1. Source a price index covering 1789–1800 with a citation, and store it in `/src/content/history/` like any other benchmark series.
+   2. Convert the nominal GDP benchmark to constant 1790 dollars at load time, never in the data file — the file keeps the sourced nominal figures as published.
+   3. The History view labels the GDP row explicitly as **"real, constant 1790 dollars"** for both columns. Per §12 of DESIGN.md, the conversion is a derivation and must be visible as one; a converted figure is not the figure the source published.
+   4. The deflator itself is benchmark data and carries its own citation. If we lack a sourced index for a year, that year renders unavailable like any other gap.
+
+   Until (b) is implemented, the null-run test asserts what the model actually claims — per-capita stability — and pins the known ratio against 1800 so the gap cannot silently drift.

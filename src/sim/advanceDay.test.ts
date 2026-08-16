@@ -221,6 +221,65 @@ describe('the founding choice diverges over time (ECONOMY.md §7.15)', () => {
   });
 });
 
+describe('permanent modifiers do not compound (regression)', () => {
+  /**
+   * Legitimacy is cumulative rather than target-seeking, so its base and its
+   * resolved value are stored separately. Folding the resolved value back into
+   * the base would re-add every permanent modifier on every monthly recompute:
+   * a single +8 would silently become +8 per month. A played run reached a
+   * legitimacy of 94.7 before this was caught.
+   */
+  it('a permanent legitimacy modifier contributes once, not once per month', () => {
+    const state = createTestGame();
+    state.activeModifiers = [
+      {
+        id: 'event:test:nation.legitimacy',
+        source: 'Test',
+        sourceType: 'event',
+        target: 'nation.legitimacy',
+        value: 8,
+        isPercentage: false,
+        startDay: 0,
+        endDay: null,
+      },
+    ];
+
+    const afterOneMonth = run(state, 32);
+    const afterTwoYears = run(state, 730);
+
+    // The modifier's contribution is +8 in both cases. Any growth beyond the
+    // republic's own decay would mean it is being re-applied.
+    const oneMonthGap = afterOneMonth.nation.legitimacy - afterOneMonth.nation.legitimacyBase;
+    const twoYearGap = afterTwoYears.nation.legitimacy - afterTwoYears.nation.legitimacyBase;
+
+    expect(oneMonthGap).toBeCloseTo(8, 6);
+    expect(twoYearGap).toBeCloseTo(8, 6);
+  });
+
+  it('an expiring legitimacy modifier stops contributing when it lapses', () => {
+    const state = createTestGame();
+    state.activeModifiers = [
+      {
+        id: 'event:temp:nation.legitimacy',
+        source: 'Temporary',
+        sourceType: 'event',
+        target: 'nation.legitimacy',
+        value: 10,
+        isPercentage: false,
+        startDay: 0,
+        endDay: 200,
+      },
+    ];
+
+    const during = run(state, 100);
+    const after = run(state, 400);
+
+    expect(during.nation.legitimacy - during.nation.legitimacyBase).toBeCloseTo(10, 6);
+    expect(after.nation.legitimacy - after.nation.legitimacyBase).toBeCloseTo(0, 6);
+    expect(after.activeModifiers).toHaveLength(0);
+  });
+});
+
 describe('effects propagate over months, not instantly (ECONOMY.md §7.1)', () => {
   it('no policy change produces its full effect within a single month', () => {
     const taxed = createTestGame();
