@@ -26,6 +26,8 @@
 
 import { advanceDay, resolveDecision } from '@/sim/advanceDay';
 import { createGame, type NewGameOptions } from '@/sim/createGame';
+import { enactPolicy } from '@/sim/policy';
+import type { ProposedPolicy } from '@/sim/projection';
 import type { ContentPack, GameState, TickEffect } from '@/sim/types';
 import { useGameStore, type Speed } from '@/store/gameStore';
 
@@ -328,6 +330,20 @@ export function answerDecision(eventId: string, optionId: string): void {
   if (!loop.game || !loop.content) return;
 
   const result = resolveDecision(loop.game, loop.content, eventId, optionId);
+  loop.game = result.state;
+  loop.pendingEffects.push(...result.effects);
+  publish(true);
+}
+
+/**
+ * Enact a proposed tax and spending policy, then publish immediately.
+ *
+ * Deliberately a discrete action rather than something a slider does: no
+ * policy change may happen from a stray drag. (UI.md §5.4)
+ */
+export function enactBudget(proposed: ProposedPolicy): void {
+  if (!loop.game) return;
+  const result = enactPolicy(loop.game, proposed);
   loop.game = result.state;
   loop.pendingEffects.push(...result.effects);
   publish(true);

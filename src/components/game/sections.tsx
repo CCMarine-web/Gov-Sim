@@ -493,15 +493,6 @@ export function Chronicle({ state }: { state: GameState }) {
 // NOT YET BUILT
 // ============================================================================
 
-export function Treasury() {
-  return (
-    <NotBuilt
-      what="Treasury"
-      when="The budget screen — tax sliders with a live projected annual balance, and an explicit Enact step — is the next section to be built. Tax rates are visible on the Desk in the meantime."
-    />
-  );
-}
-
 export function Government() {
   return (
     <NotBuilt

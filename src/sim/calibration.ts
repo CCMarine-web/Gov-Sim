@@ -282,6 +282,26 @@ export const MONARCHY_PENALTY_FACTOR = 1.5;
 
 export const PROSPERITY_TO_LEGITIMACY = 0.25;
 
+/**
+ * Legitimacy cost of raising taxes, per unit of aggregate rate increase.
+ *
+ * Enacting an unpopular policy spends political capital. A 10-point tariff
+ * rise (0.10) costs `0.10 x 45 = 4.5` legitimacy at the republic's rate.
+ * Applied as a decaying `policy` modifier so the cost is visible in the stat
+ * breakdown and wears off rather than being permanent.
+ */
+export const POLICY_LEGITIMACY_COST = 45;
+
+/** How long the political cost of a policy change lingers. */
+export const POLICY_COST_DURATION_DAYS = 730;
+
+/**
+ * A republic must carry the country with it; a crown may simply act.
+ * The mechanical expression of DESIGN.md §9.2, "cost of unilateral action".
+ */
+export const REPUBLIC_ACTION_COST = 1.0;
+export const MONARCHY_ACTION_COST = 0.55;
+
 // ============================================================================
 // LAG TIME CONSTANTS (ECONOMY.md §7.1)
 // ============================================================================

@@ -25,8 +25,8 @@ import {
   History,
   Legislation,
   Regions,
-  Treasury,
 } from './sections';
+import { TreasuryPanel } from './TreasuryPanel';
 
 const SECTION_TITLE: Record<SectionId, string> = {
   desk: 'The Desk',
@@ -113,7 +113,7 @@ export function GameShell() {
           </h1>
 
           {section === 'desk' && <Desk state={snapshot} />}
-          {section === 'treasury' && <Treasury />}
+          {section === 'treasury' && <TreasuryPanel state={snapshot} />}
           {section === 'legislation' && <Legislation state={snapshot} />}
           {section === 'regions' && <Regions state={snapshot} />}
           {section === 'government' && <Government />}

@@ -1,0 +1,212 @@
+# MANUAL-QA.md
+
+Checks that require eyes on a browser. The autonomous run had no browser tools,
+so anything visual or interaction-timing dependent is listed here rather than
+claimed as verified.
+
+Run these against <https://gov-sim.vercel.app> or a local `npm run dev`.
+
+Each item states: what to do, what you should see, and what would indicate a
+problem.
+
+---
+
+## 1. Founding and first run
+
+**1.1 — Title screen renders**
+Open the site. You should see "The American Experiment" in a serif face on a
+near-black ground, a brass-outlined seal plate, and a New Game button.
+*Problem if:* text is unstyled, the font is a system sans, or colours are
+default browser blue/white — that would mean the design tokens or `next/font`
+failed to load.
+
+**1.2 — Founding cards differ meaningfully**
+Click New Game. Compare the two cards. Monarchy should show Legitimacy 50 with
+New England and Mid-Atlantic negative; Republic should show 70 with both
+positive.
+*Problem if:* the numbers are identical between cards, which would mean the
+seed data is not being read.
+
+**1.3 — Confirmation step appears**
+Click a card. A confirm panel should slide in below with name and dynasty/party
+fields, and the field label should read "Dynasty" for monarchy and "Party" for
+republic.
+
+**1.4 — The game starts**
+Click Found the Nation. You should land on the shell: command bar across the
+top, nav on the left, main panel centre, chronicle on the right. The date reads
+30 April 1789.
+
+---
+
+## 2. The clock — acceptance criterion 2
+
+**2.1 — Space toggles pause**
+Press Space. The date should begin advancing about one day per second.
+*Problem if:* nothing happens, or the date jumps erratically.
+
+**2.2 — Speed controls**
+Press `2`, then `3`. Speed should go to 2x then 5x — roughly two and five days
+per second. The active speed gets a brass underline.
+*Problem if:* the underline moves but the rate does not change.
+
+**2.3 — CPU does not peg**
+Leave it at 5x for two minutes with a task manager open. The tab should stay
+well under one core.
+*Problem if:* a core saturates, or the UI becomes unresponsive to clicks. That
+would mean the render throttle is not holding.
+
+**2.4 — Numbers do not jitter**
+Watch the treasury figure in the command bar as it ticks. Digits should change
+without the number shifting left or right.
+*Problem if:* the number visibly wobbles — that means tabular numerals are not
+applied somewhere.
+
+**2.5 — Background tab auto-pauses**
+Start the clock, switch to another tab for thirty seconds, come back. The game
+should be paused, with "Paused (tab hidden)" shown.
+*Problem if:* it is still running, or the date has jumped forward by many days.
+
+---
+
+## 3. The stat breakdown — acceptance criterion 4
+
+**3.1 — Hover reveals the breakdown**
+Hover Stability in the command bar. A popover should list Base, then each
+contributing modifier with its source name, then Total.
+
+**3.2 — The arithmetic reconciles**
+Add up Base plus every listed contribution. It must equal the Total shown.
+*Problem if:* it does not — that is a bug, and a test exists that should have
+caught it, so tell me.
+
+**3.3 — Lag is disclosed**
+The Stability popover should end with a line reading roughly "Moving toward X ·
+about 3 months to register".
+
+**3.4 — Keyboard access**
+Tab to a stat and confirm the popover opens on focus, and Escape closes it.
+
+---
+
+## 4. Treasury — acceptance criterion 3
+
+**4.1 — Sliders move, nothing commits**
+Go to Treasury. Drag the tariff slider. The value turns brass and shows "(now
+10.0%)" beside it. Nothing in the command bar changes.
+*Problem if:* the treasury figure changes while dragging — policy must never
+commit from a drag.
+
+**4.2 — The projection updates**
+After a moment's pause the Projection block recalculates. The "simulating…"
+label appears briefly then shows "365 days forward".
+*Problem if:* it never resolves, or resolves instantly on every pixel — the
+debounce is 180ms.
+
+**4.3 — The tariff curve turns over**
+Set the tariff to 25%, note projected receipts. Now set it to 40%. Projected
+receipts should be **lower** at 40% than at 25%.
+*This is the headline causal claim of the whole economy.* A test covers it, but
+confirm it is visible on screen.
+
+**4.4 — The revenue peak mark**
+There should be a faint vertical brass line on the tariff slider track at 25%,
+labelled "revenue peak at 25%".
+
+**4.5 — The excise warning is live**
+Drag the excise to 30%. The note under the slider should show frontier
+compliance falling, and the wording should change (e.g. "largely refusing").
+
+**4.6 — Enact and Revert**
+With changes pending, Revert should restore the committed values and disable
+both buttons. Re-make a change and press Enact. The chronicle should gain an
+entry reading "The budget is altered" with a sentence naming the change.
+
+**4.7 — The political cost is visible**
+Raise the tariff substantially and Enact. Then hover Legitimacy. There should
+be a `policy` line reading "Tax rise of [date]" with a negative value.
+*Problem if:* no such line appears.
+
+**4.8 — The causal chain over time**
+After enacting a big excise rise, run the clock forward. Within a month or two
+the excise receipts on the Desk should rise. Over six to twelve months the
+Frontier's sentiment and compliance on the Regions screen should fall. This is
+acceptance criterion 3 end to end.
+
+---
+
+## 5. Events — acceptance criterion 5
+
+**5.1 — The clock stops on the day**
+Run from the start at 5x. On 20 June 1790 the game should stop and a modal
+appear for the assumption of state debts.
+*Problem if:* the date runs past it — a decision must never be missed at speed.
+
+**5.2 — The modal cannot be dismissed**
+Press Escape. Click outside it. Neither should close it.
+
+**5.3 — Historical context is present and distinct**
+The modal should show a parchment-coloured block headed "What actually
+happened", with sources listed beneath. It should be visually obvious which
+text is narrative and which is history.
+
+**5.4 — Choosing resolves and stays paused**
+Pick an option. The modal closes, the chronicle gains a "You chose: …" entry,
+and **the clock stays paused** until you restart it.
+
+**5.5 — Path-specific options**
+On the Bill of Rights event (15 Dec 1791), a republic should see the "proclaim
+as foundation" option enabled and the monarchy option disabled with a stated
+reason, and vice versa on a monarchy run.
+
+---
+
+## 6. History view — acceptance criterion 6
+
+**6.1 — Gaps are honest**
+Federal receipts and federal outlays rows must render an explicit "no verified
+data" state naming the missing source, **not** a zero, a blank, or a dash.
+*Problem if:* any number appears in those rows. That would be fabricated data
+and is the most serious defect possible in this project.
+
+**6.2 — Citations are visible**
+Population, GDP and federal debt rows should each show their source.
+
+**6.3 — Simulated and historical are distinguishable**
+The two columns must differ by colour *and* marker *and* label — check by
+taking a greyscale screenshot; the distinction must survive.
+
+**6.4 — Date scrubber**
+Drag the scrubber back to an earlier year. Every row should update to that
+date, and the historical figures should show the date of the figure they quote.
+
+---
+
+## 7. Save and load — acceptance criterion 7
+
+**7.1 — Local persistence**
+Play a few in-game months, reload the page. You should be offered the local
+save and resume at the same date.
+
+**7.2 — Cross-device** *(requires B-004 cleared)*
+Not verifiable until the Supabase auth variables are set. See
+`docs/ENV-SETUP.md`.
+
+---
+
+## 8. Responsiveness and accessibility
+
+**8.1 — Down to 1280px**
+Narrow the window to 1280px. Nothing should overlap or overflow horizontally.
+The command bar must not collapse.
+
+**8.2 — Below 1280px**
+Narrow further. The right chronicle feed should collapse into a drawer.
+
+**8.3 — Keyboard only**
+Unplug the mouse. Confirm you can reach every nav section, open a stat popover,
+operate the Treasury sliders, and answer an event modal.
+
+**8.4 — Reduced motion**
+Enable "reduce motion" in your OS. Number transitions should snap rather than
+interpolate; nothing should become unusable.

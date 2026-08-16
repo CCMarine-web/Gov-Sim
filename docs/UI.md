@@ -390,9 +390,9 @@ The budget screen. Left: tax rates. Right: spending. Bottom: live projection.
 │  Outlays   $3.90M     Outlays   $3.90M                 ▬        │
 │  Balance  +$0.52M     Balance  +$1.28M            +$0.76M ▲     │
 │                                                                 │
-│  Projections assume current conditions hold. Sentiment and      │
-│  compliance effects appear over 6–12 months and are not         │
-│  included above.                                    [ ENACT ]   │
+│  Both columns simulated forward over the same 365 days by the   │
+│  game's own engine, so they are directly comparable. Lagged      │
+│  sentiment and compliance ARE included.             [ ENACT ]   │
 └─────────────────────────────────────────────────────────────────┘
 ```
 
@@ -404,7 +404,13 @@ The budget screen. Left: tax rates. Right: spending. Bottom: live projection.
 - A **Revert** action discards pending changes.
 - The tariff slider marks the 25% revenue peak (§`ECONOMY.md` 7.5) directly on its track, because that's a real feature of the model the player deserves to be able to see.
 - The warnings under each slider are generated from current state — frontier compliance is shown next to the excise because that is the variable that will eat the revenue.
-- **Projections are honest about their own limits.** The disclaimer is not boilerplate: the lagged sentiment and compliance effects genuinely are not in the projection, and hiding that would make the screen a liar.
+- **The projection is the real engine, not a second formula.** Dragging a slider clones the state, enacts the proposed policy through the same `enactPolicy` the button calls, and runs `advanceDay` forward 365 days. It is debounced (180ms), never simplified. Two calculations of the same quantity drift apart, and the one on this screen — the one the player decides from — would be the liar.
+
+  > **Corrected during implementation.** This section originally said the projection excludes lagged sentiment and compliance effects, and that admitting so was the honest thing to do. That is no longer true: because the projection is a genuine forward simulation, those effects *are* included. Raise the excise and the projected receipts already account for the frontier refusing to pay. The screen copy was updated to match. See `DECISIONS.md` D-004.
+
+- **Both columns are simulated over the same horizon.** Comparing a forward-simulated proposal against today's un-simulated actuals would attribute a year of ordinary drift to the player's slider.
+
+- **Enacting has a political price, shown before you commit.** A tax rise costs legitimacy through the modifier ledger, and a monarchy pays less than a republic for the same rise — the mechanical expression of §9.2's "cost of unilateral action". The cost is stated under the projection before the player presses Enact, and afterwards appears as a named line in the Legitimacy breakdown. See `DECISIONS.md` D-001.
 
 ### 5.5 Legislation
 
