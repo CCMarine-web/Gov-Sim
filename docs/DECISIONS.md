@@ -1600,3 +1600,93 @@ face, in the same way the Congress screen says the party split is a model.
 appointments map reproduces a v9 save's behaviour exactly, because a v9 save's
 cabinet was the historical one throughout. Writing the historical holders in as
 though the player had chosen them would have been the fabrication.
+
+---
+
+## D-051 — A skin is CSS, not a theme object
+
+**Date:** 2026-08-16 (Phase 2, queue item 14)
+**Status:** implemented
+
+The brief's requirement is that "a future art-driven skin should require no
+component edits". That is a statement about what must be **impossible**, not
+about what should be avoided, and it decides the implementation.
+
+**A theme object cannot satisfy it.** Any component that receives a theme can be
+written to branch on it — `theme.id === 'parchment' ? … : …` — and given enough
+screens somebody eventually will, at which point a third skin does require
+component edits. The mechanism has to live somewhere components cannot reach.
+
+**So a skin is a set of CSS custom-property overrides**, applied by `data-skin`
+on the document element. `src/lib/theme.ts` knows the names; `globals.css` holds
+the values. A component emits `className="bg-ink-700"` and has no way to find out
+which skin resolved it.
+
+**The stub skin is deliberately hostile.** `parchment` inverts the ground
+completely rather than shifting a hue, because the point of shipping a second
+skin before there is a second design is to *find* the places that quietly assume
+a dark background. A gentle second skin would prove nothing and pass anyway.
+
+**It is labelled incomplete, and that is load-bearing.** The contrast ratios in
+UI.md §10 were measured against `ledger` and do not carry over. A skin that
+claimed to be finished without an audit would be the accessibility work quietly
+undone.
+
+---
+
+## D-052 — Placeholders are generated, not committed
+
+**Date:** 2026-08-16 (Phase 2, queue item 14)
+**Status:** implemented
+
+Every asset resolves through a manifest, and every one currently returns a
+**generated inline SVG data URI** rather than a committed placeholder file.
+
+**Three reasons, in order:**
+
+1. **A placeholder file can itself go missing.** Then the interface breaks in a
+   way that looks like a bug rather than like an absence — the worst of both.
+   A data URI cannot 404.
+2. **A generated placeholder can label itself.** Each carries its own logical
+   key, so a screenshot of the game names every missing asset and what to call
+   the file that replaces it. That is worth more than it sounds when the eventual
+   handover is "here is a list of art to make".
+3. **It is honest.** A grey plate reading `portrait/hamilton` is obviously
+   absent. A stock silhouette is a design decision nobody made, and it would sit
+   in the game looking deliberate.
+
+**The dimensions are the part that actually matters.** Placeholders render at
+the same size the real art will, from the same `--size-*` tokens the layout
+reserves. A placeholder at the wrong size guarantees the reflow it exists to
+prevent, and hides it until the day the art arrives — which is the worst possible
+day to be fixing layout.
+
+---
+
+## D-053 — The audio bus is silent, not stubbed
+
+**Date:** 2026-08-16 (Phase 2, queue item 14)
+**Status:** implemented
+
+There are no sound files. `audio.play()` makes no sound. Everything else is
+real: it resolves the cue key against a manifest, applies mute and both faders,
+records what would have been heard, tracks the music layer, and runs crossfades
+against an injectable clock.
+
+**Why not just return early.** A stub that returned instantly would let the
+interface develop a dependency on audio being instantaneous — a crisis handler
+that plays a cue and then assumes the transition is complete, a layer change
+treated as immediate. Those assumptions are invisible while everything is a
+no-op and break the day files arrive, and the fix would be in the callers.
+That is precisely the "surgery" the brief is trying to prevent.
+
+So the state machine is real and only the output is missing. The crossfade takes
+2400ms of clock time today, silently, so nothing can come to depend on it taking
+none.
+
+**`history()` is how a silent system is testable at all.** Every cue that would
+have played is recorded with the gain it would have played at, which lets a test
+assert that mute actually mutes — behaviour with no observable effect yet.
+
+**The settings panel says the game is silent.** A mute toggle that appears to do
+nothing reads as a bug, and the true explanation is one sentence long.

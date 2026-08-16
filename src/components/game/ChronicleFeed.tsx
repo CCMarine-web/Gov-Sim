@@ -39,10 +39,16 @@ export function ChronicleFeed({
 
   return (
     <aside
+      // Width from a layout token rather than an arbitrary value, so a skin can
+      // change the shape of the shell without a component edit. (brief §8)
+      style={{
+        width:
+          variant === 'column' ? 'var(--size-feed)' : 'var(--size-feed-drawer)',
+      }}
       className={
         variant === 'column'
-          ? 'hidden w-[320px] shrink-0 flex-col border-l border-ink-400 bg-ink-800 xl:flex'
-          : 'flex h-full w-[min(320px,85vw)] flex-col border-l border-ink-400 bg-ink-800'
+          ? 'hidden shrink-0 flex-col border-l border-ink-400 bg-ink-800 xl:flex'
+          : 'flex h-full flex-col border-l border-ink-400 bg-ink-800'
       }
       aria-label="Chronicle"
     >

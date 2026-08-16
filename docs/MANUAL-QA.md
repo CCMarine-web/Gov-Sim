@@ -1044,3 +1044,59 @@ appoint yet should say why rather than being hidden.
 **21.11 — An old save keeps the cabinet it had**
 Load a save from before this update. Every office should still show its
 historical holder, marked "as history had it", with nothing marked as yours.
+
+---
+
+## 22. Theming, assets and audio
+
+*Phase 2, queue item 14. Full documentation is `docs/THEMING.md`;
+`DECISIONS.md` D-051 to D-053.*
+
+**22.1 — Settings opens**
+A "Settings" button beside "Saved games". It should open a panel with appearance
+and sound.
+
+**22.2 — The second skin actually works**
+Switch to Parchment. **Every screen** should invert to dark ink on paper — the
+shell, the panels, the map, the chronicle. Walk through all nine sections.
+*Problem if:* any panel, border, or map fill stays dark. That is a hardcoded
+value the audit missed, and it is exactly what the stub skin exists to find.
+
+**22.3 — And it says it is a stub**
+The Parchment option should say it is a working stub, not a finished design, and
+that it has not been through a contrast audit.
+*Problem if:* it presents as finished. The contrast work in UI.md §10 was
+measured against Ledger only.
+
+**22.4 — The choice survives a reload**
+Switch skins, reload the page. It should still be the skin you chose. Load a
+saved game: the skin should not change, because it belongs to you rather than to
+the republic.
+
+**22.5 — Nothing moves when you switch**
+Watch a dense screen — Treasury or the map — while switching skins. Colours
+change; **nothing reflows**. No text rewraps, no panel resizes.
+*Problem if:* the layout shifts. A skin must not be able to change dimensions.
+
+**22.6 — Portraits are reserved, and labelled**
+Open Government. There should be a portrait plate beside the ruler and a small
+one beside each cabinet office, each a grey box reading `portrait/<name>`.
+*Problem if:* the boxes are missing, or are a different size from each other.
+The whole point is that real art drops in without moving anything.
+
+**22.7 — The sound controls are there and honest**
+Settings should have a mute toggle and four sliders — overall, music, events,
+interface — and should say plainly that there are no sounds yet.
+*Problem if:* the controls are absent, or present with no explanation. A dead
+control with no note reads as a bug.
+
+**22.8 — And they persist**
+Set music to 30%, mute, reload. Both should come back as you left them.
+
+**22.9 — Muting disables the sliders and says "Muted"**
+Not just greyed out: the word should replace the percentage.
+
+**22.10 — Nothing in the interface is a hex value**
+This one is enforced by a test rather than by eye
+(`src/lib/theming.test.ts`), which reads the source of every component. If it
+ever fails, a colour has been hardcoded and is no longer skinnable.

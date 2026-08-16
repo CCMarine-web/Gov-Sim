@@ -31,6 +31,11 @@ import { KeyboardHelp } from './KeyboardHelp';
 import { EventModal } from './EventModal';
 import { LeftNav, type SectionId } from './LeftNav';
 import { SaveMenu } from './SaveMenu';
+import { SettingsPanel } from './SettingsPanel';
+import { COPY } from '@/content/copy';
+import { loadPreferences } from '@/lib/preferences';
+import { applySkin } from '@/lib/theme';
+import { audio } from '@/lib/audio';
 import { Chronicle, Desk, Regions } from './sections';
 import { MapPanel } from './MapPanel';
 import { LegislationPanel } from './LegislationPanel';
@@ -40,17 +45,7 @@ import { GovernmentPanel } from './GovernmentPanel';
 import { HistoryPanel } from './HistoryPanel';
 import { TreasuryPanel } from './TreasuryPanel';
 
-const SECTION_TITLE: Record<SectionId, string> = {
-  map: 'The United States',
-  treasury: 'Treasury',
-  legislation: 'Legislation',
-  congress: 'Congress',
-  diplomacy: 'Diplomacy',
-  regions: 'Regions',
-  government: 'Government',
-  history: 'History',
-  chronicle: 'Chronicle',
-};
+const SECTION_TITLE: Record<SectionId, string> = COPY.section;
 
 export function GameShell() {
   const snapshot = useGameStore((s) => s.snapshot);
@@ -58,6 +53,18 @@ export function GameShell() {
   const [savesOpen, setSavesOpen] = useState(false);
   const [feedOpen, setFeedOpen] = useState(false);
   const [helpOpen, setHelpOpen] = useState(false);
+  const [settingsOpen, setSettingsOpen] = useState(false);
+
+  /*
+    THE SKIN IS APPLIED ON MOUNT, not during render. localStorage does not
+    exist on the server, and a first paint that differs from the second is a
+    hydration mismatch. (brief §8)
+  */
+  useEffect(() => {
+    const prefs = loadPreferences();
+    applySkin(prefs.skin);
+    audio.setPreferences(prefs.audio);
+  }, []);
   const pendingCount = usePendingCount();
 
   // Autosave subscribes to the store, never to the tick. Idempotent, so Strict
@@ -159,7 +166,7 @@ export function GameShell() {
                 }
                 className="flex items-center gap-1.5 rounded-card border border-ink-400 px-3 py-1 text-small text-content-secondary hover:bg-ink-500 xl:hidden"
               >
-                Chronicle
+                {COPY.shell.chronicle}
                 {pendingCount > 0 && (
                   <span
                     aria-hidden
@@ -174,7 +181,15 @@ export function GameShell() {
                 onClick={() => setSavesOpen(true)}
                 className="rounded-card border border-ink-400 px-3 py-1 text-small text-content-secondary hover:bg-ink-500"
               >
-                Saved games
+                {COPY.shell.savedGames}
+              </button>
+              <button
+                type="button"
+                data-testid="open-settings"
+                onClick={() => setSettingsOpen(true)}
+                className="rounded-card border border-ink-400 px-3 py-1 text-small text-content-secondary hover:bg-ink-500"
+              >
+                {COPY.shell.settings}
               </button>
             </div>
           </div>
@@ -234,6 +249,7 @@ export function GameShell() {
       )}
 
       {savesOpen && <SaveMenu onClose={() => setSavesOpen(false)} />}
+      {settingsOpen && <SettingsPanel onClose={() => setSettingsOpen(false)} />}
       {helpOpen && <KeyboardHelp onClose={() => setHelpOpen(false)} />}
 
       {/* Rendered last so a decision always sits above the save menu. */}

@@ -7,7 +7,11 @@ If you are resuming with no context: read `DESIGN.md` first, then this file,
 then `docs/DECISIONS.md` and `docs/BLOCKERS.md`. Then continue the **Phase 2
 queue** below, which is `gov-sim-phase2-brief.md` §9.
 
-**Last updated:** Phase 2 run of 2026-08-16, after queue item 13.
+Four documents own four concerns: `DESIGN.md` (architecture and data model),
+`docs/ECONOMY.md` (every formula and constant), `docs/UI.md` (screens), and
+`docs/THEMING.md` (tokens, skins, assets, audio — added in item 14).
+
+**Last updated:** Phase 2 run of 2026-08-16, after queue item 14.
 
 ---
 
@@ -17,7 +21,7 @@ queue** below, which is `gov-sim-phase2-brief.md` §9.
 |---|---|
 | Production URL | <https://gov-sim.vercel.app> |
 | Deploy | auto-deploys from `main` on push |
-| Tests | 826 passing |
+| Tests | 865 passing |
 | Save schema | version **10** — v1 to v9 saves migrate forward, all nine fixtures committed |
 | Gates | tests, lint, typecheck, production build — all green |
 | Database | Supabase, `save_games` table migrated, verified reachable from production |
@@ -42,7 +46,7 @@ queue** below, which is `gov-sim-phase2-brief.md` §9.
 | 11 — Diplomacy tab | **complete** — see below and D-042 to D-044 |
 | 12 — War declaration paths | **complete** — see below and D-045 to D-047 |
 | 13 — Cabinet competence and loyalty | **complete** — see below and D-048 to D-050 |
-| 14 — Theming, asset registry, audio abstraction | not started |
+| 14 — Theming, asset registry, audio abstraction | **complete** — see below and D-051 to D-053 |
 | 15 — Causal web view | not started |
 
 ### Item 1 — the number flicker: complete
@@ -757,6 +761,61 @@ fixed by using the same clamp.
 
 **Tests:** 32 in `sim/cabinet.test.ts`, 12 in `components/game/cabinet.test.tsx`,
 3 more in `migrations.test.ts`. Human-eye checks are `docs/MANUAL-QA.md` §21.
+
+---
+
+### Item 14 — theming, assets and audio: complete
+
+**Everything is documented in [docs/THEMING.md](THEMING.md)**, which is now the
+fourth authoritative document alongside DESIGN, ECONOMY and UI.
+
+**The audit passed, and is now enforced by a test.** Five hardcoded hex values
+(SVG strokes in the History panel) and five arbitrary Tailwind values became
+tokens. `src/lib/theming.test.ts` reads the source of every component and fails
+on either — this is the one requirement in item 14 that decays silently, because
+nothing *breaks* when somebody writes `stroke="#C9A227"`, it just quietly stops
+being skinnable.
+
+**A skin is CSS, not a theme object** (D-051). Overrides applied by `data-skin`
+on the document element; `src/lib/theme.ts` knows the names, `globals.css` holds
+the values. That is the only implementation that makes "a future art-driven skin
+should require no component edits" *enforceable* rather than merely intended: a
+component that reads a theme object can be written to branch on it, and one that
+emits `className="bg-ink-700"` cannot.
+
+Two skins ship. `ledger` is the design UI.md specifies. **`parchment` is a
+deliberately hostile stub** — it inverts the ground completely rather than
+shifting a hue, because the point of a second skin before there is a second
+design is to *find* the places that assume a dark background. It is labelled
+incomplete and not contrast-audited, which is load-bearing: UI.md §10's ratios
+were measured against `ledger` and do not carry over.
+
+**Assets resolve by logical key through a manifest** — `assets.portrait('hamilton')`,
+never a path — and every one returns a **generated inline SVG placeholder** at
+the final dimensions, carrying its own key as a label. Generated rather than
+committed because a placeholder file can itself go missing, because a generated
+one can name itself in a screenshot, and because a grey plate reading
+`portrait/hamilton` is obviously absent while a stock silhouette is a design
+decision nobody made (D-052). Reserved slots are on the Government screen now.
+
+**The audio bus is silent, not stubbed** (D-053). No files, so no sound — but it
+resolves cue keys, applies mute and both faders, records what would have been
+heard, tracks the music layer and runs 2400ms crossfades against an injectable
+clock. A stub that returned instantly would let the interface come to depend on
+audio being instantaneous, and that assumption would break the day files arrive.
+Settings has a mute toggle and four sliders, persisted in localStorage with the
+skin — not in `GameState`, because a volume belongs to the player rather than to
+the republic.
+
+**Copy has a home**: `src/content/copy.ts` holds the chrome. The long
+explanatory paragraphs in panels are still inline, logged as `BLOCKERS.md`
+B-008 with the reasoning — they are arguments rather than labels, every one is
+asserted verbatim by a test, and the brief's stated hazards do not apply to a
+paragraph in a `max-w-prose`.
+
+**Tests:** 30 in `lib/theming.test.ts`, 9 in `components/game/settings.test.tsx`.
+Human-eye checks are `docs/MANUAL-QA.md` §22 — and 22.2 is the important one:
+walk every screen in the Parchment skin and look for anything that stays dark.
 
 ---
 

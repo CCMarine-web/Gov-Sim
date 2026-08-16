@@ -7,6 +7,7 @@ writing code. Then, depending on the task:
 
 - Touching simulation logic or numbers → **[docs/ECONOMY.md](docs/ECONOMY.md)**
 - Touching interface or styling → **[docs/UI.md](docs/UI.md)**
+- Touching colours, skins, assets or audio → **[docs/THEMING.md](docs/THEMING.md)**
 
 Where a document and the code disagree, that is a bug in one of them. Fix it in
 the same commit that caused the drift.
@@ -82,7 +83,9 @@ This matters as much as the architecture rules.
   and the engine stay in sync.
 - **Design tokens live in `src/app/globals.css`** under `@theme` (Tailwind v4 is
   configured in CSS, not `tailwind.config.ts`). No arbitrary hex values in
-  components — add the token first.
+  components — add the token first. **A test enforces this**: it reads the source
+  of every component and fails on a hex value, an arbitrary Tailwind value, or a
+  hardcoded asset path. See `docs/THEMING.md`.
 - **`steel-*` colors are reserved for historical/benchmark data only.** No
   simulated value and no UI chrome may use them.
 - **All numeric displays use tabular numerals.** Enforced through the shared

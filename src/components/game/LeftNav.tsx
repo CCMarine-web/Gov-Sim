@@ -19,6 +19,7 @@ import {
   Users,
 } from 'lucide-react';
 import type { ComponentType } from 'react';
+import { COPY } from '@/content/copy';
 
 export type SectionId =
   /** The main view. Was 'desk' until queue item 9 replaced it with the map. */
@@ -39,15 +40,15 @@ interface NavItem {
 }
 
 const ITEMS: NavItem[] = [
-  { id: 'map', label: 'Map', Icon: Map },
-  { id: 'treasury', label: 'Treasury', Icon: Coins },
-  { id: 'legislation', label: 'Legislation', Icon: Scale },
-  { id: 'congress', label: 'Congress', Icon: Users },
-  { id: 'diplomacy', label: 'Diplomacy', Icon: Globe },
-  { id: 'regions', label: 'Regions', Icon: LayoutGrid },
-  { id: 'government', label: 'Government', Icon: Landmark },
-  { id: 'history', label: 'History', Icon: BookOpen },
-  { id: 'chronicle', label: 'Chronicle', Icon: ScrollText },
+  { id: 'map', label: COPY.nav.map, Icon: Map },
+  { id: 'treasury', label: COPY.nav.treasury, Icon: Coins },
+  { id: 'legislation', label: COPY.nav.legislation, Icon: Scale },
+  { id: 'congress', label: COPY.nav.congress, Icon: Users },
+  { id: 'diplomacy', label: COPY.nav.diplomacy, Icon: Globe },
+  { id: 'regions', label: COPY.nav.regions, Icon: LayoutGrid },
+  { id: 'government', label: COPY.nav.government, Icon: Landmark },
+  { id: 'history', label: COPY.nav.history, Icon: BookOpen },
+  { id: 'chronicle', label: COPY.nav.chronicle, Icon: ScrollText },
 ];
 
 export function LeftNav({
@@ -61,7 +62,8 @@ export function LeftNav({
 }) {
   return (
     <nav
-      className="flex w-[200px] shrink-0 flex-col gap-0.5 border-r border-ink-400 bg-ink-800 p-2"
+      style={{ width: 'var(--size-nav)' }}
+      className="flex shrink-0 flex-col gap-0.5 border-r border-ink-400 bg-ink-800 p-2"
       aria-label="Sections"
     >
       {ITEMS.map(({ id, label, Icon }) => {

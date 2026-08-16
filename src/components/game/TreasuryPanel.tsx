@@ -432,7 +432,10 @@ function RevenueAttribution({ state }: { state: GameState }) {
         </p>
       ) : (
         <div className="mt-2 overflow-x-auto">
-          <table className="w-full min-w-[42rem] border-collapse text-small">
+          <table
+            className="w-full border-collapse text-small"
+            style={{ minWidth: 'var(--size-table-treasury)' }}
+          >
             <thead>
               <tr className="border-b border-ink-400 text-left">
                 <th className="py-1 pr-3 font-normal text-content-secondary">Tax</th>

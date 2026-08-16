@@ -197,3 +197,51 @@ extension of the existing model rather than new data. For military, item 12.
 data behind them, including the two the brief singles out: sectional tension,
 "the map mode that should make the coming Civil War legible decades in advance",
 and compliance, "which makes rebellion risk visible".
+
+---
+
+## B-008 — Long explanatory prose is still inline in panels
+
+**Status:** open, deliberate, not blocking. Raised by Phase 2 queue item 14.
+
+The brief asks that "copy lives in content files, not inline JSX". Item 14 built
+the mechanism — `src/content/copy.ts`, typed, one import — and moved the chrome
+into it: navigation labels, section titles, shell controls, settings.
+
+**What remains inline** is the long explanatory prose in individual panels:
+
+- the map's modern-outline caveat (`MapPanel.tsx`)
+- the cabinet's "the ratings are a model" note (`GovernmentPanel.tsx`)
+- the Congress screen's "seat counts are historical / the party split is a
+  model" line (`CongressPanel.tsx`)
+- the diplomacy screen's category notes about the Native nations
+- the Regions screen's overlapping-membership note
+- roughly a dozen similar paragraphs
+
+**Why it was not finished rather than half-finished.** Three reasons, and the
+third is the deciding one:
+
+1. These are **arguments, not labels**. Each is a paragraph making a specific
+   claim about what the player is looking at, written to sit exactly where it
+   sits. A label is a name for a thing; these are prose.
+2. Every one of them is **asserted verbatim by a test** — that is how the
+   honesty requirements are enforced. Moving them means moving the assertions
+   too, and a mechanical move of forty strings across a dozen files with tests
+   pointing at both is a genuine regression risk for no behaviour change.
+3. The brief's stated purpose is that "a visual redesign doesn't mean editing
+   text and a text edit doesn't risk breaking layout." For a paragraph of prose
+   inside a `<p>` with a `max-w-prose`, **neither hazard applies**: a redesign
+   does not touch the words, and rewording does not touch the layout. The
+   requirement is real for labels crammed into fixed chrome. It is close to
+   inert here.
+
+**What would clear it.** A mechanical pass moving each paragraph to
+`src/content/copy.ts` under a key naming its screen and purpose, updating the
+tests to assert against the constant rather than the literal. Perhaps two hours,
+and best done immediately before a redesign rather than long before one — the
+right structure for the copy registry is much easier to see when there is a
+second design to structure it against.
+
+**What is NOT blocked.** The mechanism exists and is used. A new panel written
+today has somewhere to put its labels, and the chrome — the part a translator or
+a redesign would hit first — is already there.

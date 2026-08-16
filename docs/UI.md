@@ -791,13 +791,25 @@ Six bands is the ceiling deliberately: past that a reader cannot tell two fills 
 
 ---
 
+## 11b. Theming, assets and audio
+
+Owned by **[docs/THEMING.md](THEMING.md)**, built in Phase 2 queue item 14. In short:
+
+- Every colour, dimension, radius and duration is a token in `globals.css`. **No component contains a hex value, an arbitrary Tailwind value, or an asset path**, and a test reads the source of every component to keep that true.
+- A skin is a set of custom-property overrides applied by `data-skin` on the document element — never props, never context. Two ship: `ledger` (the design this document specifies) and `parchment` (an honest stub, not contrast-audited).
+- **The contrast ratios in §10 were measured against `ledger` and do not carry over to another skin.** A skin that has not been audited declares `complete: false`, and the settings panel says so.
+- Images resolve through a manifest by logical key and render generated placeholders at final dimensions, so adding art reflows nothing.
+- The audio bus is built and silent. Volume and mute are in settings and persist.
+
+---
+
 ## 12. Component inventory
 
 Built roughly in this order.
 
-**Primitives:** `<Stat>` (tabular numerals + popover; the most important component in the app) · `<Sparkline>` · `<Panel>` · `<Card>` · `<Button>` · `<Slider>` · `<Popover>` · `<Modal>` · `<Bar>` · `<SourceCitation>` · `<UnavailableData>`
+**Primitives:** `<Portrait>` · `<Seal>` · `<Banner>` (reserved art slots, item 14) · `<Stat>` (tabular numerals + popover; the most important component in the app) · `<Sparkline>` · `<Panel>` · `<Card>` · `<Button>` · `<Slider>` · `<Popover>` · `<Modal>` · `<Bar>` · `<SourceCitation>` · `<UnavailableData>`
 
-**Shell:** `<CommandBar>` · `<ClockControls>` · `<LeftNav>` · `<ChronicleFeed>` · `<FeedEntry>`
+**Shell:** `<SettingsPanel>` · `<CommandBar>` · `<ClockControls>` · `<LeftNav>` · `<ChronicleFeed>` · `<FeedEntry>`
 
 **Screens:** `<TitleScreen>` · `<FoundingScreen>` · `<MapPanel>` (the main view since queue item 9) · `<Desk>` (now the summary beneath the map) · `<Treasury>` · `<Legislation>` · `<Regions>` · `<Government>` · `<History>` · `<Chronicle>` · `<EventModal>`
 

@@ -30,6 +30,7 @@ import { RANGES, REPUBLIC_DECAY_PER_MONTH } from '@/sim/calibration';
 import { explainStat } from '@/sim/modifiers';
 import type { GameState } from '@/sim/types';
 import { formatIndex } from '@/lib/format';
+import { Portrait } from '@/components/primitives/Art';
 
 export function GovernmentPanel({
   state,
@@ -59,12 +60,22 @@ export function GovernmentPanel({
             The office
           </h3>
 
-          <p className="mt-2 font-serif text-h1 text-content-primary">
-            {state.ruler.name}
-          </p>
-          <p className="text-body text-content-secondary">
-            {state.ruler.title} · {state.ruler.houseName}
-          </p>
+          {/*
+            THE PORTRAIT SLOT IS RESERVED, at its final dimensions, with a
+            labelled placeholder. Adding real art is a manifest edit and this
+            layout does not move. (brief §8)
+          */}
+          <div className="mt-2 flex gap-3">
+            <Portrait id={state.ruler.portraitId ?? 'unknown'} />
+            <div>
+              <p className="font-serif text-h1 text-content-primary">
+                {state.ruler.name}
+              </p>
+              <p className="text-body text-content-secondary">
+                {state.ruler.title} · {state.ruler.houseName}
+              </p>
+            </div>
+          </div>
           <p className="mt-1 text-small text-content-muted">
             Age <span className="tabular">{age}</span> · in office since{' '}
             <span className="tabular">{formatLongDate(state.ruler.accededDay)}</span>
@@ -341,7 +352,13 @@ function CabinetSection({
           return (
             <div key={office.id} className="py-2" data-office={office.id}>
               <div className="flex flex-wrap items-baseline justify-between gap-2">
-                <p className="text-body text-content-primary">{office.title}</p>
+                <p className="flex items-center gap-2 text-body text-content-primary">
+                  <Portrait
+                    id={holder?.candidate?.id ?? 'unknown'}
+                    size="small"
+                  />
+                  {office.title}
+                </p>
                 {holder ? (
                   <p className="text-body text-content-secondary">
                     {holder.name}

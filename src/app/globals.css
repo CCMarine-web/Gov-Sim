@@ -133,6 +133,26 @@
   --text-data-sm: 13px;
   --text-data-sm--line-height: 16px;
 
+  /* --- Layout. docs/THEMING.md §3 ---------------------------------------
+     Every fixed dimension in the interface, so a redesign does not mean
+     hunting arbitrary values through components. Anything a skin might want to
+     change belongs here rather than in a className. */
+  --size-nav: 200px;
+  --size-feed: 320px;
+  --size-feed-drawer: min(320px, 85vw);
+  --size-table-history: 720px;
+  --size-table-treasury: 42rem;
+
+  /* --- Reserved art slots. brief §8, "reserve the space now." ------------
+     These exist at their final dimensions with placeholder fills, so dropping
+     real artwork in does not reflow every screen. */
+  --size-portrait-w: 96px;
+  --size-portrait-h: 120px;
+  --size-portrait-sm-w: 48px;
+  --size-portrait-sm-h: 60px;
+  --size-seal: 64px;
+  --size-banner-h: 120px;
+
   /* --- Radii. Nothing softer; softness reads as consumer software. ------- */
   --radius-DEFAULT: 2px;
   --radius-card: 4px;
@@ -146,6 +166,65 @@
   --duration-flash: 400ms;
   --duration-popover: 100ms;
   --duration-modal: 180ms;
+}
+
+
+/* ============================================================================
+   SKINS — brief §8
+
+   A skin is a set of custom-property overrides applied by `data-skin` on the
+   document element. Not props, not context, not a class components branch on:
+   the switching mechanism has to live somewhere components cannot reach, or
+   "a future art-driven skin should require no component edits" is unenforceable.
+
+   `ledger` is the default and needs no block — it IS the @theme above.
+
+   Adding a skin is a block here plus one entry in src/lib/theme.ts.
+   Full guidance, including what an artist would have to deliver, is in
+   docs/THEMING.md.
+   ========================================================================= */
+
+/* ----------------------------------------------------------------------------
+   PARCHMENT — the stub, and deliberately the harshest possible test.
+
+   It inverts the ground completely: dark ink on aged paper rather than light
+   text on dark. Anything in the interface that quietly assumes a dark
+   background shows up immediately, which is the entire point of shipping a
+   second skin before there is a second design.
+
+   NOT contrast-audited. docs/UI.md §10 ratios were measured against `ledger`
+   and do not carry over. The settings panel says so.
+   -------------------------------------------------------------------------- */
+
+[data-skin='parchment'] {
+  /* Structure inverts: the "ink" family becomes the paper. */
+  --color-ink-900: #d8cfb8;
+  --color-ink-800: #ede7d9;
+  --color-ink-700: #f5f1e8;
+  --color-ink-600: #e6dfcd;
+  --color-ink-500: #d8cfb8;
+  --color-ink-400: #b9ab8c;
+
+  /* Text inverts with it. */
+  --color-content-primary: #1f1b14;
+  --color-content-secondary: #4a4335;
+  --color-content-muted: #6b6250;
+  --color-content-disabled: #9a9179;
+
+  /* The accents move to their dark-on-light variants, which already exist
+     because the parchment surfaces needed them. */
+  --color-brass-300: #7d631f;
+  --color-brass-400: #6b5419;
+  --color-brass-focus: #4a3a10;
+  --color-oxblood-300: #6e2c26;
+  --color-verdigris-400: #3b6146;
+  --color-steel-400: #45597a;
+
+  /* Map fills need a light ground to read against. */
+  --color-map-nodata: #ded5c0;
+  --color-map-border: #b9ab8c;
+  --color-map-unorganized: #c9bc9f;
+  --color-map-foreign: #ded5c0;
 }
 
 /* ============================================================================

@@ -18,7 +18,8 @@ Three documents own three concerns, and nothing is duplicated between them:
 |---|---|
 | `DESIGN.md` (this file) | Vision, architecture rules, data model, systems design, roadmap |
 | `docs/ECONOMY.md` | Every simulation variable, formula, causal claim, and calibration constant |
-| `docs/UI.md` | Screen-by-screen interface specification and the design token system |
+| `docs/UI.md` | Screen-by-screen interface specification |
+| `docs/THEMING.md` | Design tokens, skins, the asset registry, the audio bus, interface copy |
 
 ---
 

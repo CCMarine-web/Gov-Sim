@@ -109,7 +109,7 @@ export function HistoryPanel({ state }: { state: GameState }) {
             ▪
           </span>
           <svg width="24" height="6" aria-hidden>
-            <line x1="0" y1="3" x2="24" y2="3" stroke="#C9A227" strokeWidth="2" />
+            <line x1="0" y1="3" x2="24" y2="3" stroke="var(--color-brass-400)" strokeWidth="2" />
           </svg>
           Your America <span className="text-content-muted">(simulated)</span>
         </span>
@@ -123,7 +123,7 @@ export function HistoryPanel({ state }: { state: GameState }) {
               y1="3"
               x2="24"
               y2="3"
-              stroke="#7A93B8"
+              stroke="var(--color-steel-400)"
               strokeWidth="2"
               strokeDasharray="4 3"
             />
@@ -134,7 +134,10 @@ export function HistoryPanel({ state }: { state: GameState }) {
 
       {/* --- Rows ----------------------------------------------------- */}
       <div className="overflow-x-auto rounded-card border border-ink-400 bg-ink-700">
-        <table className="w-full min-w-[720px]">
+        <table
+          className="w-full"
+          style={{ minWidth: 'var(--size-table-history)' }}
+        >
           <thead>
             <tr className="border-b border-ink-400 text-left">
               <th className="px-3 py-2 text-label uppercase tracking-wider text-content-muted">
@@ -440,7 +443,7 @@ function TrajectoryChart({
             key={d}
             d={d}
             fill="none"
-            stroke="#7A93B8"
+            stroke="var(--color-steel-400)"
             strokeWidth="1.5"
             strokeDasharray="4 3"
           />
@@ -452,12 +455,12 @@ function TrajectoryChart({
             cy={y(p.value)}
             r="2"
             fill="none"
-            stroke="#7A93B8"
+            stroke="var(--color-steel-400)"
             strokeWidth="1.2"
           />
         ))}
         {simPath && (
-          <path d={simPath} fill="none" stroke="#C9A227" strokeWidth="1.5" />
+          <path d={simPath} fill="none" stroke="var(--color-brass-400)" strokeWidth="1.5" />
         )}
       </svg>
       {hasGaps && (
