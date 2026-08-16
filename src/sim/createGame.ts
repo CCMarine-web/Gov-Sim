@@ -201,6 +201,12 @@ export function createGame(options: NewGameOptions): GameState {
       legitimacy,
       legitimacyBase: legitimacy,
       sectionalTension: START.sectionalTension,
+      // Day 0 is an equilibrium by construction, so the model targets equal
+      // the starting values until the first monthly recompute.
+      modelTargets: {
+        stability,
+        sectionalTension: START.sectionalTension,
+      },
     },
 
     regions,

@@ -135,6 +135,19 @@ export interface NationStats {
   legitimacyBase: number;
   /** 0–100. */
   sectionalTension: number;
+  /**
+   * The model's targets BEFORE the modifier ledger is applied.
+   *
+   * Stored rather than re-derived in the UI, so the stat popover can show the
+   * honest picture for a lagged stat: the current value, the modifiers acting
+   * on its target, and where it is therefore heading. Without this the popover
+   * would have to pretend modifiers act on the current value, which for a
+   * lagged stat is simply untrue. (UI.md §7)
+   */
+  modelTargets: {
+    stability: number;
+    sectionalTension: number;
+  };
 }
 
 /**

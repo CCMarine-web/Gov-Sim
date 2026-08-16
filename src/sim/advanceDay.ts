@@ -254,15 +254,17 @@ export function recomputeEconomy(state: GameState): {
   );
 
   // --- Tension and stability ----------------------------------------------
+  const tensionModelTarget = tensionTarget({
+    sentiments: regions.map((r) => r.sentiment),
+    prosperities: regions.map((r) => r.prosperity),
+    slaveryTension: numericFlag(state, 'slavery_tension'),
+  });
+
   const sectionalTension = lagToward(
     state.nation.sectionalTension,
     resolveStat(
       'nation.sectionalTension',
-      tensionTarget({
-        sentiments: regions.map((r) => r.sentiment),
-        prosperities: regions.map((r) => r.prosperity),
-        slaveryTension: numericFlag(state, 'slavery_tension'),
-      }),
+      tensionModelTarget,
       state.activeModifiers,
       day,
       RANGES.percent,
@@ -273,15 +275,17 @@ export function recomputeEconomy(state: GameState): {
   const meanSentiment =
     regions.reduce((s, r) => s + r.sentiment, 0) / (regions.length || 1);
 
+  const stabilityModelTarget = stabilityTarget({
+    meanSentiment,
+    sectionalTension,
+    legitimacy: state.nation.legitimacy,
+  });
+
   const stability = lagToward(
     state.nation.stability,
     resolveStat(
       'nation.stability',
-      stabilityTarget({
-        meanSentiment,
-        sectionalTension,
-        legitimacy: state.nation.legitimacy,
-      }),
+      stabilityModelTarget,
       state.activeModifiers,
       day,
       RANGES.percent,
@@ -365,6 +369,10 @@ export function recomputeEconomy(state: GameState): {
         legitimacy,
         legitimacyBase,
         sectionalTension,
+        modelTargets: {
+          stability: stabilityModelTarget,
+          sectionalTension: tensionModelTarget,
+        },
       },
       treasury: {
         ...state.treasury,
