@@ -20,7 +20,8 @@ import { ChronicleFeed } from './ChronicleFeed';
 import { EventModal } from './EventModal';
 import { LeftNav, type SectionId } from './LeftNav';
 import { SaveMenu } from './SaveMenu';
-import { Chronicle, Desk, Government, Legislation, Regions } from './sections';
+import { Chronicle, Desk, Legislation, Regions } from './sections';
+import { GovernmentPanel } from './GovernmentPanel';
 import { HistoryPanel } from './HistoryPanel';
 import { TreasuryPanel } from './TreasuryPanel';
 
@@ -129,7 +130,7 @@ export function GameShell() {
           {section === 'treasury' && <TreasuryPanel state={snapshot} />}
           {section === 'legislation' && <Legislation state={snapshot} />}
           {section === 'regions' && <Regions state={snapshot} />}
-          {section === 'government' && <Government />}
+          {section === 'government' && <GovernmentPanel state={snapshot} />}
           {section === 'history' && <HistoryPanel state={snapshot} />}
           {section === 'chronicle' && <Chronicle state={snapshot} />}
         </main>

@@ -6,9 +6,8 @@
  * Each section renders into the main panel. Internal panels scroll; the shell
  * stays fixed. (UI.md §4.4)
  *
- * Sections not yet built render an honest, specific empty state rather than a
- * blank panel or a spinner that never resolves. Saying what is missing and when
- * it arrives is more useful than pretending.
+ * Treasury, History and Government grew large enough to warrant their own
+ * files; the rest live here.
  */
 
 import { PHASE_1_CONTENT } from '@/content';
@@ -61,15 +60,6 @@ function Row({ label, value }: { label: string; value: string }) {
     <div className="flex items-baseline justify-between gap-3 py-0.5">
       <span className="text-small text-content-secondary">{label}</span>
       <span className="tabular text-data-sm text-content-primary">{value}</span>
-    </div>
-  );
-}
-
-function NotBuilt({ what, when }: { what: string; when: string }) {
-  return (
-    <div className="rounded-card border border-dashed border-ink-400 p-6">
-      <h3 className="font-serif text-h2 text-content-primary">{what}</h3>
-      <p className="mt-1.5 max-w-prose text-body text-content-secondary">{when}</p>
     </div>
   );
 }
@@ -493,12 +483,4 @@ export function Chronicle({ state }: { state: GameState }) {
 // NOT YET BUILT
 // ============================================================================
 
-export function Government() {
-  return (
-    <NotBuilt
-      what="Government"
-      when="Cabinet, officeholders, and the legitimacy breakdown. The legitimacy breakdown is already available by hovering the Legitimacy figure in the command bar."
-    />
-  );
-}
 
