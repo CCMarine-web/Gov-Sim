@@ -29,6 +29,7 @@
 
 import { blocWeights, driftBlocs } from './blocs';
 import { annualTribute, decayRelations } from './diplomacy';
+import { accrueWeariness } from './war';
 import {
   dayToDate,
   daysInYear,
@@ -1187,6 +1188,13 @@ export function advanceDay(state: GameState, content: ContentPack): TickResult {
       relationship loses what it bought. (ECONOMY.md §7.23)
     */
     next = { ...next, diplomacy: decayRelations(next.diplomacy) };
+
+    /*
+      A MONTH OF WAR. Weariness rises, and rises faster the worse the case for
+      the war was — which is what stops a badly justified war from being a
+      single payment made at the declaration. (ECONOMY.md §7.24)
+    */
+    next = accrueWeariness(next);
 
     const weights = blocWeights(next);
     const decayed = decayGrievance(next.grievance, weights);

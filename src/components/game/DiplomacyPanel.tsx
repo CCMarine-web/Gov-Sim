@@ -35,7 +35,18 @@ import {
   treatiesInForce,
   annualTribute,
 } from '@/sim/diplomacy';
-import { ENVOY_CAPITAL_COST } from '@/sim/calibration';
+import {
+  ENVOY_CAPITAL_COST,
+  FABRICATION_CAPITAL_COST,
+  PEACE_CAPITAL_COST,
+  UNJUSTIFIED_WAR_THRESHOLD,
+} from '@/sim/calibration';
+import {
+  availableGrounds,
+  declarationCost,
+  peaceOnOffer,
+  warWith,
+} from '@/sim/war';
 import { formatCurrency } from '@/lib/format';
 import type { GameState } from '@/sim/types';
 
@@ -69,10 +80,16 @@ export function DiplomacyPanel({
   state,
   onEnvoy,
   onSign,
+  onDeclare,
+  onFabricate,
+  onPeace,
 }: {
   state: GameState;
   onEnvoy?: (powerId: string) => void;
   onSign?: (treatyId: string) => void;
+  onDeclare?: (powerId: string, groundsId: string) => void;
+  onFabricate?: (powerId: string) => void;
+  onPeace?: (powerId: string) => void;
 }) {
   const [open, setOpen] = useState<string | null>(null);
 
@@ -123,6 +140,9 @@ export function DiplomacyPanel({
                 onToggle={() => setOpen(open === power.id ? null : power.id)}
                 onEnvoy={onEnvoy}
                 onSign={onSign}
+                onDeclare={onDeclare}
+                onFabricate={onFabricate}
+                onPeace={onPeace}
               />
             ))}
           </div>
@@ -139,6 +159,9 @@ function PowerCard({
   onToggle,
   onEnvoy,
   onSign,
+  onDeclare,
+  onFabricate,
+  onPeace,
 }: {
   power: ForeignPower;
   state: GameState;
@@ -146,6 +169,9 @@ function PowerCard({
   onToggle: () => void;
   onEnvoy?: (powerId: string) => void;
   onSign?: (treatyId: string) => void;
+  onDeclare?: (powerId: string, groundsId: string) => void;
+  onFabricate?: (powerId: string) => void;
+  onPeace?: (powerId: string) => void;
 }) {
   const relation = state.diplomacy.relations[power.id];
   const value = relation?.relation ?? 0;
@@ -269,6 +295,15 @@ function PowerCard({
             )}
           </div>
 
+          {/* --- War ----------------------------------------------------- */}
+          <WarBlock
+            power={power}
+            state={state}
+            onDeclare={onDeclare}
+            onFabricate={onFabricate}
+            onPeace={onPeace}
+          />
+
           {/* --- Treaties ------------------------------------------------ */}
           <div className="mt-2 border-t border-ink-400 pt-2">
             <p className="text-label uppercase tracking-wider text-content-muted">
@@ -320,5 +355,167 @@ function PowerCard({
         </div>
       )}
     </article>
+  );
+}
+
+/**
+ * WAR — the declaration, and the price on it
+ *
+ * Phase 2 brief §7, queue item 12. What this block has to make visible BEFORE
+ * the player commits:
+ *
+ *   1. Every ground available, with how good a case it makes.
+ *   2. What each would cost — capital always, legitimacy in proportion to how
+ *      thin the case is, and the standing of the country with every other power.
+ *   3. Which path the player is on. A crown declares; a republic asks. The
+ *      button says which, because they are different acts.
+ *
+ * A manufactured claim is offered last and is labelled for what it is. A player
+ * who takes it should be able to see the whole bill first.
+ */
+function WarBlock({
+  power,
+  state,
+  onDeclare,
+  onFabricate,
+  onPeace,
+}: {
+  power: ForeignPower;
+  state: GameState;
+  onDeclare?: (powerId: string, groundsId: string) => void;
+  onFabricate?: (powerId: string) => void;
+  onPeace?: (powerId: string) => void;
+}) {
+  const war = warWith(state, power.id);
+
+  if (war) {
+    const terms = peaceOnOffer(state, power.id);
+    return (
+      <div
+        className="mt-2 border-t border-oxblood-400 pt-2"
+        data-testid={`war-${power.id}`}
+      >
+        <p className="text-label uppercase tracking-wider text-oxblood-300">
+          At war since {formatLongDate(war.declaredDay)}
+        </p>
+        <div className="flex items-baseline justify-between py-0.5">
+          <span className="text-small text-content-secondary">Weariness</span>
+          <span className="tabular text-data-sm text-content-primary">
+            {war.weariness.toFixed(0)}
+          </span>
+        </div>
+        {war.fabricated && (
+          <p className="text-small text-oxblood-300">
+            Begun on a manufactured grievance, and the country knows it.
+          </p>
+        )}
+        <p className="mt-0.5 text-small text-content-muted">
+          Peace today would come{' '}
+          {terms === 'victory'
+            ? 'on our terms'
+            : terms === 'settlement'
+              ? 'on terms nobody would call a victory'
+              : 'on theirs'}
+          .
+        </p>
+        <button
+          type="button"
+          data-peace={power.id}
+          disabled={state.politicalCapital.current < PEACE_CAPITAL_COST}
+          onClick={() => onPeace?.(power.id)}
+          className="mt-1 rounded border border-ink-400 px-2 py-1 text-small text-content-secondary hover:bg-ink-500 disabled:cursor-not-allowed disabled:text-content-disabled"
+        >
+          Seek peace — {PEACE_CAPITAL_COST} political capital
+        </button>
+      </div>
+    );
+  }
+
+  const grounds = availableGrounds(state, power.id);
+  const republic = state.governmentType === 'republic';
+
+  return (
+    <div className="mt-2 border-t border-ink-400 pt-2" data-testid={`grounds-${power.id}`}>
+      <p className="text-label uppercase tracking-wider text-content-muted">
+        Grounds for war
+      </p>
+      {/*
+        The path is stated, not implied. A crown declares and a republic asks,
+        and those are different acts with different failure modes.
+      */}
+      <p className="text-small text-content-muted">
+        {republic
+          ? 'A declaration must carry both chambers. It can be voted down.'
+          : 'The crown declares. Nothing can refuse it — only the country can remember it.'}
+      </p>
+
+      <ul className="mt-1 space-y-2">
+        {grounds.map((ground) => {
+          const cost = declarationCost(ground);
+          return (
+            <li key={ground.id} data-grounds={ground.id}>
+              <div className="flex items-baseline justify-between gap-2">
+                <span className="text-small text-content-primary">{ground.name}</span>
+                <span className="tabular text-small text-content-muted">
+                  case {ground.strength}/100
+                </span>
+              </div>
+              <p className="text-small text-content-secondary">{ground.claim}</p>
+
+              <p className="text-small text-content-muted">
+                {ground.fabricated
+                  ? 'Manufactured. It will not bear examination.'
+                  : cost.unjustified
+                    ? `Thin — a defensible case needs ${UNJUSTIFIED_WAR_THRESHOLD}.`
+                    : 'A defensible case.'}{' '}
+                Costs {cost.capital} capital
+                {cost.legitimacy > 0.5 &&
+                  ` and about ${cost.legitimacy.toFixed(0)} legitimacy`}
+                {cost.relationPenaltyToOthers > 0 &&
+                  `, and every other power thinks less of us for it`}
+                .
+              </p>
+
+              {ground.fabricated ? (
+                <div className="mt-0.5 flex flex-wrap gap-1">
+                  <button
+                    type="button"
+                    data-fabricate={power.id}
+                    disabled={state.politicalCapital.current < FABRICATION_CAPITAL_COST}
+                    onClick={() => onFabricate?.(power.id)}
+                    className="rounded border border-ink-400 px-2 py-1 text-small text-content-secondary hover:bg-ink-500 disabled:cursor-not-allowed disabled:text-content-disabled"
+                  >
+                    Prepare the grievance — {FABRICATION_CAPITAL_COST} capital
+                  </button>
+                  <button
+                    type="button"
+                    data-declare={ground.id}
+                    disabled={state.politicalCapital.current < cost.capital}
+                    onClick={() => onDeclare?.(power.id, ground.id)}
+                    className="rounded border border-oxblood-400 px-2 py-1 text-small text-oxblood-300 hover:bg-ink-500 disabled:cursor-not-allowed disabled:text-content-disabled"
+                  >
+                    {republic ? 'Put it to Congress' : 'Declare war'}
+                  </button>
+                </div>
+              ) : (
+                <button
+                  type="button"
+                  data-declare={ground.id}
+                  disabled={state.politicalCapital.current < cost.capital}
+                  onClick={() => onDeclare?.(power.id, ground.id)}
+                  className="mt-0.5 rounded border border-oxblood-400 px-2 py-1 text-small text-oxblood-300 hover:bg-ink-500 disabled:cursor-not-allowed disabled:text-content-disabled"
+                >
+                  {republic ? 'Put it to Congress' : 'Declare war'}
+                </button>
+              )}
+
+              <p className="mt-0.5 max-w-prose text-small text-content-muted">
+                {ground.historicalNote}
+              </p>
+            </li>
+          );
+        })}
+      </ul>
+    </div>
   );
 }

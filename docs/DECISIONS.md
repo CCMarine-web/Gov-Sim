@@ -1410,3 +1410,90 @@ So a v7 save from 1798 resumes with Britain still cool and nothing signed. That
 is a country that took a different path, not a broken one, and it is the same
 answer `v4ToV5` gave for grievance and `v6ToV7` for blocs: a save records no
 history of a system it did not have.
+
+---
+
+## D-045 — A declaration of war is a measure, and uses the same vote
+
+**Date:** 2026-08-16 (Phase 2, queue item 12)
+**Status:** implemented
+
+`whipCount` took a `Bill`. It now takes a `Measure`, which is an interface with
+one field: `blocReactions`. `Bill` satisfies it structurally, and so does a
+casus belli.
+
+**Because that is all the vote model ever asked a bill.** It wanted to know whom
+a measure helps and whom it harms; everything else — the party line, the
+sectional term, grievance, whipping, riders, promises — is computed from the
+delegation and the state. Widening the parameter was a two-line change.
+
+**The alternative was a second vote path for war**, and it would have been
+wrong in a way that gets worse over time. Two implementations of "how does the
+House decide" eventually disagree: one gets the schadenfreude discount and the
+other does not, one gets the location quotient and the other does not, and the
+difference shows up as a war that passes when the identical bill would fail.
+
+The payoff is immediate: a declaration gets the full inspectable division, with
+every delegation's reasons, and the player can whip a war exactly as they whip a
+tariff — at the same price.
+
+---
+
+## D-046 — Aggression is a spectrum, and diplomacy closes it
+
+**Date:** 2026-08-16 (Phase 2, queue item 12)
+**Status:** implemented
+
+The brief asks for "the HOI4-style threshold gate: aggression without
+justification tanks legitimacy". A gate implies a switch: justified or not.
+
+**Implemented as a slope instead.** `UNJUSTIFIED_WAR_THRESHOLD` is 60, and the
+legitimacy cost is `shortfall × 22` where the shortfall is how far under 60 the
+case falls. So the Mississippi at 58 costs almost nothing and a manufactured
+claim at 18 costs a great deal, with everything in between priced in between.
+
+**Why a slope is better here.** A switch would make 59 and 18 identical, which
+is absurd, and it would make the whole system a binary the player solves once. A
+slope means the player is choosing how much of a case they have, which is the
+actual decision a government faces.
+
+**The strengths were set against the record**, not tuned in isolation: the
+Algerine captures (80), the French spoliations (74) and impressment (70) above
+the line; the retained posts (62) just above; the Mississippi (58) and the Ohio
+boundary (55) just below. That ordering is roughly how contemporaries ranked
+them, and it puts the two wars the United States actually came closest to
+fighting at the top.
+
+**The most important consequence is that diplomacy closes the grounds.** A
+casus belli with a `settledBy` treaty vanishes once that treaty is in force. Sign
+the Jay Treaty and the case about the posts is gone — but impressment remains,
+because the treaty was silent on it. That is not a flourish: it is the mechanism
+by which treaties genuinely prevent wars, and it is why the treaty and war
+systems had to be designed against one another rather than in sequence.
+
+---
+
+## D-047 — Peace is deterministic, because there is nothing to roll
+
+**Date:** 2026-08-16 (Phase 2, queue item 12)
+**Status:** implemented
+
+Combat is out of scope this phase — the brief says so — so a war ends when the
+government decides to end it, on terms computed from the country's position:
+stability, legitimacy, remaining patience, against the enemy's strength.
+
+**No randomness.** The temptation is a die roll, on the grounds that war is
+uncertain. But with no campaign to simulate there is nothing for the randomness
+to *represent*: it would be a coin flip wearing a costume. Worse, it would
+destroy the only interesting decision the system has — whether to fight on —
+because a player cannot reason about a coin.
+
+Deterministic terms mean "hold out another year and the terms improve" is a real
+judgement the player can make from what is on the screen. And when combat
+arrives in Phase 3 the uncertainty will come from the campaign, where it belongs,
+rather than from a shrug at the peace table.
+
+**Weariness is the term that makes this a decision at all.** It rises faster the
+worse the case for the war was — twice as fast at zero justification as at full
+— so a badly justified war is not a single payment at the declaration. It gets
+worse every month, and it degrades the peace the player can eventually get.

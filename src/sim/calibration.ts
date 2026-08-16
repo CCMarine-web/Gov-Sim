@@ -1111,3 +1111,64 @@ export const DIPLOMATIC_DECAY_PER_MONTH = 0.02;
  */
 export const TREATY_BREACH_RELATION_COST = 55;
 export const TREATY_BREACH_LEGITIMACY_COST = 9;
+
+// ============================================================================
+// WAR (brief §7, ECONOMY.md §7.24)
+// ============================================================================
+
+/**
+ * The threshold gate the brief asks for.
+ *
+ * A casus belli at or above this is a defensible case: the declaration costs
+ * almost nothing in legitimacy and a republic can usually carry it. Below it,
+ * the cost rises in proportion to how far short it falls — which is what makes
+ * "aggression without justification" a spectrum rather than a switch.
+ *
+ * 60 is set so that the real grievances of the decade sit either side of it in
+ * roughly the order contemporaries ranked them: the Algerine captures (80) and
+ * the French spoliations (74) above, impressment (70) above, the retained posts
+ * (62) just above, the Mississippi (58) and the Ohio boundary (55) just below —
+ * and a manufactured claim (18) nowhere near.
+ */
+export const UNJUSTIFIED_WAR_THRESHOLD = 60;
+
+/** Political capital to put a declaration, on either path. */
+export const WAR_DECLARATION_CAPITAL = 90;
+
+/**
+ * Legitimacy lost at a completely unjustified declaration, scaled down toward
+ * zero as the case approaches the threshold.
+ *
+ * 22 is deliberately larger than any single decree in the game costs. Going to
+ * war without a case should be the most expensive thing a government can do
+ * short of losing one.
+ */
+export const WAR_LEGITIMACY_PER_MISSING_JUSTIFICATION = 22;
+
+/** Capital to prepare a pretext, spent whether or not it is ever used. */
+export const FABRICATION_CAPITAL_COST = 45;
+
+/** On top of the shortfall, for a claim that was manufactured outright. */
+export const FABRICATED_WAR_LEGITIMACY_COST = 15;
+
+/**
+ * What every OTHER power thinks of a country that fabricates a pretext.
+ *
+ * "Invites foreign hostility" (brief §7). A government that invents its reasons
+ * once is a government nobody can safely sign anything with, so the penalty
+ * falls on every relation rather than on the victim alone.
+ */
+export const FABRICATED_WAR_RELATION_COST = 25;
+
+/** Trade capacity lost while a war is on. Blockade, embargo and risk. */
+export const WAR_TRADE_SUPPRESSION = 0.28;
+
+/**
+ * Weariness per month at a perfectly justified war, doubled at a wholly
+ * unjustified one. About three years to exhaust a country that believed in it,
+ * eighteen months for one that did not.
+ */
+export const WAR_WEARINESS_PER_MONTH = 2.8;
+
+/** Capital to bring a war to an end. Peace is also a negotiation. */
+export const PEACE_CAPITAL_COST = 40;

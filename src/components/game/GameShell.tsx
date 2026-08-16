@@ -12,7 +12,15 @@
 
 import { useCallback, useEffect, useState } from 'react';
 import { PHASE_1_CONTENT } from '@/content';
-import { concludeTreaty, sendMinister, setSpeed, toggle } from '@/runtime/gameLoop';
+import {
+  concludeTreaty,
+  declare,
+  fabricate,
+  seekPeace,
+  sendMinister,
+  setSpeed,
+  toggle,
+} from '@/runtime/gameLoop';
 import { SPEEDS } from '@/runtime/speeds';
 import { useGameStore } from '@/store/gameStore';
 import { startAutosave, stopAutosave } from '@/lib/saves/autosave';
@@ -190,6 +198,9 @@ export function GameShell() {
               state={snapshot}
               onEnvoy={sendMinister}
               onSign={concludeTreaty}
+              onDeclare={declare}
+              onFabricate={fabricate}
+              onPeace={seekPeace}
             />
           )}
           {section === 'regions' && <Regions state={snapshot} />}

@@ -898,3 +898,81 @@ Load a save made before this update. Relations should be at their 1789
 baselines and **nothing should be signed** — even if the save's date is after
 the Jay Treaty was historically concluded. A treaty is something the player
 earns.
+
+---
+
+## 20. War
+
+*Phase 2, queue item 12. `DECISIONS.md` D-045 to D-047, `ECONOMY.md` §7.24.*
+
+**20.1 — A crown declares; a republic asks**
+Open Diplomacy on a monarchy and expand any power. The button should read
+"Declare war" and the note above should say the crown declares and nothing can
+refuse it. Start a republic and the same button should read "Put it to
+Congress", with a note that it can be voted down.
+*Problem if:* both paths use the same wording. They are different acts.
+
+**20.2 — The republic can actually refuse**
+As a republic, try to declare war on Britain on a manufactured grievance. It
+should be voted down, the chronicle should record which chamber refused and by
+what division, and the capital should still be spent.
+*Problem if:* it passes, or the failed attempt is free.
+
+**20.3 — And can be persuaded**
+Try the Algerine captures as a republic. Unwhipped it should fail — the seamen
+and merchants want it and are outnumbered. Whip both parties hard and it should
+carry.
+*Problem if:* no amount of whipping moves it. Then the tools are decoration.
+
+**20.4 — The crown cannot be refused, and pays for it**
+As a monarchy, declare on a manufactured grievance. It happens immediately.
+Legitimacy should drop sharply, and the blocs that opposed it should show new
+grievance on the Regions screen.
+
+**20.5 — The price is on the label before you commit**
+Each ground should show how good a case it makes out of 100, what it costs in
+capital, roughly what it costs in legitimacy, and — for a weak or manufactured
+one — that every other power will think less of us.
+*Problem if:* any of that only becomes visible after the declaration.
+
+**20.6 — Aggression really does invite foreign hostility**
+Note your relations with everyone, then declare on a manufactured pretext.
+**Every** other power's relation should fall, not just the victim's.
+*Problem if:* only the victim reacts. A government that invents its reasons once
+is one nobody can safely sign anything with.
+
+**20.7 — A good case costs almost nothing abroad**
+Declare on the Algerine captures instead. Britain and France should be
+unchanged.
+
+**20.8 — Diplomacy closes the grounds**
+Look at Spain's grounds: the closure of the Mississippi should be there. Sign
+Pinckney's Treaty and look again — it should be gone. Do the same with Britain
+and the Jay Treaty: the retained posts disappear, and **impressment does not**,
+because the treaty was silent on it.
+*Problem if:* signing a treaty leaves its grievance available, or removes one it
+never addressed.
+
+**20.9 — A war is felt**
+While at war, trade capacity should carry a named "War with…" line in its
+breakdown, stability should fall, and weariness should climb month by month.
+*Problem if:* the war has no line in the ledger.
+
+**20.10 — A bad war gets worse**
+Run two games: one at war on a strong case, one on a fabricated one. After a
+year, the fabricated war's weariness should be visibly higher.
+
+**20.11 — Peace is a judgement, not a gamble**
+Before seeking peace the panel should say what terms are on offer today. Play on
+and watch them change as the country tires. Seeking peace twice from the same
+position should give the same answer.
+*Problem if:* the terms vary at random. With no combat to simulate there is
+nothing for a die roll to represent, and it would make "fight on or settle"
+unanswerable.
+
+**20.12 — Winning is worth something**
+Make peace from a strong position: legitimacy should rise. From an exhausted
+one: it should fall.
+
+**20.13 — No treaties with a power you are fighting**
+While at war with Spain, Pinckney's Treaty should say there is a war on.

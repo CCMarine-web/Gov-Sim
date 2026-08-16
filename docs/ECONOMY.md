@@ -1213,6 +1213,68 @@ So a power's population is either cited with the year it is FOR — Britain's is
 
 Naval and land strength are **calibration constants**, not history: nobody published a comparable index in 1790. They are reasoned in the content file and the screen says on its face that strength is a model.
 
+### 7.24 War — declaring it, and living with it
+
+*Phase 2 brief §7, queue item 12. Model in `src/sim/war.ts`; the grounds are content, in `src/content/diplomacy/casusBelli.ts`. Combat is explicitly out of scope for this phase.*
+
+#### The two paths, which is the whole point
+
+| | **Monarchy** | **Republic** |
+|---|---|---|
+| How it is declared | by decree, at once | by vote of both chambers |
+| What can stop it | nothing | the House or the Senate |
+| A weak pretext costs | legitimacy and grievance | the vote simply fails |
+| A strong one costs | little | a majority, and capital |
+
+A crown can always have its war. What it cannot do is have it cheaply, and what it cannot do at all is be told no. This is the same bargain the rest of the game makes — speed bought with consent — applied to the largest decision in it.
+
+**A declaration is a `Measure`** and goes through `whipCount` exactly as a bill does: same inspectable division, same reasons per delegation, same whipping, riders and promises. Widening `whipCount`'s parameter rather than writing a second vote path is deliberate — two vote paths would eventually disagree about how the House works.
+
+#### The threshold gate
+
+```
+shortfall  = max(0, (60 − strength) / 60)
+legitimacy = shortfall × 22  +  (fabricated ? 15 : 0)
+```
+
+`UNJUSTIFIED_WAR_THRESHOLD` = 60. At or above it a case is defensible and the declaration costs nothing in legitimacy. Below it the cost rises **in proportion to the shortfall**, so aggression is a spectrum rather than a switch.
+
+The threshold was set so the real grievances of the decade fall either side of it in roughly the order contemporaries ranked them:
+
+| Grounds | Strength | |
+|---|---:|---|
+| The captives at Algiers | 80 | defensible |
+| The French spoliations | 74 | defensible |
+| The impressment of seamen | 70 | defensible |
+| The retained posts | 62 | just defensible |
+| The closure of the Mississippi | 58 | thin |
+| The Ohio boundary | 55 | thin |
+| A manufactured grievance | 18 | nowhere near |
+
+**A fabricated pretext is the worst deal in the game.** It carries a flat 15 legitimacy on top of a near-maximum shortfall, and it costs 25 relation with **every other power**, not only the victim — "invites foreign hostility", because a government that invents its reasons once is a government nobody can safely sign anything with.
+
+#### Diplomacy removes grounds for war
+
+A casus belli with a `settledBy` treaty disappears once that treaty is in force. Once Britain has evacuated the posts under the Jay Treaty there is no longer a case about the posts.
+
+This is the mechanism by which diplomacy genuinely prevents wars rather than postponing them, and it is why the treaty and war systems had to be built against each other. **Impressment is deliberately not settled by the Jay Treaty**, because the treaty was silent on it — so a player who signs it finds one grievance closed and the other still open, which is exactly what happened.
+
+#### A war is a state, not a campaign
+
+There is no combat this phase, so a war is something the country is IN:
+
+- **Trade capacity −28%**, through the ledger, with no phase-in. A war closes a trade the day it is declared.
+- **Stability −8**, likewise.
+- **Weariness** rises `2.8 × (2 − justification/100)` a month: about three years to exhaust a country that believed in the war, eighteen months for one that did not. This is the only term that keeps acting after the declaration, and it is what stops a badly justified war from being a single payment made up front.
+
+#### Peace, and why it is deterministic
+
+`peaceOnOffer` compares what the country can bring — stability, legitimacy, and how much patience is left — against the enemy's strength, and returns `victory`, `settlement` or `concession`. It is a pure function of things the player can see on screen.
+
+**A die roll here would be worse than nothing.** With no combat to simulate there is nothing for randomness to represent, and a player deciding whether to fight on would have no way to reason about it. Deterministic terms mean "hold out another year and the terms improve" is a real judgement rather than a hope.
+
+Victory is worth +12 legitimacy and +6 stability — the one route by which a war improves anything. A concession costs 14 legitimacy, which is more than most decrees.
+
 ---
 
 ## 8. Government type differences

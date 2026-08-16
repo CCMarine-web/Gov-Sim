@@ -57,8 +57,8 @@ import {
 } from './calibration';
 import { isoToDay } from './calendar';
 import type {
-  Bill,
   BlocId,
+  BlocReaction,
   CongressState,
   Delegation,
   GameState,
@@ -67,6 +67,23 @@ import type {
   RegionId,
   StateSeats,
 } from './types';
+
+/**
+ * ANYTHING CONGRESS CAN VOTE ON.
+ *
+ * The vote model only ever asks a measure one question — whom does this help
+ * and whom does it harm — so that is all this interface requires. `Bill`
+ * satisfies it structurally, and so does a declaration of war (queue item 12),
+ * which is a measure Congress votes on exactly as it votes on a tariff.
+ *
+ * Widening this rather than duplicating `whipCount` for war is the whole point:
+ * a declaration gets the same inspectable division, the same reasons per
+ * delegation, the same whipping and riders and promises. A second vote path
+ * would eventually disagree with the first about how the House works.
+ */
+export interface Measure {
+  blocReactions: readonly BlocReaction[];
+}
 
 // ============================================================================
 // COMPOSITION
@@ -401,7 +418,7 @@ export const NO_TACTICS: BillTactics = { whip: {}, rider: null, logRoll: null };
  * The dot product of the party's affinities and the bill's bloc reactions.
  * Positive means the bill serves the party's coalition.
  */
-function partyLine(bill: Bill, party: Party): number {
+function partyLine(bill: Measure, party: Party): number {
   let total = 0;
 
   for (const reaction of bill.blocReactions) {
@@ -440,7 +457,7 @@ function partyLine(bill: Bill, party: Party): number {
  * sectional one.
  */
 function regionalInterest(
-  bill: Bill,
+  bill: Measure,
   standing: Record<string, number>,
   concentration: Record<string, number>,
 ): number {
@@ -505,7 +522,7 @@ export function nationalStanding(state: GameState): Record<string, number> {
 
 /** The bloc most responsible for a region's view of a bill, for the reason text. */
 function principalInterest(
-  bill: Bill,
+  bill: Measure,
   standing: Record<string, number>,
   concentration: Record<string, number>,
 ): { bloc: BlocId; reason: string } | null {
@@ -534,7 +551,7 @@ function principalInterest(
  */
 export function whipCount(
   state: GameState,
-  bill: Bill,
+  bill: Measure,
   parties: readonly Party[],
   chamber: 'house' | 'senate',
   tactics: BillTactics = NO_TACTICS,
@@ -680,7 +697,7 @@ export function whipCount(
 /** Both chambers. A bill must carry each of them. */
 export function bothChambers(
   state: GameState,
-  bill: Bill,
+  bill: Measure,
   parties: readonly Party[],
   tactics: BillTactics = NO_TACTICS,
 ): { house: WhipCount; senate: WhipCount; passes: boolean } {

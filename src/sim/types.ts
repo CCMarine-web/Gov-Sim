@@ -31,7 +31,7 @@ import type { TaxBase } from './taxBases';
  * migrated forward or refused cleanly — never crashed, never silently loaded
  * into a broken state. (DESIGN.md Rule 8)
  */
-export const SCHEMA_VERSION = 8;
+export const SCHEMA_VERSION = 9;
 
 // ============================================================================
 // GOVERNMENT AND REGIONS
@@ -1405,8 +1405,38 @@ export interface TributeObligation {
   annualAmount: number;
 }
 
+/**
+ * A war, from the declaration to the peace. (brief §7, queue item 12)
+ *
+ * Combat is out of scope for this phase, so a war is a STATE the country is in
+ * rather than a campaign it fights: it suppresses trade, it costs stability, it
+ * wears the country down at a rate set by how good the case for it was, and it
+ * ends when the government decides to end it on the terms its position can
+ * command.
+ */
+export interface WarRecord {
+  powerId: string;
+  /** The casus belli it was declared on. */
+  groundsId: string;
+  declaredDay: number;
+  /** null = still being fought. */
+  endedDay: number | null;
+  /** Whether the pretext was manufactured. The country finds out. */
+  fabricated: boolean;
+  /** The strength of the case at the moment of declaration, 0–100. */
+  justification: number;
+  /**
+   * 0–100. Rises monthly, and rises FASTER the worse the case was — which is
+   * how a bad war goes on costing rather than being a single payment.
+   */
+  weariness: number;
+  /** How it ended. Null while it is still being fought. */
+  outcome: 'victory' | 'settlement' | 'concession' | null;
+}
+
 export interface DiplomacyState {
   relations: Record<string, PowerRelation>;
   treaties: TreatyRecord[];
   tributeDue: TributeObligation[];
+  wars: WarRecord[];
 }

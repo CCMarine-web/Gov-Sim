@@ -7,7 +7,7 @@ If you are resuming with no context: read `DESIGN.md` first, then this file,
 then `docs/DECISIONS.md` and `docs/BLOCKERS.md`. Then continue the **Phase 2
 queue** below, which is `gov-sim-phase2-brief.md` §9.
 
-**Last updated:** Phase 2 run of 2026-08-16, after queue item 11.
+**Last updated:** Phase 2 run of 2026-08-16, after queue item 12.
 
 ---
 
@@ -17,8 +17,8 @@ queue** below, which is `gov-sim-phase2-brief.md` §9.
 |---|---|
 | Production URL | <https://gov-sim.vercel.app> |
 | Deploy | auto-deploys from `main` on push |
-| Tests | 735 passing |
-| Save schema | version **8** — v1 to v7 saves migrate forward, all seven fixtures committed |
+| Tests | 779 passing |
+| Save schema | version **9** — v1 to v8 saves migrate forward, all eight fixtures committed |
 | Gates | tests, lint, typecheck, production build — all green |
 | Database | Supabase, `save_games` table migrated, verified reachable from production |
 | Phase | **2 — in progress.** Phase 1 shipped. |
@@ -40,7 +40,7 @@ queue** below, which is `gov-sim-phase2-brief.md` §9.
 | 9 — Map view replacing the Desk | **complete** — see below and D-036 to D-038 |
 | 10 — Remaining map modes and state detail panel | **complete** — see below and D-039 to D-041 |
 | 11 — Diplomacy tab | **complete** — see below and D-042 to D-044 |
-| 12 — War declaration paths | not started |
+| 12 — War declaration paths | **complete** — see below and D-045 to D-047 |
 | 13 — Cabinet competence and loyalty | not started |
 | 14 — Theming, asset registry, audio abstraction | not started |
 | 15 — Causal web view | not started |
@@ -633,8 +633,66 @@ achievement in the item (D-044).
 `components/game/diplomacy.test.tsx`, 5 more in `migrations.test.ts`. Human-eye
 checks are `docs/MANUAL-QA.md` §19.
 
-**Left for item 12:** declaring war. `PowerRelation.atWar` exists and every
-query already respects it; the declaration paths that set it are the next item.
+**Item 12 built the declaration paths.** See below.
+
+---
+
+### Item 12 — war declaration paths: complete
+
+**The divergence the brief asked for, concretely.** A crown declares by decree
+and cannot be refused. A republic must carry both chambers and can simply be
+told no. That is the same bargain the rest of the game makes — speed bought with
+consent — applied to the largest decision in it.
+
+**A declaration is a `Measure` and uses the same vote as a bill.** `whipCount`'s
+parameter was widened from `Bill` to an interface with one field,
+`blocReactions`, because that is all the vote model ever asked a bill for. So a
+declaration gets the full inspectable division, every delegation's reasons, and
+the same whipping, riders and promises at the same prices. A second vote path
+for war would eventually have disagreed with the first about how the House works
+(D-045).
+
+**Seven real grounds for war**, each dated, cited and two-sided — the retained
+posts, impressment, the French spoliations, the Mississippi, the Algerine
+captives, Tripoli's demands, the Ohio boundary — plus a manufactured claim
+available against anyone.
+
+**The threshold gate is a slope, not a switch.** A defensible case is 60;
+legitimacy costs `shortfall × 22`, so the Mississippi at 58 costs almost nothing
+and a fabricated claim at 18 costs a great deal. The strengths were set against
+the record rather than tuned in isolation (D-046).
+
+**Aggression invites foreign hostility**, as the brief specifies — a fabricated
+pretext costs relations with **every** power, not only the victim.
+
+**Diplomacy closes the grounds.** A casus belli with a `settledBy` treaty
+vanishes when that treaty is in force: sign the Jay Treaty and the case about
+the posts is gone, while **impressment remains**, because the treaty was silent
+on it. This is what makes treaties prevent wars rather than postpone them.
+
+**A war is a state, not a campaign** — combat is Phase 3. It suppresses trade
+28% through the ledger, costs stability, and accrues weariness at a rate set by
+how good the case was: about three years to exhaust a country that believed in
+it, eighteen months for one that did not.
+
+**Peace is deterministic**, computed from stability, legitimacy, remaining
+patience and the enemy's strength. With no combat to simulate there is nothing
+for a die roll to represent, and it would destroy the only interesting decision
+the system has — whether to fight on (D-047).
+
+**What the model produced without being told to.** A farming republic carries
+the wars its farmers want. The Mississippi and the Ohio boundary pass; Algiers
+and the French spoliations fail unless whipped hard, because the small farmers
+are most of every delegation and a navy is a permanent tax. That is a good
+likeness of a decade in which Congress declared no maritime war at all and
+fought the Quasi-War without ever declaring it.
+
+**Schema version 9**, `migrations/v8ToV9.ts`, with a committed v8 fixture — the
+smallest migration in the project, and still a migration.
+
+**Tests:** 32 in `sim/war.test.ts`, 9 more in
+`components/game/diplomacy.test.tsx`, 3 in `migrations.test.ts`. Human-eye checks
+are `docs/MANUAL-QA.md` §20.
 
 ---
 

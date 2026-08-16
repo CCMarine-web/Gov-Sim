@@ -28,6 +28,12 @@ import { TREATY_BY_ID } from '@/content/diplomacy/treaties';
 import { advanceDay, resolveDecision } from '@/sim/advanceDay';
 import { amendBill, enactBill, repealBill } from '@/sim/bills';
 import { breachTreaty, sendEnvoy, signTreaty } from '@/sim/diplomacy';
+import {
+  declareWar,
+  fabricateClaim,
+  makePeace,
+  type DeclarationOutcome,
+} from '@/sim/war';
 import { NO_TACTICS, type BillTactics } from '@/sim/congress';
 import { createGame, type NewGameOptions } from '@/sim/createGame';
 import { enactPolicy } from '@/sim/policy';
@@ -517,6 +523,45 @@ export function concludeTreaty(treatyId: string): void {
 export function repudiateTreaty(treatyId: string): void {
   if (!loop.game) return;
   const result = breachTreaty(loop.game, treatyId);
+  if (!result.ok) return;
+  loop.game = result.state;
+  publish(true);
+}
+
+/**
+ * Declare war. (brief §7, queue item 12)
+ *
+ * Returns the outcome rather than swallowing it, because on the republican path
+ * "voted down" is an ordinary result the interface has to be able to report —
+ * it is not a failure to declare, it is Congress declining.
+ */
+export function declare(
+  powerId: string,
+  groundsId: string,
+  tactics: BillTactics = NO_TACTICS,
+): DeclarationOutcome | null {
+  if (!loop.game || !loop.content) return null;
+  const outcome = declareWar(loop.game, powerId, groundsId, loop.content.parties, tactics);
+  if (outcome.kind !== 'refused') {
+    loop.game = outcome.state;
+    publish(true);
+  }
+  return outcome;
+}
+
+/** Prepare a pretext. The capital is spent whether it is ever used or not. */
+export function fabricate(powerId: string): void {
+  if (!loop.game) return;
+  const result = fabricateClaim(loop.game, powerId);
+  if (!result.ok) return;
+  loop.game = result.state;
+  publish(true);
+}
+
+/** End a war, on whatever terms the country's position can command. */
+export function seekPeace(powerId: string): void {
+  if (!loop.game) return;
+  const result = makePeace(loop.game, powerId);
   if (!result.ok) return;
   loop.game = result.state;
   publish(true);

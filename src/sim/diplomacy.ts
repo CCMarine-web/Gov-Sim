@@ -67,7 +67,7 @@ export function seedDiplomacy(): DiplomacyState {
     };
   }
 
-  return { relations, treaties: [], tributeDue: [] };
+  return { relations, treaties: [], tributeDue: [], wars: [] };
 }
 
 // ============================================================================

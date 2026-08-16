@@ -25,6 +25,7 @@ import { v4ToV5 } from './v4ToV5';
 import { v5ToV6 } from './v5ToV6';
 import { v6ToV7 } from './v6ToV7';
 import { v7ToV8 } from './v7ToV8';
+import { v8ToV9 } from './v8ToV9';
 
 /** A single forward step. Receives and returns loosely-typed state by design:
  *  the shape it migrates FROM no longer has a TypeScript type in this build. */
@@ -51,6 +52,8 @@ export const MIGRATIONS: Record<number, Migration> = {
   6: v6ToV7,
   /** Diplomacy arrives: relations, treaties and tribute. (brief §7) */
   7: v7ToV8,
+  /** Wars become a record. (brief §7, queue item 12) */
+  8: v8ToV9,
 };
 
 export type LoadOutcome =

@@ -14,6 +14,7 @@ import v4Fixture from './fixtures/v4-republic-day900.json';
 import v5Fixture from './fixtures/v5-republic-day900.json';
 import v6Fixture from './fixtures/v6-republic-day900.json';
 import v7Fixture from './fixtures/v7-republic-day900.json';
+import v8Fixture from './fixtures/v8-republic-day900.json';
 import { MIGRATIONS, migrateToCurrent, parseSave } from './index';
 
 describe('loading a save of the current version', () => {
@@ -887,5 +888,47 @@ describe('the v7 fixture gains a world it has not yet acted in', () => {
 
     expect(Number.isFinite(state.nation.gdp)).toBe(true);
     expect(Object.keys(state.diplomacy.relations).length).toBe(POWERS.length);
+  });
+});
+
+/**
+ * THE v8 FIXTURE
+ *
+ * A real save in the version 8 format, at day 900. Diplomacy existed in v8 but
+ * no war could be declared, so `wars` did not exist. The smallest migration in
+ * the project, and it is still a migration: a save written under v8 is a real
+ * save that a real person may hold.
+ */
+describe('the v8 fixture gains a record of wars it never fought', () => {
+  const raw = JSON.parse(JSON.stringify(v8Fixture)) as Record<string, unknown>;
+
+  it('is genuinely a v8 save, with diplomacy but no wars', () => {
+    expect(raw.schemaVersion).toBe(8);
+    const diplomacy = raw.diplomacy as Record<string, unknown>;
+    expect(diplomacy).toBeDefined();
+    expect(diplomacy.wars).toBeUndefined();
+    expect(diplomacy.relations).toBeDefined();
+  });
+
+  it('starts with no wars, because it could not have had any', () => {
+    const outcome = migrateToCurrent(JSON.parse(JSON.stringify(raw)));
+    expect(outcome.ok).toBe(true);
+    if (!outcome.ok) return;
+
+    expect(outcome.state.diplomacy.wars).toEqual([]);
+    for (const relation of Object.values(outcome.state.diplomacy.relations)) {
+      expect(relation.atWar).toBe(false);
+    }
+  });
+
+  it('keeps the relations and treaties it already had', () => {
+    const outcome = migrateToCurrent(JSON.parse(JSON.stringify(raw)));
+    expect(outcome.ok).toBe(true);
+    if (!outcome.ok) return;
+
+    const before = raw.diplomacy as Record<string, unknown>;
+    expect(outcome.state.diplomacy.relations).toEqual(before.relations);
+    expect(outcome.state.diplomacy.treaties).toEqual(before.treaties);
+    expect(outcome.state.diplomacy.tributeDue).toEqual(before.tributeDue);
   });
 });

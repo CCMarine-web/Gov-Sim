@@ -16,10 +16,12 @@
 
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { cleanup, fireEvent, render } from '@testing-library/react';
+import { PARTIES } from '@/content';
 import { TREATY_BY_ID } from '@/content/diplomacy/treaties';
 import { isoToDay } from '@/sim/calendar';
 import { createTestGame } from '@/sim/createGame';
 import { signTreaty } from '@/sim/diplomacy';
+import { declareWar } from '@/sim/war';
 import type { GameState } from '@/sim/types';
 import { DiplomacyPanel } from './DiplomacyPanel';
 
@@ -211,5 +213,162 @@ describe('sending a minister', () => {
     expect(
       container.querySelector('[data-envoy="britain"]')!.hasAttribute('disabled'),
     ).toBe(true);
+  });
+});
+
+// ============================================================================
+// QUEUE ITEM 12 — WAR ON SCREEN
+// ============================================================================
+
+describe('the grounds for war are laid out before anything is committed', () => {
+  it('lists every ground with how good a case it makes', () => {
+    const { container } = render(<DiplomacyPanel state={funded()} />);
+    fireEvent.click(
+      container.querySelector('[data-power="britain"]')!.querySelector('button')!,
+    );
+
+    const grounds = container.querySelector('[data-testid="grounds-britain"]')!;
+    expect(grounds.querySelector('[data-grounds="impressment"]')).not.toBeNull();
+    expect(grounds.textContent).toContain('case 70/100');
+  });
+
+  it('states the full price of a declaration, before it is made', () => {
+    const { container } = render(<DiplomacyPanel state={funded()} />);
+    fireEvent.click(
+      container.querySelector('[data-power="britain"]')!.querySelector('button')!,
+    );
+
+    const fabricated = container.querySelector(
+      '[data-grounds="fabricated:britain"]',
+    )!;
+    expect(fabricated.textContent).toContain('Manufactured');
+    expect(fabricated.textContent).toContain('legitimacy');
+    // "Invites foreign hostility" has to be on the label, not a surprise.
+    expect(fabricated.textContent).toContain('every other power thinks less of us');
+  });
+
+  it('says which path the player is on, because they are different acts', () => {
+    const monarchy = createTestGame({ governmentType: 'monarchy' });
+    const crown = render(
+      <DiplomacyPanel
+        state={{
+          ...monarchy,
+          day: isoToDay('1795-01-01'),
+          politicalCapital: { ...monarchy.politicalCapital, current: 1000, cap: 1000 },
+        }}
+      />,
+    );
+    fireEvent.click(
+      crown.container.querySelector('[data-power="spain"]')!.querySelector('button')!,
+    );
+    expect(
+      crown.container.querySelector('[data-testid="grounds-spain"]')!.textContent,
+    ).toContain('The crown declares');
+    expect(
+      crown.container.querySelector('[data-declare="mississippi_closed"]')!.textContent,
+    ).toContain('Declare war');
+    cleanup();
+
+    const base = createTestGame({ governmentType: 'republic' });
+    const republic: GameState = {
+      ...base,
+      day: isoToDay('1795-01-01'),
+      politicalCapital: { ...base.politicalCapital, current: 1000, cap: 1000 },
+    };
+    const { container } = render(<DiplomacyPanel state={republic} />);
+    fireEvent.click(
+      container.querySelector('[data-power="spain"]')!.querySelector('button')!,
+    );
+
+    expect(
+      container.querySelector('[data-testid="grounds-spain"]')!.textContent,
+    ).toContain('must carry both chambers');
+    expect(
+      container.querySelector('[data-declare="mississippi_closed"]')!.textContent,
+    ).toContain('Put it to Congress');
+  });
+
+  it('calls the handler with the power and the grounds', () => {
+    const onDeclare = vi.fn();
+    const { container } = render(
+      <DiplomacyPanel state={funded()} onDeclare={onDeclare} />,
+    );
+    fireEvent.click(
+      container.querySelector('[data-power="spain"]')!.querySelector('button')!,
+    );
+    fireEvent.click(container.querySelector('[data-declare="mississippi_closed"]')!);
+
+    expect(onDeclare).toHaveBeenCalledWith('spain', 'mississippi_closed');
+  });
+
+  it('offers to prepare a pretext, at its own price', () => {
+    const onFabricate = vi.fn();
+    const { container } = render(
+      <DiplomacyPanel state={funded()} onFabricate={onFabricate} />,
+    );
+    fireEvent.click(
+      container.querySelector('[data-power="spain"]')!.querySelector('button')!,
+    );
+
+    const button = container.querySelector('[data-fabricate="spain"]')!;
+    expect(button.textContent).toContain('capital');
+    fireEvent.click(button);
+    expect(onFabricate).toHaveBeenCalledWith('spain');
+  });
+
+  it('drops a ground once the grievance behind it is settled', () => {
+    const settled = signTreaty(funded(), TREATY_BY_ID.pinckney_treaty).state;
+    const { container } = render(<DiplomacyPanel state={settled} />);
+    fireEvent.click(
+      container.querySelector('[data-power="spain"]')!.querySelector('button')!,
+    );
+
+    expect(container.querySelector('[data-grounds="mississippi_closed"]')).toBeNull();
+    // The manufactured option remains, because it always does.
+    expect(container.querySelector('[data-grounds="fabricated:spain"]')).not.toBeNull();
+  });
+});
+
+describe('a war on screen', () => {
+  function atWar(): GameState {
+    const outcome = declareWar(funded(), 'britain', 'impressment', PARTIES);
+    if (outcome.kind !== 'declared') throw new Error('expected a declaration');
+    return outcome.state;
+  }
+
+  it('replaces the grounds with the war, and says how tired the country is', () => {
+    const { container } = render(<DiplomacyPanel state={atWar()} />);
+    fireEvent.click(
+      container.querySelector('[data-power="britain"]')!.querySelector('button')!,
+    );
+
+    const war = container.querySelector('[data-testid="war-britain"]')!;
+    expect(war.textContent).toContain('At war since');
+    expect(war.textContent).toContain('Weariness');
+    expect(container.querySelector('[data-testid="grounds-britain"]')).toBeNull();
+  });
+
+  it('says what peace would look like today, before it is sought', () => {
+    const { container } = render(<DiplomacyPanel state={atWar()} />);
+    fireEvent.click(
+      container.querySelector('[data-power="britain"]')!.querySelector('button')!,
+    );
+
+    expect(container.querySelector('[data-testid="war-britain"]')!.textContent).toMatch(
+      /on our terms|nobody would call a victory|on theirs/,
+    );
+  });
+
+  it('calls the handler when peace is sought', () => {
+    const onPeace = vi.fn();
+    const { container } = render(
+      <DiplomacyPanel state={atWar()} onPeace={onPeace} />,
+    );
+    fireEvent.click(
+      container.querySelector('[data-power="britain"]')!.querySelector('button')!,
+    );
+
+    fireEvent.click(container.querySelector('[data-peace="britain"]')!);
+    expect(onPeace).toHaveBeenCalledWith('britain');
   });
 });
