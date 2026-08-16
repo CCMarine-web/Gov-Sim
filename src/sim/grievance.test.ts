@@ -21,6 +21,7 @@
 import { describe, expect, it } from 'vitest';
 import { PHASE_1_CONTENT } from '@/content';
 import { advanceDay } from './advanceDay';
+import { blocWeights } from './blocs';
 import { enactBill, priceOf } from './bills';
 import {
   DECREE_CAPITAL_FACTOR,
@@ -49,6 +50,14 @@ import {
 import { annualMortality, checkSuccession, heirFor, rulerAge } from './succession';
 import { PHASE_1_END_DAY } from './calendar';
 import type { Bill, BlocReaction, ContentPack, GameState } from './types';
+
+/*
+  The founding distribution of the blocs: how much of each lives in each region
+  on day 0. Grievance lands on regions through it, so the tests need it too.
+  Taken from a real game rather than written out, so it cannot drift from the
+  model it is testing. (ECONOMY.md §7.21)
+*/
+const W = blocWeights(createTestGame());
 
 const EMPTY: ContentPack = { version: 'test', events: [], bills: [], offices: [], parties: [], stateSeats: [] };
 
@@ -88,7 +97,7 @@ describe('grievance is tracked per bloc, not as generic unhappiness', () => {
   });
 
   it('builds against the bloc that was acted against, and no other', () => {
-    const after = accrueGrievance(emptyGrievance(), PLANTERS_HATE_IT, 'monarchy');
+    const after = accrueGrievance(emptyGrievance(), PLANTERS_HATE_IT, 'monarchy', W);
 
     expect(after.byBloc.planters).toBeGreaterThan(0);
     for (const bloc of ['merchants', 'artisans', 'seamen', 'clergy']) {
@@ -102,7 +111,7 @@ describe('grievance is tracked per bloc, not as generic unhappiness', () => {
     let grievance = emptyGrievance();
     const levels: number[] = [];
     for (let i = 0; i < 4; i++) {
-      grievance = accrueGrievance(grievance, PLANTERS_HATE_IT, 'monarchy');
+      grievance = accrueGrievance(grievance, PLANTERS_HATE_IT, 'monarchy', W);
       levels.push(grievance.byBloc.planters);
     }
 
@@ -118,29 +127,30 @@ describe('grievance is tracked per bloc, not as generic unhappiness', () => {
       emptyGrievance(),
       [{ bloc: 'merchants', strength: 90, reason: 'test' }],
       'monarchy',
+      W,
     );
     expect(after.byBloc.merchants).toBe(0);
   });
 
   it('lands where the aggrieved bloc actually is', () => {
-    const planters = regionalGrievance({ planters: 100 });
+    const planters = regionalGrievance({ planters: 100 }, W);
     expect(planters.south).toBeGreaterThan(planters.new_england);
     expect(planters.south).toBeGreaterThan(planters.frontier);
 
-    const frontier = regionalGrievance({ frontier_settlers: 100 });
+    const frontier = regionalGrievance({ frontier_settlers: 100 }, W);
     expect(frontier.frontier).toBeGreaterThan(frontier.south);
   });
 
   it('names the bloc most responsible for a region’s grievance', () => {
-    expect(principalGrievance({ planters: 90, seamen: 10 }, 'south')).toBe('planters');
-    expect(principalGrievance({ planters: 10, seamen: 90 }, 'new_england')).toBe(
+    expect(principalGrievance({ planters: 90, seamen: 10 }, 'south', W)).toBe('planters');
+    expect(principalGrievance({ planters: 10, seamen: 90 }, 'new_england', W)).toBe(
       'seamen',
     );
   });
 
   it('decays, proportionally, so a large grievance lingers and a small one fades', () => {
-    const small = decayGrievance({ ...emptyGrievance(), byBloc: { planters: 10 } });
-    const large = decayGrievance({ ...emptyGrievance(), byBloc: { planters: 90 } });
+    const small = decayGrievance({ ...emptyGrievance(), byBloc: { planters: 10 } }, W);
+    const large = decayGrievance({ ...emptyGrievance(), byBloc: { planters: 90 } }, W);
 
     expect(small.byBloc.planters).toBeLessThan(10);
     expect(large.byBloc.planters).toBeLessThan(90);
@@ -151,7 +161,7 @@ describe('grievance is tracked per bloc, not as generic unhappiness', () => {
   it('never exceeds 100 however many times it is provoked', () => {
     let grievance = emptyGrievance();
     for (let i = 0; i < 60; i++) {
-      grievance = accrueGrievance(grievance, PLANTERS_HATE_IT, 'monarchy');
+      grievance = accrueGrievance(grievance, PLANTERS_HATE_IT, 'monarchy', W);
     }
     expect(grievance.byBloc.planters).toBeLessThanOrEqual(100);
   });
@@ -290,7 +300,7 @@ describe('grievance has consequences, in stages', () => {
 
   it('opens an episode when a region crosses a threshold', () => {
     const grievance = { ...emptyGrievance(), byRegion: { south: 60 } };
-    const change = reconcileUnrest(grievance, 100);
+    const change = reconcileUnrest(grievance, 100, W);
 
     expect(change.started).toHaveLength(1);
     expect(change.started[0].regionId).toBe('south');
@@ -302,10 +312,11 @@ describe('grievance has consequences, in stages', () => {
     let grievance = reconcileUnrest(
       { ...emptyGrievance(), byRegion: { south: 40 } },
       100,
+      W,
     ).grievance;
     expect(activeEpisodes(grievance)[0].severity).toBe('resistance');
 
-    const escalated = reconcileUnrest({ ...grievance, byRegion: { south: 85 } }, 200);
+    const escalated = reconcileUnrest({ ...grievance, byRegion: { south: 85 } }, 200, W);
     grievance = escalated.grievance;
 
     // The chronicle should read as a story, not as overlapping states.
@@ -319,10 +330,11 @@ describe('grievance has consequences, in stages', () => {
     const opened = reconcileUnrest(
       { ...emptyGrievance(), byRegion: { south: 60 } },
       100,
+      W,
     ).grievance;
 
     // Two points below the threshold is inside the resolution margin.
-    const dipped = reconcileUnrest({ ...opened, byRegion: { south: 53 } }, 130);
+    const dipped = reconcileUnrest({ ...opened, byRegion: { south: 53 } }, 130, W);
     expect(dipped.ended).toHaveLength(0);
     expect(activeEpisodes(dipped.grievance)).toHaveLength(1);
   });
@@ -331,9 +343,10 @@ describe('grievance has consequences, in stages', () => {
     const opened = reconcileUnrest(
       { ...emptyGrievance(), byRegion: { south: 60 } },
       100,
+      W,
     ).grievance;
 
-    const cleared = reconcileUnrest({ ...opened, byRegion: { south: 10 } }, 200);
+    const cleared = reconcileUnrest({ ...opened, byRegion: { south: 10 } }, 200, W);
     expect(cleared.ended).toHaveLength(1);
     expect(activeEpisodes(cleared.grievance)).toHaveLength(0);
     // The record survives.
@@ -344,10 +357,12 @@ describe('grievance has consequences, in stages', () => {
     const quiet = reconcileUnrest(
       { ...emptyGrievance(), byRegion: { south: 40 } },
       1,
+      W,
     ).grievance;
     const armed = reconcileUnrest(
       { ...emptyGrievance(), byRegion: { south: 85 } },
       1,
+      W,
     ).grievance;
 
     // Quiet non-payment is already costing revenue; charging it twice would
@@ -362,7 +377,7 @@ describe('grievance has consequences, in stages', () => {
       grievance: {
         ...emptyGrievance(),
         byBloc: { planters: 95 },
-        byRegion: regionalGrievance({ planters: 95 }),
+        byRegion: regionalGrievance({ planters: 95 }, W),
       },
     };
 
@@ -384,7 +399,7 @@ describe('grievance has consequences, in stages', () => {
         grievance: {
           ...emptyGrievance(),
           byBloc: { planters: 95, small_farmers: 80 },
-          byRegion: regionalGrievance({ planters: 95, small_farmers: 80 }),
+          byRegion: regionalGrievance({ planters: 95, small_farmers: 80 }, W),
         },
       },
       400,

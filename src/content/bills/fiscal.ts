@@ -65,6 +65,13 @@ export const FISCAL_BILLS: Bill[] = [
       { target: 'nation.stability', value: 4, isPercentage: false, scalesWithSlider: false, durationDays: null },
       { target: 'region.new_england.prosperity', value: 3, isPercentage: false, scalesWithSlider: false, durationDays: null },
       { target: 'region.mid_atlantic.prosperity', value: 4, isPercentage: false, scalesWithSlider: false, durationDays: null },
+      // A bank does not merely please the men who hold paper; it MAKES more of
+      // them. Subscription, discounting and a market in federal stock gave the
+      // seaboard cities a financial class where there had barely been one, and
+      // Philadelphia most of all. (ECONOMY.md §7.21)
+      { target: 'bloc.financiers.mid_atlantic', value: 0.35, isPercentage: true, scalesWithSlider: false, durationDays: null },
+      { target: 'bloc.financiers.new_england', value: 0.25, isPercentage: true, scalesWithSlider: false, durationDays: null },
+      { target: 'bloc.financiers.south', value: 0.12, isPercentage: true, scalesWithSlider: false, durationDays: null },
     ],
     blocReactions: [
       { bloc: 'financiers', strength: 85, reason: 'A market for public paper and a bank to hold it' },
@@ -541,6 +548,13 @@ export const FISCAL_BILLS: Bill[] = [
       { target: 'region.new_england.prosperity', value: 4, isPercentage: false, scalesWithSlider: false, durationDays: null },
       { target: 'region.mid_atlantic.prosperity', value: 3, isPercentage: false, scalesWithSlider: false, durationDays: null },
       { target: 'region.south.prosperity', value: -2, isPercentage: false, scalesWithSlider: false, durationDays: null },
+      // Discriminating tonnage duties are the reason the American merchant
+      // marine grew as fast as it did: hulls built here, crewed here, because
+      // foreign bottoms paid more to enter. More ships means more seamen, and
+      // more houses to consign to. (ECONOMY.md §7.21)
+      { target: 'bloc.seamen.new_england', value: 0.2, isPercentage: true, scalesWithSlider: false, durationDays: null },
+      { target: 'bloc.seamen.mid_atlantic', value: 0.15, isPercentage: true, scalesWithSlider: false, durationDays: null },
+      { target: 'bloc.merchants.new_england', value: 0.1, isPercentage: true, scalesWithSlider: false, durationDays: null },
     ],
     blocReactions: [
       { bloc: 'seamen', strength: 80, reason: 'Berths in a fleet that is about to grow' },
@@ -587,6 +601,14 @@ export const FISCAL_BILLS: Bill[] = [
       { target: 'nation.tradeCapacity', value: -0.1, isPercentage: true, scalesWithSlider: true, durationDays: null },
       { target: 'region.new_england.prosperity', value: -5, isPercentage: false, scalesWithSlider: true, durationDays: null },
       { target: 'nation.legitimacy', value: 3, isPercentage: false, scalesWithSlider: true, durationDays: 1095 },
+      // Shutting out British manufactures is Madison's whole argument for the
+      // measure: goods that cannot be imported have to be made. It costs the
+      // carrying trade and builds the workshops, which is the trade-off — the
+      // merchants lose and the artisans gain, in the same statute.
+      { target: 'bloc.artisans.new_england', value: 0.18, isPercentage: true, scalesWithSlider: true, durationDays: null },
+      { target: 'bloc.artisans.mid_atlantic', value: 0.2, isPercentage: true, scalesWithSlider: true, durationDays: null },
+      { target: 'bloc.merchants.new_england', value: -0.15, isPercentage: true, scalesWithSlider: true, durationDays: null },
+      { target: 'bloc.merchants.mid_atlantic', value: -0.12, isPercentage: true, scalesWithSlider: true, durationDays: null },
     ],
     blocReactions: [
       { bloc: 'artisans', strength: 70, reason: 'British manufactures priced out of the American market at last' },

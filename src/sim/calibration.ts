@@ -514,41 +514,167 @@ export const BUDGET_CAPITAL_COST_FLOOR = 1.5;
 export const EMERGENCY_POWERS_MULTIPLIER = 2.5;
 
 // ============================================================================
-// BLOCS (ECONOMY.md §7.18)
+// BLOCS (ECONOMY.md §7.21, brief §1 and queue item 8)
 //
-// INTERIM, AND DELIBERATELY SO. Queue item 8 builds overlapping, fluid bloc
-// membership that policy can move people between. Until it does, each bloc is
-// distributed across the four regions by the weighting below, so a bill's
-// declared bloc reactions land somewhere real rather than sitting inert.
+// WHO THE COUNTRY IS MADE OF, AT THE FOUNDING.
 //
-// Bills declare their reactions NOW (brief §4.2) so that the content does not
-// have to be rewritten when the model lands — item 8 replaces this table and
-// nothing in src/content/ changes.
+// Membership is a fraction of a REGION'S population, per bloc, and it is the
+// day-0 seed for a quantity that then moves — the live figures are state, in
+// `GameState.blocs`, and the model that moves them is `src/sim/blocs.ts`.
 //
-// The weightings follow the economic geography the regions already encode: the
-// planters are the South's staple agriculture, the merchants and seamen the
-// northern carrying trade, the frontier settlers the trans-Appalachian west.
-// Each bloc's weights sum to 1.
+// These are CALIBRATION CONSTANTS, not benchmark data (DESIGN.md §12.2). No
+// census counted planters, and none of these figures is displayed anywhere as a
+// historical fact. What they are is a documented reading of the economic
+// geography the region seeds already encode, with each column reasoned below.
+//
+// TWO PROPERTIES THAT LOOK LIKE ERRORS AND ARE NOT.
+//
+// The rows do not sum to 1 in either direction, on purpose:
+//
+//   ABOVE 1 on the frontier (about 1.37), because membership OVERLAPS. Half the
+//   frontier are small farmers and four fifths are frontier settlers, and most
+//   of them are both people. That is the graduated, overlapping membership the
+//   brief asks for, and a column summing to exactly 1 would be the binary model
+//   it asks us to leave behind.
+//
+//   BELOW 1 in the South (about 0.60), because a third of the region's people
+//   were enslaved and had no political interest this model can represent — they
+//   were permitted none. Rounding them into "small farmers" would make the
+//   column tidy by asserting something false about 1790. The gap is reported to
+//   the player instead (`unrepresentedShare`).
 // ============================================================================
 
-export const BLOC_REGION_WEIGHTS: Record<string, Record<string, number>> = {
-  /** Staple agriculture on large holdings, overwhelmingly Southern. */
-  planters: { new_england: 0.02, mid_atlantic: 0.1, south: 0.82, frontier: 0.06 },
-  /** Import-export houses, concentrated in the port cities. */
-  merchants: { new_england: 0.36, mid_atlantic: 0.42, south: 0.19, frontier: 0.03 },
-  /** Trans-Appalachian settlers: land-hungry, cash-poor, distant from courts. */
-  frontier_settlers: { new_england: 0.02, mid_atlantic: 0.08, south: 0.12, frontier: 0.78 },
-  /** Skilled urban trades — the beneficiaries of tariff protection. */
-  artisans: { new_england: 0.34, mid_atlantic: 0.44, south: 0.18, frontier: 0.04 },
-  /** Holders of public paper and bank stock. Very few, very concentrated. */
-  financiers: { new_england: 0.3, mid_atlantic: 0.55, south: 0.13, frontier: 0.02 },
-  /** Established churches and their congregations, weighted to New England. */
-  clergy: { new_england: 0.38, mid_atlantic: 0.27, south: 0.24, frontier: 0.11 },
-  /** Merchant seamen and fishermen. Almost entirely a northern coastal trade. */
-  seamen: { new_england: 0.51, mid_atlantic: 0.31, south: 0.16, frontier: 0.02 },
-  /** Yeoman farmers working their own land. The largest bloc, spread widely. */
-  small_farmers: { new_england: 0.24, mid_atlantic: 0.27, south: 0.24, frontier: 0.25 },
+export const BLOC_MEMBERSHIP_1790: Record<string, Record<string, number>> = {
+  /*
+    NEW ENGLAND — 1,009,522 people, almost no enslaved population, poor soil and
+    the country's deepest harbours. Farms are small and worked by their owners;
+    the carrying trade and the fisheries are the region's cash. The standing
+    order of Congregational churches is stronger here than anywhere else, which
+    is why the clergy share is the highest of the four.
+  */
+  new_england: {
+    small_farmers: 0.55,
+    artisans: 0.1,
+    merchants: 0.035,
+    seamen: 0.045,
+    financiers: 0.005,
+    clergy: 0.022,
+    planters: 0.002,
+    frontier_settlers: 0.004,
+  },
+  /*
+    MID-ATLANTIC — 1,017,726 people, the mixed-farming and milling belt, and the
+    two cities where the public debt and the banks actually live. Highest
+    financier share by a wide margin, and the largest artisan population.
+  */
+  mid_atlantic: {
+    small_farmers: 0.55,
+    artisans: 0.11,
+    merchants: 0.04,
+    seamen: 0.025,
+    financiers: 0.008,
+    clergy: 0.016,
+    planters: 0.012,
+    frontier_settlers: 0.012,
+  },
+  /*
+    SOUTH — 1,792,710 people, of whom 632,593 are enslaved. Staple agriculture on
+    large holdings is a SMALL share of households and a dominant share of wealth,
+    which is why planters are 5.5% of the population and carry the highest
+    `BLOC_POWER` of any bloc. The shares total about 0.60; see the note above.
+  */
+  south: {
+    small_farmers: 0.42,
+    artisans: 0.04,
+    merchants: 0.015,
+    seamen: 0.008,
+    financiers: 0.002,
+    clergy: 0.012,
+    planters: 0.055,
+    frontier_settlers: 0.01,
+  },
+  /*
+    FRONTIER — 109,368 people in Kentucky and the Southwest Territory. Almost
+    everybody here is a frontier settler, and most of them are also a small
+    farmer: land-hungry, cash-poor, distilling grain because it is the only form
+    in which a crop can be carried over the mountains. Which is exactly why the
+    whiskey excise landed the way it did.
+  */
+  frontier: {
+    small_farmers: 0.5,
+    artisans: 0.03,
+    merchants: 0.008,
+    seamen: 0.001,
+    financiers: 0.001,
+    clergy: 0.008,
+    planters: 0.02,
+    frontier_settlers: 0.8,
+  },
 };
+
+/**
+ * How hard each bloc's size responds to each economic quantity.
+ *
+ * An elasticity against the day-0 value: `(now / then)^e`. A bloc with e = 0.6
+ * on trade per head grows by about 6% when trade per head grows by 10%. Sign
+ * matters — `small_farmers` has a NEGATIVE elasticity on manufacturing, because
+ * the workshop fills from the farm and always has.
+ *
+ * Magnitudes are deliberately below 1 across the board. People move between
+ * occupations more slowly than the economy moves, and an elasticity above 1
+ * would have a bloc outrunning the thing supposedly causing it.
+ */
+export const BLOC_ELASTICITIES: Record<
+  string,
+  Partial<
+    Record<
+      | 'tradePerHead'
+      | 'manufacturingPerHead'
+      | 'agriculturePerHead'
+      | 'enslavedShare'
+      | 'prosperity'
+      | 'population',
+      number
+    >
+  >
+> = {
+  /** The carrying trade makes merchants; nothing else does. */
+  merchants: { tradePerHead: 0.6, prosperity: 0.15 },
+  /** Crews are hired to carry cargo. Slightly less responsive than their masters. */
+  seamen: { tradePerHead: 0.5 },
+  /** Protection and prosperity fill the workshops. */
+  artisans: { manufacturingPerHead: 0.7, prosperity: 0.2 },
+  /**
+   * Grows with farm output and SHRINKS as manufacturing rises — the single
+   * clearest case of the brief's "policies change the size of groups": a tariff
+   * that builds workshops does not just please the artisans, it makes more of
+   * them, out of the farmers.
+   */
+  small_farmers: { agriculturePerHead: 0.25, manufacturingPerHead: -0.3 },
+  /** Staple agriculture on large holdings tracks the labour it was built on. */
+  planters: { enslavedShare: 0.8, agriculturePerHead: 0.2 },
+  /** Paper, banks and the public debt. The most concentrated and most volatile. */
+  financiers: { tradePerHead: 0.4, prosperity: 0.5 },
+  /** The west fills by migration, so its settlers track its population. */
+  frontier_settlers: { population: 0.45 },
+  /** Congregations are supported out of surplus, and only just track it. */
+  clergy: { prosperity: 0.2 },
+};
+
+/**
+ * How much of the remaining gap a bloc closes in a month.
+ *
+ * 3% a month is a half-life of about 23 months. Occupations change over years,
+ * not quarters, and a bloc that snapped to its target would make policy feel
+ * like a switch. It also means a measure repealed before it has taken hold
+ * leaves the country roughly where it found it, which is the correct behaviour
+ * and not a separate mechanism.
+ */
+export const BLOC_DRIFT_PER_MONTH = 0.03;
+
+/** Nobody is ever quite nobody, and nobody is ever quite everybody. */
+export const BLOC_MEMBERSHIP_MIN = 0.0005;
+export const BLOC_MEMBERSHIP_MAX = 0.95;
 
 /**
  * Sentiment points per unit of (reaction strength × regional weight).

@@ -27,6 +27,7 @@
  * they were applied to the stored value each day.
  */
 
+import { blocWeights, driftBlocs } from './blocs';
 import {
   dayToDate,
   daysInYear,
@@ -1044,6 +1045,7 @@ export function advanceDay(state: GameState, content: ContentPack): TickResult {
         stateSeats: content.stateSeats,
         parties: content.parties,
         sentimentByRegion,
+        membershipByRegion: next.blocs.membership,
         previous,
       }),
       log: [
@@ -1158,8 +1160,19 @@ export function advanceDay(state: GameState, content: ContentPack): TickResult {
     already reflect this month's grievance.
   */
   if (isFirstOfMonth(day)) {
-    const decayed = decayGrievance(next.grievance);
-    const reconciled = reconcileUnrest(decayed, day);
+    /*
+      WHO THE COUNTRY IS MADE OF MOVES FIRST, before anything reads it.
+
+      Bloc membership drifts toward what the economy and the statute book imply
+      (brief §1, ECONOMY.md §7.21). It runs ahead of grievance because grievance
+      is landed on regions BY bloc: doing it the other way round would spread
+      this month's anger over last month's country.
+    */
+    next = { ...next, blocs: driftBlocs(next) };
+
+    const weights = blocWeights(next);
+    const decayed = decayGrievance(next.grievance, weights);
+    const reconciled = reconcileUnrest(decayed, day, weights);
     next = { ...next, grievance: reconciled.grievance };
 
     for (const episode of reconciled.started) {

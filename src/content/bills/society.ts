@@ -53,6 +53,14 @@ export const SOCIETY_BILLS: Bill[] = [
     effects: [
       { target: 'region.frontier.prosperity', value: 4, isPercentage: false, scalesWithSlider: false, durationDays: null },
       { target: 'nation.stability', value: 2, isPercentage: false, scalesWithSlider: false, durationDays: null },
+      // The point of a land act is to MOVE PEOPLE. Selling the public domain in
+      // sections a farmer could actually buy is what turned the trans-Appalachian
+      // west from a claim into a population, and the settlers came out of the
+      // eastern farming counties. (ECONOMY.md §7.21)
+      { target: 'bloc.frontier_settlers.frontier', value: 0.22, isPercentage: true, scalesWithSlider: false, durationDays: null },
+      { target: 'bloc.frontier_settlers.south', value: 0.3, isPercentage: true, scalesWithSlider: false, durationDays: null },
+      { target: 'bloc.small_farmers.mid_atlantic', value: -0.06, isPercentage: true, scalesWithSlider: false, durationDays: null },
+      { target: 'bloc.small_farmers.new_england', value: -0.05, isPercentage: true, scalesWithSlider: false, durationDays: null },
     ],
     blocReactions: [
       { bloc: 'financiers', strength: 50, reason: 'Public land converted into public revenue, at a price speculators can meet' },
@@ -246,6 +254,12 @@ export const SOCIETY_BILLS: Bill[] = [
       { target: 'nation.sectionalTension', value: 35, isPercentage: false, scalesWithSlider: false, durationDays: null },
       { target: 'nation.legitimacy', value: -10, isPercentage: false, scalesWithSlider: false, durationDays: null },
       { target: 'nation.stability', value: -12, isPercentage: false, scalesWithSlider: false, durationDays: null },
+      // Emancipation does not merely anger the planters. It DISSOLVES them: an
+      // interest defined by holding people in bondage cannot outlive the
+      // bondage. Gradual, so the shares move over years rather than at once.
+      { target: 'bloc.planters.south', value: -0.4, isPercentage: true, scalesWithSlider: false, durationDays: null },
+      { target: 'bloc.planters.mid_atlantic', value: -0.5, isPercentage: true, scalesWithSlider: false, durationDays: null },
+      { target: 'bloc.small_farmers.south', value: 0.12, isPercentage: true, scalesWithSlider: false, durationDays: null },
     ],
     blocReactions: [
       { bloc: 'planters', strength: -100, reason: 'The whole basis of the Southern economy, and they will leave the union over it' },
@@ -465,6 +479,18 @@ export const SOCIETY_BILLS: Bill[] = [
       { target: 'region.new_england.prosperity', value: 7, isPercentage: false, scalesWithSlider: true, durationDays: null },
       { target: 'region.mid_atlantic.prosperity', value: 6, isPercentage: false, scalesWithSlider: true, durationDays: null },
       { target: 'nation.sectionalTension', value: 7, isPercentage: false, scalesWithSlider: true, durationDays: null },
+      /*
+        THE CLEAREST CASE OF THE BRIEF'S "POLICIES CHANGE THE SIZE OF GROUPS".
+        Hamilton's whole argument for bounties over duties is that they produce
+        manufactures rather than merely making imports dearer. So this does not
+        just please the artisans — it makes more of them, out of the farmers,
+        which is exactly what the Report intended and exactly why the South
+        objected. (ECONOMY.md §7.21)
+      */
+      { target: 'bloc.artisans.new_england', value: 0.3, isPercentage: true, scalesWithSlider: true, durationDays: null },
+      { target: 'bloc.artisans.mid_atlantic', value: 0.32, isPercentage: true, scalesWithSlider: true, durationDays: null },
+      { target: 'bloc.small_farmers.new_england', value: -0.07, isPercentage: true, scalesWithSlider: true, durationDays: null },
+      { target: 'bloc.small_farmers.mid_atlantic', value: -0.07, isPercentage: true, scalesWithSlider: true, durationDays: null },
     ],
     blocReactions: [
       { bloc: 'artisans', strength: 80, reason: 'Capital for workshops that cannot raise it any other way' },

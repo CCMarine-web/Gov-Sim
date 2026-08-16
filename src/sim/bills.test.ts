@@ -31,8 +31,8 @@ import {
   treasuryCost,
   validateBill,
 } from './bills';
-import { BLOC_REGION_WEIGHTS } from './calibration';
 import { isoToDay } from './calendar';
+import { blocWeights } from './blocs';
 import { createTestGame } from './createGame';
 import { explainStat } from './modifiers';
 import { taxesInForce } from './taxes';
@@ -449,9 +449,11 @@ describe('what a bill costs', () => {
 
 describe('bloc reactions land on the regions', () => {
   it('weights every bloc to sum to one across the regions', () => {
+    // Derived from live membership now, not tabulated — so this is a real
+    // invariant of the derivation rather than a restatement of a constant.
+    const weights = blocWeights(createTestGame());
     for (const bloc of BLOC_IDS) {
-      const weights = BLOC_REGION_WEIGHTS[bloc];
-      const total = Object.values(weights).reduce((s, w) => s + w, 0);
+      const total = Object.values(weights[bloc]).reduce((a, b) => a + b, 0);
       expect(total, bloc).toBeCloseTo(1, 6);
     }
   });
@@ -460,6 +462,7 @@ describe('bloc reactions land on the regions', () => {
     const shifts = blocSentimentShifts(
       [{ bloc: 'frontier_settlers', strength: -80, reason: 'test' }],
       createTestGame().regions,
+      blocWeights(createTestGame()),
     );
 
     expect(shifts.frontier).toBeLessThan(0);
@@ -470,6 +473,7 @@ describe('bloc reactions land on the regions', () => {
     const shifts = blocSentimentShifts(
       [{ bloc: 'planters', strength: -80, reason: 'test' }],
       createTestGame().regions,
+      blocWeights(createTestGame()),
     );
 
     expect(shifts.south).toBeLessThan(shifts.new_england);

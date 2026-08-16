@@ -7,7 +7,7 @@ If you are resuming with no context: read `DESIGN.md` first, then this file,
 then `docs/DECISIONS.md` and `docs/BLOCKERS.md`. Then continue the **Phase 2
 queue** below, which is `gov-sim-phase2-brief.md` §9.
 
-**Last updated:** Phase 2 run of 2026-08-16, after queue item 7.
+**Last updated:** Phase 2 run of 2026-08-16, after queue item 8.
 
 ---
 
@@ -17,8 +17,8 @@ queue** below, which is `gov-sim-phase2-brief.md` §9.
 |---|---|
 | Production URL | <https://gov-sim.vercel.app> |
 | Deploy | auto-deploys from `main` on push |
-| Tests | 584 passing |
-| Save schema | version **6** — v1 to v5 saves migrate forward, all five fixtures committed |
+| Tests | 618 passing |
+| Save schema | version **7** — v1 to v6 saves migrate forward, all six fixtures committed |
 | Gates | tests, lint, typecheck, production build — all green |
 | Database | Supabase, `save_games` table migrated, verified reachable from production |
 | Phase | **2 — in progress.** Phase 1 shipped. |
@@ -36,7 +36,7 @@ queue** below, which is `gov-sim-phase2-brief.md` §9.
 | 5 — Legislation categories and bill schema (≥25 bills) | **complete** — 32 bills, see below and D-023 to D-026 |
 | 6 — Monarchy decree path | **complete** — see below and D-027 to D-029 |
 | 7 — Congress and the republic path | **complete** — see below and D-030 to D-032 |
-| 8 — Bloc model | not started |
+| 8 — Bloc model | **complete** — see below and D-033 to D-035 |
 | 9 — Map view replacing the Desk | not started |
 | 10 — Remaining map modes and state detail panel | not started |
 | 11 — Diplomacy tab | not started |
@@ -422,6 +422,67 @@ votes and standing for defeats.
 
 ---
 
+### Item 8 — the bloc model: complete
+
+**What it replaced.** Item 5 shipped a deliberately interim answer: a static
+table of how much of each bloc lived in each region, with a comment saying item 8
+would replace it. A tariff could make the artisans happier. It could not make
+there be more of them.
+
+**Membership is now state.** `GameState.blocs.membership[region][bloc]` — a
+fraction of that region's population, drifting monthly toward what the economy
+and the statute book imply. The old table survives only as `BLOC_MEMBERSHIP_1790`,
+the day-0 seed.
+
+**Two properties that look like errors and are not.** The shares do not sum to 1
+in either direction:
+
+- **Above 1 on the frontier** (about 1.37), because membership OVERLAPS. Half the
+  frontier are small farmers and four fifths are frontier settlers, and most of
+  them are both people. A column summing to exactly 1 would be the binary model
+  the brief asks us to leave behind.
+- **Below 1 in the South** (about 0.60), because a third of the region's people
+  were enslaved and belonged to no political interest — they were permitted none.
+  Rounding them into "small farmers" would tidy a column by asserting something
+  false about 1790. The gap is stated on the Regions screen instead.
+
+**Every driver is a ratio to its own founding value**, so at day 0 every ratio is
+1 and nothing moves. The founding is an equilibrium the model sits still in
+rather than a point it slides away from — the same discipline `baseProsperity`
+carries, and the reason a fresh game does not start drifting for no reason.
+
+**Policy moves blocs through the ledger**, target `bloc.<id>.<region>`, so the
+phase-in ramp applies and the breakdown names the statute. Eight bills now do it,
+each with its historical argument beside it: the Bank makes financiers, the
+Bounties make artisans **out of the farmers**, Commercial Discrimination makes
+artisans and unmakes merchants in the same statute, the Land Act and the National
+Road move people west, and federal emancipation **dissolves the planters** — an
+interest defined by holding people in bondage cannot outlive the bondage.
+
+**Drift is 3% of the gap a month** — a half-life of about 23 months. It falls out
+of that, rather than needing a separate mechanism, that a measure repealed before
+it has taken hold leaves the country roughly where it found it.
+
+**A model bug the tests caught, and it mattered.** Moving Congress onto live
+membership silently collapsed the sectional term: a region's standing is
+normalised within the region, and the small farmers are ~62% of every region's
+politics, so every region started looking alike. Mean regional spread fell from
+0.42 to 0.13 — the property the brief cares most about, lost quietly while the
+model still ran. Fixed by weighting the sectional term with a **location
+quotient**: what divides a country is not what a measure does, it is whether it
+falls here more than elsewhere (D-034). Two tests that failed were corrected
+rather than widened, and both are stronger for it.
+
+**Schema version 7**, `migrations/v6ToV7.ts`, with a committed v6 fixture. It
+seeds the founding shares and takes the save's own present as its baseline, so a
+migrated save behaves like a new game begun on its own date rather than one
+carrying a decade of change it never made.
+
+**Tests:** 24 in `blocs.test.ts`, 5 in `monarchy.test.tsx` for the Regions panel,
+5 more in `migrations.test.ts`. Human-eye checks are `docs/MANUAL-QA.md` §16.
+
+---
+
 ## Phase 1 run queue (complete)
 
 | Item | Status |
@@ -479,6 +540,8 @@ Added in Phase 2, in queue order:
 - `congress.ts` — delegations, the vote model, whipping, riders, log-rolling,
   cooldowns and elections (item 7).
 - `offices.ts` — who holds which office on a given day.
+- `blocs.ts` — who the country is made of, and how policy and the economy
+  change that (item 8).
 
 **Content** (`src/content/`) — **fourteen events**, six laws, cabinet tenures,
 and region seed data, all with sourced historical context.

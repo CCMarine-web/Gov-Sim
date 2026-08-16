@@ -137,6 +137,10 @@ export const GOVERNMENT_BILLS: Bill[] = [
     effects: [
       { target: 'nation.stability', value: 3, isPercentage: false, scalesWithSlider: true, durationDays: null },
       { target: 'region.new_england.prosperity', value: 4, isPercentage: false, scalesWithSlider: true, durationDays: null },
+      // Six frigates have to be built and then manned. The yards are in the
+      // northern ports and so are the crews.
+      { target: 'bloc.seamen.new_england', value: 0.12, isPercentage: true, scalesWithSlider: true, durationDays: null },
+      { target: 'bloc.artisans.new_england', value: 0.08, isPercentage: true, scalesWithSlider: true, durationDays: null },
     ],
     blocReactions: [
       { bloc: 'merchants', strength: 75, reason: 'Cargoes and crews taken in the Mediterranean, and nothing to answer with' },
@@ -391,6 +395,11 @@ export const GOVERNMENT_BILLS: Bill[] = [
       { target: 'region.mid_atlantic.prosperity', value: 5, isPercentage: false, scalesWithSlider: true, durationDays: null },
       { target: 'nation.sectionalTension', value: -6, isPercentage: false, scalesWithSlider: true, durationDays: null },
       { target: 'nation.legitimacy', value: -3, isPercentage: false, scalesWithSlider: true, durationDays: null },
+      // A road west is an invitation west. It also gives the interior farmer a
+      // way to send a bulk crop to market as a crop rather than as whiskey,
+      // which is the quiet answer to the grievance the excise created.
+      { target: 'bloc.frontier_settlers.frontier', value: 0.15, isPercentage: true, scalesWithSlider: true, durationDays: null },
+      { target: 'bloc.merchants.mid_atlantic', value: 0.08, isPercentage: true, scalesWithSlider: true, durationDays: null },
     ],
     blocReactions: [
       { bloc: 'frontier_settlers', strength: 85, reason: 'A road to market is the whole difference between a farm and a subsistence' },

@@ -1057,6 +1057,97 @@ It is not a tuned number. One third is what the clause says.
 
 ---
 
+### 7.21 Blocs — who the country is made of, and how that changes
+
+*Phase 2 brief §1, queue item 8. Implemented in `src/sim/blocs.ts`; the constants are in `calibration.ts` under BLOCS.*
+
+Two ideas taken from Democracy 4, stated in the brief:
+
+> "Nobody in Democracy 4 is only a member of one group… citizens belong to multiple overlapping blocs simultaneously, with graduated rather than binary membership."
+
+> "Group membership is fluid and policies change the size of groups over time. Build this. Blocs should grow and shrink in response to policy, not just get happier or angrier."
+
+Until this landed, a bloc was a row in a static table. A tariff could make the artisans happier. It could not make there be more of them.
+
+#### What membership is
+
+`GameState.blocs.membership[region][bloc]` — a fraction of that region's population. Overlapping and graduated, and both properties are load-bearing.
+
+| Region | Shares total | Why that number |
+|---|---:|---|
+| New England | 0.78 | |
+| Mid-Atlantic | 0.79 | |
+| South | 0.60 | A third of the region's people were enslaved and belonged to no political interest, because they were permitted none |
+| Frontier | **1.37** | Half are small farmers and four fifths are frontier settlers, because most of them are both |
+
+**Neither direction is an error.** Above 1 is the overlap the brief asks for; a column summing to exactly 1 would be the binary model it asks us to leave behind. Below 1 is honesty: rounding the enslaved into "small farmers" would make the arithmetic tidy by asserting something false about 1790. The shortfall is reported on the Regions screen rather than hidden.
+
+The day-0 shares are **calibration constants, not benchmark data** (DESIGN.md §12.2). No census counted planters. Each column's reasoning is written above it in `calibration.ts`, and no screen presents any of them as a historical figure.
+
+#### How a bloc's size moves
+
+Each month, membership drifts toward a target:
+
+```
+target      = seed × Π (driverᵢ / driverᵢ at day 0)^elasticityᵢ    ← the economy
+            then through the modifier ledger, target `bloc.<id>.<region>`  ← the statute book
+membership' = membership + (target − membership) × BLOC_DRIFT_PER_MONTH
+```
+
+**Every driver is a ratio to its own founding value.** At day 0 every ratio is 1, so the target equals the seed and nothing moves — the founding is an equilibrium the model sits still in rather than a point it slides away from. Same discipline as `baseProsperity` and `baselineTaxBurden`. The denominators are stored in `blocs.baseDrivers` and never recomputed; recomputing them from the current economy would make every ratio 1 at every moment and freeze the model permanently.
+
+**Drivers are per head**, not absolute. A region whose trade doubles while its population doubles has not become more mercantile. Absolute figures would turn every bloc into a population counter.
+
+| Bloc | Responds to | Why |
+|---|---|---|
+| Merchants | trade per head (+0.6), prosperity (+0.15) | The carrying trade makes merchants; nothing else does |
+| Seamen | trade per head (+0.5) | Crews are hired to carry cargo |
+| Artisans | manufacturing per head (+0.7), prosperity (+0.2) | Protection and prosperity fill the workshops |
+| Small farmers | farm output per head (+0.25), **manufacturing per head (−0.3)** | The workshop fills from the farm and always has |
+| Planters | enslaved share (+0.8), farm output per head (+0.2) | Staple agriculture on large holdings tracks the labour it was built on |
+| Financiers | trade per head (+0.4), prosperity (+0.5) | Paper, banks and the public debt — the most volatile |
+| Frontier settlers | population (+0.45) | The west fills by migration |
+| Clergy | prosperity (+0.2) | Congregations are supported out of surplus |
+
+Every magnitude is below 1 deliberately. People change occupation more slowly than the economy moves, and an elasticity above 1 would have a bloc outrunning the thing supposedly causing it. **`small_farmers` is the only negative**, and it is the mechanism the brief actually asked for: a measure that builds workshops does not merely please the artisans, it makes more of them, out of the farmers.
+
+**`BLOC_DRIFT_PER_MONTH` = 3%** — a half-life of about 23 months. It falls out of that, rather than needing a separate mechanism, that a measure repealed before it has taken hold leaves the country roughly where it found it.
+
+#### Policy moves blocs through the ledger, like everything else
+
+A bill's `effects` may target `bloc.<blocId>.<regionId>` exactly as they target `region.south.prosperity`. Eight bills now do, each with its historical argument in a comment beside it:
+
+| Bill | What it does to the country |
+|---|---|
+| Bank of the United States | Makes financiers, most of all in Philadelphia — subscription and a market in federal stock gave the seaboard a financial class where there had barely been one |
+| Bounties on Manufactures | Makes artisans out of farmers. Hamilton's whole argument for bounties over duties was that they produce manufactures rather than dearer imports |
+| Commercial Discrimination | Makes artisans and unmakes merchants, in the same statute. Goods that cannot be imported have to be made |
+| Tonnage Act of 1789 | Makes seamen. Discriminating duties are why the American merchant marine grew as it did |
+| Naval Act of 1794 | Makes seamen and shipwrights, in the northern yards |
+| Land Act of 1796 | Moves people west, out of the eastern farming counties |
+| National Road | Moves people west, and gives the interior a way to send a crop to market as a crop rather than as whiskey |
+| Federal Gradual Emancipation | **Dissolves the planters.** An interest defined by holding people in bondage cannot outlive the bondage |
+
+Because it goes through the ledger, the phase-in ramp applies: a statute does not change a country the day it is signed, and the breakdown names which law is doing it.
+
+#### Everything downstream now asks where people actually are
+
+`blocWeights(state)` — the share of each bloc living in each region — replaced the old static table, with the same shape so nothing downstream had to be rewritten. It is now a **consequence** of where people are rather than an assertion about it, and it is what regional grievance, a bill's sentiment shifts, and the chronicle's "chiefly the planters" all read.
+
+The visible consequence: a country whose workshops have filled for a decade reacts to a measure differently from the one that passed the first tariff.
+
+#### Standing, and concentration
+
+Congress asks two different questions of the same data, and they need different normalisations.
+
+**`regionStanding(membership)`** — how much of a region's POLITICS each bloc is: membership × `BLOC_POWER`, normalised to 1. The planters are 5.5% of the South's people and about a fifth of its politics. The enslaved third is none of it. This is what a party's alignment with a region is built from, and what a delegation's own interest is measured in.
+
+**`blocConcentration(standing, national)`** — a location quotient, damped by a square root: how concentrated a bloc is here against the country at large. **This is the term that makes sectional politics work at all.** Standing alone cannot produce a sectional split, because the small farmers are about 62% of every region's politics and a measure that hurts them hurts everywhere equally. What divides a country is not what a measure does, it is whether it falls *here* more than elsewhere: planters are twice as concentrated in the South as nationally, frontier settlers nineteen times over on the frontier.
+
+The square root is deliberate — salience rises with concentration and does so with diminishing returns. Without it the frontier's quotient alone would swamp every other consideration in the model.
+
+---
+
 ## 8. Government type differences
 
 Summarizing what §7 distributes, since this is the founding choice and needs to be reviewable in one place.

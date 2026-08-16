@@ -31,6 +31,7 @@
  */
 
 import { PARTIES, STATE_SEATS } from '@/content/government/congress';
+import { BLOC_MEMBERSHIP_1790 } from '../calibration';
 import { dayToDate } from '../calendar';
 import { seatCongress } from '../congress';
 
@@ -72,6 +73,9 @@ export function v5ToV6(state: Record<string, unknown>): Record<string, unknown> 
       stateSeats: STATE_SEATS,
       parties: PARTIES,
       sentimentByRegion,
+      // The founding seed: v6 predates bloc state entirely, and v6ToV7 is what
+      // gives a save its own. Standing at the founding is the honest input here.
+      membershipByRegion: BLOC_MEMBERSHIP_1790,
       // No previous Congress: cooldowns, obligations and defeats all start
       // empty, because a v5 save records no votes — there were none to record.
     }),

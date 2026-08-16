@@ -38,7 +38,7 @@
  */
 
 import {
-  BLOC_REGION_WEIGHTS,
+  BLOC_POWER,
   CONGRESS_DEFEAT_LEGITIMACY_COST,
   CONGRESS_GRIEVANCE_RESISTANCE,
   CONGRESS_PARTY_LINE_WEIGHT,
@@ -129,6 +129,35 @@ export function isSeated(state: StateSeats, day: number): boolean {
 }
 
 /**
+ * A region's political standing, bloc by bloc, summing to 1.
+ *
+ * NOT the same as its population. A bloc's standing is how many of them there
+ * are TIMES what they can obstruct (`BLOC_POWER`), so the planters — 5.5% of
+ * the South's people — carry about a fifth of its politics, and the enslaved
+ * third of the region carries none of it at all. That gap is the historical
+ * fact the model refuses to smooth over. (ECONOMY.md §7.21)
+ *
+ * Derived from live membership, so a region whose workshops fill for a decade
+ * genuinely becomes a different political place.
+ */
+export function regionStanding(
+  membership: Record<string, number>,
+): Record<string, number> {
+  const weighted: Record<string, number> = {};
+  let total = 0;
+
+  for (const bloc of Object.keys(membership)) {
+    const value = (membership[bloc] ?? 0) * (BLOC_POWER[bloc] ?? 0.5);
+    weighted[bloc] = value;
+    total += value;
+  }
+
+  if (total <= 0) return weighted;
+  for (const bloc of Object.keys(weighted)) weighted[bloc] /= total;
+  return weighted;
+}
+
+/**
  * How a state's delegation divides between the parties in existence.
  *
  * A MODEL, NOT A RECORD, and the whole reason it is derived rather than
@@ -145,19 +174,21 @@ export function delegationShare(
   regionId: RegionId,
   parties: readonly Party[],
   regionSentiment: number,
+  standing: Record<string, number>,
 ): Record<string, number> {
   const raw: Record<string, number> = {};
 
   for (const party of parties) {
     /*
-      How much of this region's economy this party speaks for: the party's
-      affinity for each bloc, weighted by how much of that bloc lives here.
-      A party aligned with the planters polls strongly in the South and barely
-      registers in New England, which is the correct shape.
+      How much of this region's politics this party speaks for: the party's
+      affinity for each bloc, weighted by that bloc's STANDING in this region —
+      its share of the population, times what that share can obstruct. A party
+      aligned with the planters polls strongly in the South and barely registers
+      in New England, which is the correct shape.
     */
     let alignment = 0;
-    for (const [bloc, weight] of Object.entries(BLOC_REGION_WEIGHTS)) {
-      alignment += (party.blocAffinity[bloc] ?? 0) * (weight[regionId] ?? 0);
+    for (const [bloc, weight] of Object.entries(standing)) {
+      alignment += (party.blocAffinity[bloc] ?? 0) * weight;
     }
 
     /*
@@ -229,6 +260,8 @@ export function seatCongress(params: {
   stateSeats: readonly StateSeats[];
   parties: readonly Party[];
   sentimentByRegion: Record<string, number>;
+  /** Live bloc membership per region. Standing is derived from it. */
+  membershipByRegion: Record<string, Record<string, number>>;
   previous?: CongressState;
 }): CongressState {
   const live = partiesOn(params.parties, params.day);
@@ -244,6 +277,7 @@ export function seatCongress(params: {
         s.regionId,
         live,
         params.sentimentByRegion[s.regionId] ?? 0,
+        regionStanding(params.membershipByRegion[s.regionId] ?? {}),
       );
       return {
         stateCode: s.code,
@@ -405,22 +439,83 @@ function partyLine(bill: Bill, party: Party): number {
  * Massachusetts. Over decades this is what turns a party system into a
  * sectional one.
  */
-function regionalInterest(bill: Bill, regionId: RegionId): number {
+function regionalInterest(
+  bill: Bill,
+  standing: Record<string, number>,
+  concentration: Record<string, number>,
+): number {
   let total = 0;
   for (const reaction of bill.blocReactions) {
-    const weight = BLOC_REGION_WEIGHTS[reaction.bloc]?.[regionId] ?? 0;
-    total += reaction.strength * weight;
+    total +=
+      reaction.strength *
+      (standing[reaction.bloc] ?? 0) *
+      (concentration[reaction.bloc] ?? 1);
   }
   return total / 100;
 }
 
+/**
+ * How concentrated each bloc is here, against the country as a whole.
+ *
+ * A location quotient, damped by a square root — and it is the term that makes
+ * the sectional politics work at all.
+ *
+ * Standing alone cannot produce a sectional split, because the small farmers
+ * are about 62% of every region's politics and a measure that hurts them hurts
+ * everywhere equally. What divides a country is not what a measure does, it is
+ * whether it falls HERE more than elsewhere. The planters are twice as
+ * concentrated in the South as in the country at large; the frontier settlers
+ * nineteen times over on the frontier. That ratio is the sectional term.
+ *
+ * The square root is deliberate. Salience rises with concentration and does so
+ * with diminishing returns — a bloc twenty times over-represented is not twenty
+ * times louder — and without it the frontier's quotient alone would swamp every
+ * other consideration in the model.
+ */
+export function blocConcentration(
+  standing: Record<string, number>,
+  national: Record<string, number>,
+): Record<string, number> {
+  const out: Record<string, number> = {};
+  for (const bloc of Object.keys(standing)) {
+    const reference = national[bloc] ?? 0;
+    out[bloc] = reference > 0 ? Math.sqrt(standing[bloc] / reference) : 1;
+  }
+  return out;
+}
+
+/**
+ * The country's standing, bloc by bloc: the reference every region is compared
+ * against. Weighted by population, so a region of a hundred thousand does not
+ * count the same as one of two million.
+ */
+export function nationalStanding(state: GameState): Record<string, number> {
+  const total = state.regions.reduce((sum, r) => sum + r.population, 0) || 1;
+  const out: Record<string, number> = {};
+
+  for (const region of state.regions) {
+    const standing = regionStanding(state.blocs.membership[region.id] ?? {});
+    for (const bloc of Object.keys(standing)) {
+      out[bloc] = (out[bloc] ?? 0) + (standing[bloc] * region.population) / total;
+    }
+  }
+
+  return out;
+}
+
 /** The bloc most responsible for a region's view of a bill, for the reason text. */
-function principalInterest(bill: Bill, regionId: RegionId): { bloc: BlocId; reason: string } | null {
+function principalInterest(
+  bill: Bill,
+  standing: Record<string, number>,
+  concentration: Record<string, number>,
+): { bloc: BlocId; reason: string } | null {
   let best: { bloc: BlocId; reason: string; magnitude: number } | null = null;
 
   for (const reaction of bill.blocReactions) {
-    const weight = BLOC_REGION_WEIGHTS[reaction.bloc]?.[regionId] ?? 0;
-    const magnitude = Math.abs(reaction.strength) * weight;
+    const magnitude =
+      Math.abs(reaction.strength) *
+      (standing[reaction.bloc] ?? 0) *
+      (concentration[reaction.bloc] ?? 1);
     if (!best || magnitude > best.magnitude) {
       best = { bloc: reaction.bloc, reason: reaction.reason, magnitude };
     }
@@ -445,6 +540,7 @@ export function whipCount(
   tactics: BillTactics = NO_TACTICS,
 ): WhipCount {
   const live = partiesOn(parties, state.day);
+  const national = nationalStanding(state);
   const votes: DelegationVote[] = [];
 
   for (const delegation of state.congress.delegations) {
@@ -453,8 +549,10 @@ export function whipCount(
     if (seatsInChamber === 0) continue;
 
     const grievance = state.grievance.byRegion[delegation.regionId] ?? 0;
-    const interest = regionalInterest(bill, delegation.regionId);
-    const principal = principalInterest(bill, delegation.regionId);
+    const standing = regionStanding(state.blocs.membership[delegation.regionId] ?? {});
+    const concentration = blocConcentration(standing, national);
+    const interest = regionalInterest(bill, standing, concentration);
+    const principal = principalInterest(bill, standing, concentration);
 
     for (const [recordedId, share] of Object.entries(sharesIn(delegation, chamber))) {
       // Resolved through succession: a delegation seated as Pro-Administration

@@ -1018,3 +1018,124 @@ the House after opinion swings; a newly admitted state gets its first two
 senators outright; and a class elected as Anti-Administration still counts once
 that interest becomes the Democratic-Republicans, with the shares still summing
 to a whole chamber.
+
+---
+
+## D-033 — Bloc membership is state, and the old table survives only as its seed
+
+**Date:** 2026-08-16 (Phase 2, queue item 8)
+**Status:** implemented
+
+**The brief asked for two things.** Overlapping, graduated membership; and sizes
+that policy can change — "blocs should grow and shrink in response to policy,
+not just get happier or angrier". Item 5 shipped an explicitly interim answer: a
+static table of how much of each bloc lived in each region, with a comment saying
+item 8 would replace it.
+
+**Decision: membership becomes `GameState.blocs`,** a fraction of each region's
+population per bloc, drifting monthly toward a target the economy and the statute
+book imply. The old table is now `BLOC_MEMBERSHIP_1790` — the day-0 seed, which
+is where a founding equilibrium belongs, and nothing more.
+
+**The key discipline is that every driver is a RATIO to its own founding value.**
+At day 0 every ratio is 1, so target equals seed and nothing moves. Without this
+the country would slide away from the founding on the first tick for no reason
+the player caused — the same failure `baseProsperity` and `baselineTaxBurden`
+were introduced to prevent, and the same fix.
+
+**What the change cost, honestly.** The old weights could not be preserved
+exactly, because they were never a population distribution. They said a quarter
+of the nation's small farmers lived on the frontier; the frontier held 2.8% of
+the population. That was a rough political weighting doing duty as a geography,
+and the discrepancy is not a rounding difference — it was wrong. Six of the eight
+blocs land within a few points of the old table when derived from membership;
+`small_farmers` and `frontier_settlers` move a long way, and in both cases the
+new figure is the defensible one.
+
+**Why the shares deliberately do not sum to 1, in either direction.** Above 1 on
+the frontier is the overlap the brief asked for: half are small farmers, four
+fifths are frontier settlers, most are both. Below 1 in the South is the harder
+one — a third of the region's people were enslaved and belonged to no political
+interest because they were permitted none. Rounding them into "small farmers"
+would tidy a column by asserting something false about 1790. The gap is reported
+on the Regions screen in words instead.
+
+**Sizes are calibration constants, not benchmark data.** No census counted
+planters. Each column's reasoning is written above it in `calibration.ts`, and no
+screen shows any of them as a historical figure (DESIGN.md §12.2).
+
+---
+
+## D-034 — Sectional politics needs concentration, not size
+
+**Date:** 2026-08-16 (Phase 2, queue item 8)
+**Status:** implemented. Found by two failing tests, and it changed the model.
+
+**What broke.** Moving Congress from the old national weights to live membership
+made two long-standing tests fail: no delegation was undecided on any bill, and
+whipping a party by thirty points no longer moved a vote. The obvious response —
+widen the undecided band — would have hidden the real problem.
+
+**What the real problem was**, once measured rather than guessed. The mean
+regional SPREAD of a bill's sectional term had collapsed from 0.42 to 0.13. The
+cause is that a region's standing is normalised within the region, and the small
+farmers are about 62% of every region's politics — so every region looked alike
+and the sectional term could no longer differentiate anything. The model had lost
+the one property the brief cares most about, quietly, while still running.
+
+**Decision: weight the sectional term by a location quotient** — how concentrated
+a bloc is here against the country at large — damped by a square root.
+
+Standing answers "what is this region made of". Concentration answers "does this
+fall on us more than on them", and **that** is what divides a country. A measure
+that hurts small farmers hurts everyone equally and should produce no sectional
+split; one that hurts planters splits the union, because the planters are twice
+as concentrated in the South as nationally. Under the old table this fell out by
+accident of how the weights were written. It is now the model.
+
+The square root is not decoration. The frontier settlers are nineteen times
+over-represented on the frontier, and undamped that single quotient would swamp
+every other term in the whip count. Salience rises with concentration and does so
+with diminishing returns.
+
+**The two tests were then corrected rather than weakened.** The abstention test
+asked whether one bill produced an abstention; it now asks whether the undecided
+band is reachable across the whole statute book, and it is — 29% of
+delegation-votes. The Bank was simply the worst possible example, because nobody
+abstained on the Bank, which is correct. The whipping test asserted that whipping
+buys votes; it now asserts that whipping moves the division, because whipping
+buys ABSTENTIONS before it buys votes — which is how persuasion works — and it
+additionally asserts that a large enough whip does buy the votes themselves.
+Both tests are stronger than before.
+
+---
+
+## D-035 — A migrated save keeps the founding shares and its own denominators
+
+**Date:** 2026-08-16 (Phase 2, queue item 8)
+**Status:** implemented
+
+**The question `v6ToV7` had to answer.** A v6 save has no bloc state. Two
+candidates:
+
+1. **Seed the founding shares.** Every save resumes with the country made of the
+   people it was made of in 1789.
+2. **Derive shares from the save's current economy**, as if the drift had been
+   running all along.
+
+**(2) is tempting and wrong.** It would invent a decade of occupational change
+the player never caused and then present it as their record — a save whose whole
+legislative history is three tariffs would load into a country of artisans it
+never made. Same reasoning as seeding grievance empty in `v4ToV5`.
+
+**The denominators are the harder half.** Every driver is a ratio to its founding
+value. A v6 save from 1798 has an economy that has grown for nine years;
+measuring it against real 1789 figures is impossible because the save does not
+contain them, and measuring it against today's figures reads as "nothing has
+changed" — which is precisely the right answer for a save that has not been
+running the model.
+
+**So: founding shares, and the save's own present as the baseline.** The country
+is what it is, and it changes from here. A migrated save then behaves like a new
+game started on its own date rather than like one quietly running a model it
+never had. Asserted by test: the first drift after loading moves nothing.

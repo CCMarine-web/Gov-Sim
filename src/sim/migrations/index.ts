@@ -23,6 +23,7 @@ import { v2ToV3 } from './v2ToV3';
 import { v3ToV4 } from './v3ToV4';
 import { v4ToV5 } from './v4ToV5';
 import { v5ToV6 } from './v5ToV6';
+import { v6ToV7 } from './v6ToV7';
 
 /** A single forward step. Receives and returns loosely-typed state by design:
  *  the shape it migrates FROM no longer has a TypeScript type in this build. */
@@ -45,6 +46,8 @@ export const MIGRATIONS: Record<number, Migration> = {
   4: v4ToV5,
   /** Congress arrives, seated for the day the save is on. (brief §2.2) */
   5: v5ToV6,
+  /** Blocs become state: overlapping membership that policy can move. (brief §1) */
+  6: v6ToV7,
 };
 
 export type LoadOutcome =

@@ -15,8 +15,8 @@
  *      item 3, and it is the requirement the author stated most plainly:
  *      "When I pass a new tax in Legislation, it must appear as a new line in
  *      Treasury."
- *   4. Its bloc reactions move regional sentiment through a documented
- *      weighting, until queue item 8 replaces that with the real bloc model.
+ *   4. Its bloc reactions move regional sentiment, landing wherever each bloc
+ *      actually lives on the day it passes (`blocWeights`, ECONOMY.md §7.21).
  *
  * Repealing reverses 1 to 3: the modifiers go (they must, or the ledger keeps
  * applying a law no longer in force), and the tax or programme it created is
@@ -29,12 +29,12 @@
 
 import {
   BLOC_REACTION_TO_SENTIMENT,
-  BLOC_REGION_WEIGHTS,
   DECREE_CAPITAL_FACTOR,
   DECREE_GRIEVANCE_PER_OPPOSITION,
   FAILED_BILL_COOLDOWN_DAYS,
   LEGISLATION_GRIEVANCE_PER_OPPOSITION,
 } from './calibration';
+import { blocWeights, type BlocWeights } from './blocs';
 import { isoToDay } from './calendar';
 import { describeUnmet, evaluateAll } from './conditions';
 import {
@@ -379,27 +379,28 @@ export function billModifiers(
 /**
  * How a bill's bloc reactions land on the regions.
  *
- * INTERIM, AND SAID SO. Queue item 8 builds overlapping, fluid bloc membership;
- * until it does, each bloc is distributed across the regions by a documented
- * weighting (`BLOC_REGION_WEIGHTS`, ECONOMY.md §7.18) and its reaction moves
- * that region's sentiment in proportion.
+ * A bloc's reaction moves a region's sentiment in proportion to how much of
+ * that bloc lives there — so passing a bill the planters hate angers the South,
+ * and one the seamen hate angers New England.
  *
- * This is a real mechanic rather than a placeholder — passing a bill the
- * planters hate really does anger the South today — and item 8 replaces the
- * weighting without touching the content, which is the whole reason bills
- * declare bloc reactions now rather than later.
+ * The weights come from `blocWeights(state)` (ECONOMY.md §7.21) and are
+ * therefore CURRENT: they are derived from where people are today, not from a
+ * table written in 1790. A country whose workshops have filled for a decade
+ * reacts to a tariff differently from the one that passed the first one, which
+ * is the point of making membership move at all.
  */
 export function blocSentimentShifts(
   reactions: readonly BlocReaction[],
   regions: readonly Region[],
+  weights: BlocWeights,
 ): Record<string, number> {
   const shifts: Record<string, number> = {};
   for (const region of regions) shifts[region.id] = 0;
 
   for (const reaction of reactions) {
-    const weights = BLOC_REGION_WEIGHTS[reaction.bloc];
+    const row = weights[reaction.bloc] ?? {};
     for (const region of regions) {
-      const weight = weights[region.id] ?? 0;
+      const weight = row[region.id] ?? 0;
       shifts[region.id] +=
         reaction.strength * weight * BLOC_REACTION_TO_SENTIMENT;
     }
@@ -550,7 +551,7 @@ export function enactBill(
   }
 
   // --- Bloc reactions ------------------------------------------------------
-  const shifts = blocSentimentShifts(bill.blocReactions, state.regions);
+  const shifts = blocSentimentShifts(bill.blocReactions, state.regions, blocWeights(state));
   const regions = state.regions.map((region) => ({
     ...region,
     // Applied to the BASE sentiment, not the current value, because a lagged
@@ -578,6 +579,7 @@ export function enactBill(
     state.grievance,
     bill.blocReactions,
     state.governmentType,
+    blocWeights(state),
   );
 
   /*

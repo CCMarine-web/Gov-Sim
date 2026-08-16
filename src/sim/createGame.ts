@@ -23,6 +23,7 @@ import {
   content pack it is created against. Both are pure data with no logic.
 */
 import { PARTIES as partyData, STATE_SEATS as seatData } from '@/content/government/congress';
+import { seedBlocs } from './blocs';
 import { seatCongress } from './congress';
 import { START, START_DEBT_RATE, START_TRADE_CAPACITY } from './calibration';
 import {
@@ -314,6 +315,14 @@ export function createGame(options: NewGameOptions): GameState {
 
   const startingCap = capitalCapTarget({ governmentType, legitimacy });
 
+  /*
+    WHO THE COUNTRY IS MADE OF, at the founding. Overlapping shares of each
+    region, and the day-0 economy every later target is measured against — so
+    the founding is an equilibrium the bloc model sits still in rather than a
+    point it immediately slides away from. (ECONOMY.md §7.21)
+  */
+  const blocs = seedBlocs(regions);
+
   return {
     schemaVersion: SCHEMA_VERSION,
     gameId,
@@ -461,7 +470,9 @@ export function createGame(options: NewGameOptions): GameState {
       sentimentByRegion: Object.fromEntries(
         regions.map((r) => [r.id, r.sentiment]),
       ),
+      membershipByRegion: blocs.membership,
     }),
+    blocs,
 
     activeModifiers: [],
 

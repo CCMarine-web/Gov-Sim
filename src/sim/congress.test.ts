@@ -39,6 +39,7 @@ import {
   houseSeatsOn,
   offCooldown,
   partiesOn,
+  regionStanding,
   seatCongress,
   seatsByParty,
   tacticsCost,
@@ -48,6 +49,15 @@ import {
 } from './congress';
 import { createTestGame } from './createGame';
 import type { Bill, CongressState, GameState } from './types';
+
+/**
+ * The founding composition of the country: who lives in each region.
+ *
+ * Taken from a real game rather than written out, so these tests cannot drift
+ * away from the model they are testing. (ECONOMY.md §7.21)
+ */
+const M = createTestGame().blocs.membership;
+
 
 function billById(id: string): Bill {
   return PHASE_1_CONTENT.bills.find((b) => b.id === id)!;
@@ -115,6 +125,7 @@ describe('the seat counts are the historical ones', () => {
       number: 3,
       stateSeats: STATE_SEATS,
       parties: PARTIES,
+      membershipByRegion: M,
       sentimentByRegion: {},
     });
 
@@ -216,9 +227,31 @@ describe('the whip count shows its working', () => {
   });
 
   it('lets a delegation abstain rather than forcing a side', () => {
-    const state = republic(isoToDay('1791-06-01'));
-    const count = whipCount(state, bill, PARTIES, 'house');
-    expect(count.votes.some((v) => v.verdict === 'undecided')).toBe(true);
+    /*
+      Asked of the whole statute book rather than of one bill, and deliberately.
+      The Bank is the most polarising question of the decade and NOBODY abstains
+      on it — which is correct, and makes it the worst possible example of the
+      general rule. What has to be true is that the undecided band is reachable
+      at all: that a member could sit a vote out, as members of the early
+      Congresses did far more readily than a modern whipped one.
+    */
+    const state = republic(isoToDay('1796-06-02'));
+    let undecided = 0;
+    let total = 0;
+
+    for (const candidate of PHASE_1_CONTENT.bills) {
+      const count = whipCount(state, candidate, PARTIES, 'house');
+      for (const vote of count.votes) {
+        total++;
+        if (vote.verdict === 'undecided') undecided++;
+      }
+    }
+
+    expect(total).toBeGreaterThan(0);
+    expect(undecided).toBeGreaterThan(0);
+    // And it is a real feature of the model rather than a rounding accident:
+    // a fair share of divisions have somebody sitting them out.
+    expect(undecided / total).toBeGreaterThan(0.05);
   });
 
   it('requires both chambers', () => {
@@ -306,8 +339,26 @@ describe('the player can change the count, at a price', () => {
     };
     const after = whipCount(state, bill, PARTIES, 'house', tactics);
 
-    expect(after.for).toBeGreaterThan(before.for);
+    /*
+      Whipping buys abstentions before it buys votes, which is how persuasion
+      works: a member set against a bill is talked into staying out of it long
+      before they are talked into supporting it. So the claim is that the
+      DIVISION moves the government's way — measured as for-minus-against,
+      which counts both effects.
+    */
+    expect(after.for - after.against).toBeGreaterThan(before.for - before.against);
+    expect(after.against).toBeLessThan(before.against);
     expect(tacticsCost(tactics)).toBeGreaterThan(0);
+
+    // And enough of it does buy the votes themselves.
+    const hard = whipCount(state, bill, PARTIES, 'house', {
+      ...NO_TACTICS,
+      whip: { anti_administration: 70 },
+    });
+    expect(hard.for).toBeGreaterThan(before.for);
+    expect(tacticsCost({ ...NO_TACTICS, whip: { anti_administration: 70 } })).toBeGreaterThan(
+      tacticsCost(tactics),
+    );
   });
 
   it('a rider buys one party outright, for a flat price', () => {
@@ -482,8 +533,9 @@ describe('elections re-seat Congress from the country as it is', () => {
   it('returns members hostile to a government that has alienated a region', () => {
     const parties = partiesOn(PARTIES, isoToDay('1795-01-01'));
 
-    const content = delegationShare('south', parties, 60);
-    const hostile = delegationShare('south', parties, -60);
+    const standing = regionStanding(M.south);
+    const content = delegationShare('south', parties, 60, standing);
+    const hostile = delegationShare('south', parties, -60, standing);
 
     // Sentiment becomes seats: the administration party loses ground where the
     // government is disliked.
@@ -496,7 +548,7 @@ describe('elections re-seat Congress from the country as it is', () => {
   it('leaves every party some presence everywhere', () => {
     const parties = partiesOn(PARTIES, isoToDay('1795-01-01'));
     for (const regionId of ['new_england', 'mid_atlantic', 'south', 'frontier']) {
-      const share = delegationShare(regionId as never, parties, -100);
+      const share = delegationShare(regionId as never, parties, -100, regionStanding(M[regionId] ?? {}));
       for (const party of parties) {
         // No region in 1790 was unanimous, and a zero share would make a state
         // permanently unwinnable.
@@ -513,6 +565,7 @@ describe('elections re-seat Congress from the country as it is', () => {
       number: 1,
       stateSeats: STATE_SEATS,
       parties: PARTIES,
+      membershipByRegion: M,
       sentimentByRegion: {},
     });
     const used = {
@@ -527,6 +580,7 @@ describe('elections re-seat Congress from the country as it is', () => {
       number: 3,
       stateSeats: STATE_SEATS,
       parties: PARTIES,
+      membershipByRegion: M,
       sentimentByRegion: {},
       previous: used,
     });
@@ -580,6 +634,7 @@ describe('elections re-seat Congress from the country as it is', () => {
         number: previous ? previous.number + 1 : 1,
         stateSeats: STATE_SEATS,
         parties: PARTIES,
+        membershipByRegion: M,
         sentimentByRegion: sentiment,
         previous,
       });
@@ -591,7 +646,7 @@ describe('elections re-seat Congress from the country as it is', () => {
 
       const va = after.delegations.find((d) => d.stateCode === 'VA')!;
       const sat = before.delegations.find((d) => d.stateCode === 'VA')!;
-      const fresh = delegationShare('south', live, -60);
+      const fresh = delegationShare('south', live, -60, regionStanding(M.south));
 
       for (const party of live) {
         // The House is elected entire: it is exactly the new result.
@@ -633,6 +688,7 @@ describe('elections re-seat Congress from the country as it is', () => {
         number: 2,
         stateSeats: STATE_SEATS,
         parties: PARTIES,
+        membershipByRegion: M,
         sentimentByRegion: warm,
       });
       expect(before.delegations.map((d) => d.stateCode)).not.toContain('KY');
@@ -642,6 +698,7 @@ describe('elections re-seat Congress from the country as it is', () => {
         number: 3,
         stateSeats: STATE_SEATS,
         parties: PARTIES,
+        membershipByRegion: M,
         sentimentByRegion: cold,
         previous: before,
       });
@@ -661,6 +718,7 @@ describe('elections re-seat Congress from the country as it is', () => {
         number: 2,
         stateSeats: STATE_SEATS,
         parties: PARTIES,
+        membershipByRegion: M,
         sentimentByRegion: warm,
         previous: undefined,
       });
@@ -671,6 +729,7 @@ describe('elections re-seat Congress from the country as it is', () => {
         number: 3,
         stateSeats: STATE_SEATS,
         parties: PARTIES,
+        membershipByRegion: M,
         sentimentByRegion: warm,
         previous: before,
       });

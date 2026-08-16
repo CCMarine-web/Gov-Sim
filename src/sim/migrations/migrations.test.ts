@@ -1,5 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { advanceDay, resolveDecision } from '../advanceDay';
+import { driftBlocs } from '../blocs';
+import { BLOC_MEMBERSHIP_1790 } from '../calibration';
 import { createTestGame } from '../createGame';
 import { aggregateRate, spendingFor } from '../taxes';
 import { SCHEMA_VERSION } from '../types';
@@ -9,6 +11,7 @@ import v2Fixture from './fixtures/v2-republic-day900.json';
 import v3Fixture from './fixtures/v3-republic-day900.json';
 import v4Fixture from './fixtures/v4-republic-day900.json';
 import v5Fixture from './fixtures/v5-republic-day900.json';
+import v6Fixture from './fixtures/v6-republic-day900.json';
 import { MIGRATIONS, migrateToCurrent, parseSave } from './index';
 
 describe('loading a save of the current version', () => {
@@ -709,5 +712,95 @@ describe('a migrated save is still a valid game state', () => {
 
     expect(resumed.day).toBe(100);
     expect(Number.isFinite(resumed.nation.gdp)).toBe(true);
+  });
+});
+
+/**
+ * THE v6 FIXTURE
+ *
+ * A real save in the version 6 format, at day 900 — 16 October 1791. Blocs were
+ * a static table in v6 and could not move, so the migration has to give the save
+ * a country that CAN change, without inventing a decade of change it never had.
+ * (DECISIONS.md D-035)
+ */
+describe('the v6 fixture gains a country that can change', () => {
+  const raw = JSON.parse(JSON.stringify(v6Fixture)) as Record<string, unknown>;
+
+  it('is genuinely a v6 save, with no bloc state in it', () => {
+    expect(raw.schemaVersion).toBe(6);
+    expect(raw.blocs).toBeUndefined();
+    // And it carries a Congress, so v6 is what it says it is.
+    expect(raw.congress).toBeDefined();
+  });
+
+  it('seeds the founding shares rather than inventing a history', () => {
+    const outcome = migrateToCurrent(JSON.parse(JSON.stringify(raw)));
+    expect(outcome.ok).toBe(true);
+    if (!outcome.ok) return;
+
+    /*
+      A v6 save records no bloc movement, because blocs could not move. Deriving
+      shares from the save's current economy would invent occupational change the
+      player never caused and then present it as their record — the same
+      reasoning that seeds grievance empty in v4ToV5.
+    */
+    for (const region of outcome.state.regions) {
+      const seeded = BLOC_MEMBERSHIP_1790[region.id];
+      expect(outcome.state.blocs.membership[region.id], region.id).toEqual(seeded);
+    }
+  });
+
+  it('measures the future against the save’s own economy, not against 1789', () => {
+    const outcome = migrateToCurrent(JSON.parse(JSON.stringify(raw)));
+    expect(outcome.ok).toBe(true);
+    if (!outcome.ok) return;
+
+    /*
+      The denominators must be the save's CURRENT economy. Measuring a 1791 save
+      against 1789 figures it does not contain is impossible; measuring it
+      against itself declares its present to be its baseline, so it behaves like
+      a game begun on its own date. The observable consequence is that nothing
+      lurches on the first tick after loading.
+    */
+    for (const region of outcome.state.regions) {
+      const base = outcome.state.blocs.baseDrivers[region.id];
+      expect(base, region.id).toBeDefined();
+      expect(base.tradePerHead).toBeCloseTo(region.tradeVolume / region.population, 9);
+      expect(base.population).toBeCloseTo(region.population, 6);
+      // Every driver has to be usable as a denominator.
+      for (const value of Object.values(base)) {
+        expect(Number.isFinite(value)).toBe(true);
+      }
+    }
+  });
+
+  it('does not lurch on the first month after loading', () => {
+    const outcome = migrateToCurrent(JSON.parse(JSON.stringify(raw)));
+    expect(outcome.ok).toBe(true);
+    if (!outcome.ok) return;
+
+    const before = JSON.parse(JSON.stringify(outcome.state.blocs.membership));
+    const drifted = driftBlocs(outcome.state);
+
+    for (const regionId of Object.keys(before)) {
+      for (const bloc of Object.keys(before[regionId])) {
+        // The save's present is its baseline, so the first drift has nothing to
+        // move toward and moves nowhere.
+        expect(drifted.membership[regionId][bloc], `${regionId}/${bloc}`).toBeCloseTo(
+          before[regionId][bloc],
+          9,
+        );
+      }
+    }
+  });
+
+  it('keeps everything the migration is not about', () => {
+    const outcome = migrateToCurrent(JSON.parse(JSON.stringify(raw)));
+    expect(outcome.ok).toBe(true);
+    if (!outcome.ok) return;
+
+    expect(outcome.state.day).toBe(raw.day);
+    expect(outcome.state.congress).toEqual(raw.congress);
+    expect(outcome.state.grievance).toEqual(raw.grievance);
   });
 });

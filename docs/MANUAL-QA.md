@@ -614,3 +614,71 @@ legislature you do not need, and point at the grievance you are accumulating
 instead.
 *Problem if:* a monarchy is shown a projected division. It would be projecting a
 vote that cannot happen.
+
+---
+
+## 16. Blocs — who the country is made of
+
+*Phase 2, queue item 8. `ECONOMY.md` §7.21, `DECISIONS.md` D-033 to D-035.*
+
+**16.1 — Every region says who lives in it**
+Open Regions. Under each region's stats there should be a "Who lives here"
+list: the blocs, largest first, each with a share.
+*Problem if:* a region shows no blocs, or shows all eight at identical shares.
+
+**16.2 — The shares do not add to a hundred, and the screen says why**
+Add up the frontier's shares. They come to about 137%. The note underneath
+should explain that people belong to more than one at once.
+*Problem if:* there is no note. The first thing a careful reader does is add the
+column up, and without the note they will conclude the screen is broken.
+
+**16.3 — The South's missing four tenths are named**
+Look at the South. Its shares come to about 60%, and the note should say that a
+further third of the region were enslaved and belonged to none of these,
+having been allowed no political interest at all.
+*Problem if:* the shortfall is silent, or the enslaved have been quietly folded
+into "small farmers" to make the column tidy. That would be the project's
+hardest rule broken by rounding.
+
+**16.4 — A statute changes the country, not just its mood**
+Start a monarchy so you can decree freely. Pass **Bounties on Manufactures** at
+the top of its slider, then run several years at speed. Come back to Regions:
+the artisans in the Mid-Atlantic and New England should be visibly larger than
+they were, marked "growing", and the small farmers slightly smaller.
+*Problem if:* nothing moves. Then blocs only ever get happier or angrier, which
+is exactly what item 8 was for.
+
+**16.5 — It takes years, not weeks**
+Watch how long that takes. It should be years of game time before the change is
+worth noticing, and it should still be moving after a decade.
+*Problem if:* a bloc jumps within a month or two. Occupations do not change
+because a statute passed, and a bloc that snaps makes policy feel like a switch.
+
+**16.6 — Taking a law back leaves the country roughly as it was**
+Pass the bounties, run one year, then repeal. Run two more. The artisans should
+end up close to where they started.
+*Problem if:* a brief experiment permanently rebuilds the economy.
+
+**16.7 — Where a bloc lives determines where its anger lands**
+Play long enough for the artisans to have grown substantially in one region,
+then decree something they hate. The grievance should show up where they now
+are.
+*Problem if:* anger lands where the bloc used to be. Then membership is moving
+on screen without anything downstream reading it.
+
+**16.8 — The founding sits still**
+Start a fresh game and run a year with no legislation at all. The bloc shares
+should be essentially unchanged, and nothing should be marked growing or
+shrinking.
+*Problem if:* the country starts changing on its own from day one. The founding
+is meant to be an equilibrium, not a slope.
+
+**16.9 — Direction is never carried by colour alone**
+A growing bloc should say "growing" with an arrow, and a shrinking one
+"shrinking". (UI.md §10)
+*Problem if:* the only difference is that one number is green.
+
+**16.10 — An old save loads into its own country**
+Load a save made before this update. It should open with the founding shares
+and then start changing from its own date onward — not lurch on the first month,
+and not arrive with a decade of change it never made.

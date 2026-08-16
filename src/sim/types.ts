@@ -31,7 +31,7 @@ import type { TaxBase } from './taxBases';
  * migrated forward or refused cleanly — never crashed, never silently loaded
  * into a broken state. (DESIGN.md Rule 8)
  */
-export const SCHEMA_VERSION = 6;
+export const SCHEMA_VERSION = 7;
 
 // ============================================================================
 // GOVERNMENT AND REGIONS
@@ -817,6 +817,14 @@ export interface GameState {
    * monarchy decrees, and Congress is a record of who would have objected.
    */
   congress: CongressState;
+  /**
+   * Who the country is made of, and how that is changing. (brief §1, item 8)
+   *
+   * Overlapping, graduated membership per region, drifting monthly toward what
+   * the economy and the statute book imply. The reason a tariff can produce
+   * more artisans rather than merely happier ones.
+   */
+  blocs: BlocState;
 
   // --- the ledger ---
   activeModifiers: Modifier[];
@@ -1108,11 +1116,10 @@ export type BillHistoricity =
  * The economic and social groupings a bill acts on. (brief §1, from Democracy 4)
  *
  * Membership is graduated and overlapping — a Virginia planter is also a
- * slaveholder and often a debtor — and modelling that properly is queue item 8.
- * Bills declare their reactions NOW so that the content does not have to be
- * rewritten when the model lands, and so the reactions can drive regional
- * sentiment in the meantime through a documented weighting
- * (`BLOC_REGION_WEIGHTS`, ECONOMY.md §7.18).
+ * slaveholder and often a debtor — and it MOVES: `BlocState` below carries the
+ * live shares, `src/sim/blocs.ts` the model that changes them, and ECONOMY.md
+ * §7.21 the reasoning. A bill's declared reactions land wherever the bloc
+ * actually is on the day it passes, not wherever a table once said it was.
  */
 export type BlocId =
   | 'planters'
@@ -1134,6 +1141,37 @@ export const BLOC_IDS: readonly BlocId[] = [
   'seamen',
   'small_farmers',
 ] as const;
+
+/**
+ * Who the country is made of, as it stands today. (brief §1, queue item 8)
+ *
+ * `membership[regionId][blocId]` is a fraction of that region's population.
+ * Overlapping, so a region's shares may sum above 1; incomplete, so they may
+ * sum below it. Both are load-bearing — see `calibration.ts`, BLOCS.
+ */
+export interface BlocState {
+  membership: Record<string, Record<string, number>>;
+  /**
+   * The day-0 economy each bloc's target is measured against.
+   *
+   * Stored, never recomputed. Every driver enters the model as a ratio to its
+   * founding value, so these are the denominators — recomputing them from the
+   * current economy would make every ratio 1 forever and freeze the model.
+   */
+  baseDrivers: Record<
+    string,
+    {
+      tradePerHead: number;
+      manufacturingPerHead: number;
+      agriculturePerHead: number;
+      enslavedShare: number;
+      prosperity: number;
+      population: number;
+    }
+  >;
+  /** Last day the monthly drift ran. Bookkeeping, like `lastEconomyRecomputeDay`. */
+  lastDriftDay: number;
+}
 
 export interface BlocReaction {
   bloc: BlocId;

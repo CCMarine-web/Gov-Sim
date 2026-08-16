@@ -14,7 +14,7 @@
  * government can be broadly tolerated and still have made one interest
  * implacable, and the interest it has made implacable determines where the
  * trouble comes from. Regional grievance is DERIVED from bloc grievance through
- * the same weighting bills use (`BLOC_REGION_WEIGHTS`), so the two cannot
+ * the same weighting bills use (`blocWeights`), so the two cannot
  * disagree and a bloc's anger lands where that bloc actually is.
  *
  * WHY THE MONARCHY PAYS MORE FOR THE SAME MEASURE
@@ -32,7 +32,6 @@
 
 import {
   BLOC_POWER,
-  BLOC_REGION_WEIGHTS,
   DECREE_GRIEVANCE_PER_OPPOSITION,
   DECREE_LEGITIMACY_FLOOR,
   DECREE_LEGITIMACY_PER_OPPOSITION,
@@ -44,6 +43,7 @@ import {
   UNREST_STABILITY_COST,
   UNREST_THRESHOLD,
 } from './calibration';
+import type { BlocWeights } from './blocs';
 import { BLOC_IDS, REGION_IDS } from './types';
 import type {
   BlocId,
@@ -115,6 +115,7 @@ export function accrueGrievance(
   grievance: GrievanceState,
   reactions: readonly BlocReaction[],
   governmentType: GovernmentType,
+  weights: BlocWeights,
 ): GrievanceState {
   const rate =
     governmentType === 'monarchy'
@@ -129,7 +130,7 @@ export function accrueGrievance(
     byBloc[reaction.bloc] = Math.min(100, current + -reaction.strength * rate);
   }
 
-  return { ...grievance, byBloc, byRegion: regionalGrievance(byBloc) };
+  return { ...grievance, byBloc, byRegion: regionalGrievance(byBloc, weights) };
 }
 
 /**
@@ -143,6 +144,7 @@ export function accrueGrievance(
  */
 export function regionalGrievance(
   byBloc: Record<string, number>,
+  weights: BlocWeights,
 ): Record<string, number> {
   const byRegion: Record<string, number> = {};
   for (const region of REGION_IDS) byRegion[region] = 0;
@@ -150,9 +152,9 @@ export function regionalGrievance(
   for (const bloc of BLOC_IDS) {
     const level = byBloc[bloc] ?? 0;
     if (level <= 0) continue;
-    const weights = BLOC_REGION_WEIGHTS[bloc] ?? {};
+    const row = weights[bloc] ?? {};
     for (const region of REGION_IDS) {
-      byRegion[region] += level * (weights[region] ?? 0);
+      byRegion[region] += level * (row[region] ?? 0);
     }
   }
 
@@ -169,12 +171,15 @@ export function regionalGrievance(
  * Proportional rather than flat, so a small grievance fades quickly and a large
  * one lingers. Grievances are forgotten, but not quickly.
  */
-export function decayGrievance(grievance: GrievanceState): GrievanceState {
+export function decayGrievance(
+  grievance: GrievanceState,
+  weights: BlocWeights,
+): GrievanceState {
   const byBloc: Record<string, number> = {};
   for (const bloc of BLOC_IDS) {
     byBloc[bloc] = Math.max(0, (grievance.byBloc[bloc] ?? 0) * (1 - GRIEVANCE_DECAY_PER_MONTH));
   }
-  return { ...grievance, byBloc, byRegion: regionalGrievance(byBloc) };
+  return { ...grievance, byBloc, byRegion: regionalGrievance(byBloc, weights) };
 }
 
 // ============================================================================
@@ -245,12 +250,13 @@ export function unrestStabilityCost(grievance: GrievanceState): number {
 export function principalGrievance(
   byBloc: Record<string, number>,
   regionId: RegionId,
+  weights: BlocWeights,
 ): BlocId {
   let worst: BlocId = BLOC_IDS[0];
   let worstShare = -1;
 
   for (const bloc of BLOC_IDS) {
-    const share = (byBloc[bloc] ?? 0) * (BLOC_REGION_WEIGHTS[bloc]?.[regionId] ?? 0);
+    const share = (byBloc[bloc] ?? 0) * (weights[bloc]?.[regionId] ?? 0);
     if (share > worstShare) {
       worstShare = share;
       worst = bloc;
@@ -283,6 +289,7 @@ export interface UnrestChange {
 export function reconcileUnrest(
   grievance: GrievanceState,
   day: number,
+  weights: BlocWeights,
 ): UnrestChange {
   const episodes = [...grievance.episodes];
   const started: UnrestEpisode[] = [];
@@ -334,7 +341,7 @@ export function reconcileUnrest(
         id: `unrest:${regionId}:${day}`,
         regionId,
         severity: wanted,
-        drivenBy: principalGrievance(grievance.byBloc, regionId),
+        drivenBy: principalGrievance(grievance.byBloc, regionId, weights),
         startedDay: day,
         endedDay: null,
       };

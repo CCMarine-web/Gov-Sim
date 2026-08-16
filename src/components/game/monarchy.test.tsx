@@ -18,6 +18,11 @@ import { afterEach, describe, expect, it } from 'vitest';
 import { cleanup, render } from '@testing-library/react';
 import { isoToDay } from '@/sim/calendar';
 import { createTestGame } from '@/sim/createGame';
+
+/** The founding distribution of the blocs. Grievance lands on regions through it. */
+const W = blocWeights(createTestGame());
+
+import { blocWeights } from '@/sim/blocs';
 import { emptyGrievance, regionalGrievance, reconcileUnrest } from '@/sim/grievance';
 import type { GameState } from '@/sim/types';
 import { GovernmentPanel } from './GovernmentPanel';
@@ -82,7 +87,7 @@ describe('grievance is visible before it bites', () => {
       grievance: {
         ...emptyGrievance(),
         byBloc,
-        byRegion: regionalGrievance(byBloc),
+        byRegion: regionalGrievance(byBloc, W),
       },
     };
   }
@@ -106,7 +111,7 @@ describe('grievance is visible before it bites', () => {
     const base = aggrieved({ planters: 95, small_farmers: 70 });
     const withUnrest: GameState = {
       ...base,
-      grievance: reconcileUnrest(base.grievance, base.day).grievance,
+      grievance: reconcileUnrest(base.grievance, base.day, W).grievance,
     };
 
     const { container } = render(<Regions state={withUnrest} />);
@@ -172,8 +177,9 @@ describe('unrest reaches the crisis list, named and explained', () => {
     const state: GameState = {
       ...base,
       grievance: reconcileUnrest(
-        { ...emptyGrievance(), byBloc, byRegion: regionalGrievance(byBloc) },
+        { ...emptyGrievance(), byBloc, byRegion: regionalGrievance(byBloc, W) },
         base.day,
+        W,
       ).grievance,
     };
 
@@ -193,12 +199,83 @@ describe('unrest reaches the crisis list, named and explained', () => {
     const byBloc = { planters: 20 };
     const grieved: GameState = {
       ...base,
-      grievance: { ...emptyGrievance(), byBloc, byRegion: regionalGrievance(byBloc) },
+      grievance: { ...emptyGrievance(), byBloc, byRegion: regionalGrievance(byBloc, W) },
     };
 
     // A crisis list that included every complaint would stop being a crisis
     // list. Mild grievance belongs on the Regions screen, as a warning.
     expect(grieved.grievance.byRegion.south).toBeGreaterThan(0);
     expect(currentCrises(grieved)).toEqual(currentCrises(base));
+  });
+});
+
+/**
+ * WHO LIVES HERE — the bloc panel on the Regions screen
+ *
+ * Phase 2 brief §1, queue item 8. The requirement is that blocs "grow and
+ * shrink in response to policy, not just get happier or angrier", and that is
+ * only real if the player can watch it happen.
+ */
+describe('the Regions screen says who a region is made of', () => {
+  it('lists the blocs with their shares', () => {
+    const { container } = render(<Regions state={createTestGame()} />);
+    const panel = container.querySelector('[data-region-blocs="south"]')!;
+
+    expect(panel).not.toBeNull();
+    expect(panel.textContent).toContain('Who lives here');
+    expect(panel.querySelector('[data-bloc="planters"]')).not.toBeNull();
+    expect(panel.querySelector('[data-bloc="small_farmers"]')).not.toBeNull();
+  });
+
+  it('explains why the shares do not add up to a hundred', () => {
+    const { container } = render(<Regions state={createTestGame()} />);
+    const note = container.querySelector('[data-testid="bloc-note-frontier"]')!;
+
+    // People belong to more than one at once. Without saying so, the first
+    // thing a careful player does is add the column up and conclude the screen
+    // is broken.
+    expect(note.textContent).toContain('more than one of these at once');
+  });
+
+  it('says plainly that a third of the South belonged to none of them', () => {
+    const { container } = render(<Regions state={createTestGame()} />);
+    const note = container.querySelector('[data-testid="bloc-note-south"]')!;
+
+    // The model does not round the enslaved into a bloc to make a column tidy.
+    expect(note.textContent).toContain('enslaved');
+    expect(note.textContent).toContain('no political interest at all');
+    // And New England, where the figure is negligible, is not told the same.
+    const quiet = container.querySelector('[data-testid="bloc-note-new_england"]')!;
+    expect(quiet.textContent).not.toContain('enslaved');
+  });
+
+  it('marks a bloc that is growing with a word, never colour alone', () => {
+    const base = createTestGame();
+    const grown: GameState = {
+      ...base,
+      blocs: {
+        ...base.blocs,
+        membership: {
+          ...base.blocs.membership,
+          mid_atlantic: {
+            ...base.blocs.membership.mid_atlantic,
+            artisans: base.blocs.membership.mid_atlantic.artisans * 1.4,
+          },
+        },
+      },
+    };
+
+    const { container } = render(<Regions state={grown} />);
+    const change = container.querySelector('[data-bloc-change="artisans"]')!;
+
+    expect(change).not.toBeNull();
+    expect(change.textContent).toContain('growing');
+    expect(change.textContent).toContain('since 1789');
+  });
+
+  it('says nothing about movement in a country that has not moved', () => {
+    const { container } = render(<Regions state={createTestGame()} />);
+    // An always-present "unchanged" would train the player to stop looking.
+    expect(container.querySelector('[data-bloc-change]')).toBeNull();
   });
 });

@@ -12,7 +12,12 @@
 
 import { PHASE_1_CONTENT } from '@/content';
 import { formatLongDate } from '@/sim/calendar';
-import { BLOC_REGION_WEIGHTS, RANGES, TAU_MONTHS } from '@/sim/calibration';
+import { RANGES, TAU_MONTHS } from '@/sim/calibration';
+import {
+  blocWeights,
+  blocsInRegion,
+  unrepresentedShare,
+} from '@/sim/blocs';
 import { explainStat, type StatBreakdown } from '@/sim/modifiers';
 import { currentCrises, stateOfTheUnion } from '@/sim/narrative';
 import { taxesInForce } from '@/sim/taxes';
@@ -343,6 +348,13 @@ function RegionCard({ region, state }: { region: Region; state: GameState }) {
       */}
       <RegionGrievance region={region} state={state} />
 
+      {/*
+        WHO LIVES HERE, and which way that is moving. The brief's requirement
+        that blocs "grow and shrink in response to policy, not just get happier
+        or angrier" is only real if the player can watch it happen.
+      */}
+      <RegionBlocs region={region} state={state} />
+
       <div className="mt-2 border-t border-ink-400 pt-2">
         <p className="text-label uppercase tracking-wider text-content-muted">
           Tax exposure
@@ -384,10 +396,12 @@ function RegionGrievance({ region, state }: { region: Region; state: GameState }
 
   if (level < 1 && !episode) return null;
 
+  const weights = blocWeights(state);
+
   // The blocs actually behind it, by how much of this region they account for.
   const contributors = BLOC_IDS.map((bloc) => ({
     bloc,
-    share: (state.grievance.byBloc[bloc] ?? 0) * (BLOC_REGION_WEIGHTS[bloc]?.[region.id] ?? 0),
+    share: (state.grievance.byBloc[bloc] ?? 0) * (weights[bloc]?.[region.id] ?? 0),
   }))
     .filter((c) => c.share >= 0.5)
     .sort((a, b) => b.share - a.share)
@@ -425,6 +439,94 @@ function RegionGrievance({ region, state }: { region: Region; state: GameState }
           {contributors.map((c) => c.bloc.replace(/_/g, ' ')).join(', the ')}.
         </p>
       )}
+    </div>
+  );
+}
+
+/** Bloc names as a reader would say them. */
+const BLOC_LABEL: Record<string, string> = {
+  planters: 'Planters',
+  merchants: 'Merchants',
+  frontier_settlers: 'Frontier settlers',
+  artisans: 'Artisans',
+  financiers: 'Financiers',
+  clergy: 'Clergy',
+  seamen: 'Seamen',
+  small_farmers: 'Small farmers',
+};
+
+/**
+ * WHO A REGION IS MADE OF, and which way it is moving.
+ *
+ * Three things this has to say, none of which a bar chart says on its own:
+ *
+ *   1. THE DIRECTION. A share is a fact; a share that is growing is a
+ *      consequence. Marked with an arrow AND a word, never colour alone.
+ *   2. THE OVERLAP. The shares do not sum to 100 and are not meant to — most
+ *      frontier settlers are also small farmers. Said in words, or the first
+ *      thing a careful player does is add the column up and conclude the screen
+ *      is broken.
+ *   3. THE GAP. In the South about a third of the people belong to no bloc here,
+ *      because they were enslaved and permitted no political interest at all.
+ *      The model does not round them into a bloc to make the arithmetic tidy,
+ *      and the screen says so plainly. (ECONOMY.md §7.21)
+ */
+function RegionBlocs({ region, state }: { region: Region; state: GameState }) {
+  const blocs = blocsInRegion(state, region.id).filter((b) => b.share >= 0.002);
+  const unrepresented = unrepresentedShare(state, region.id);
+
+  return (
+    <div className="mt-2 border-t border-ink-400 pt-2" data-region-blocs={region.id}>
+      <p className="text-label uppercase tracking-wider text-content-muted">
+        Who lives here
+      </p>
+
+      <ul className="mt-1 space-y-0.5">
+        {blocs.map(({ bloc, share, change }) => {
+          const moving = Math.abs(change) >= 0.02;
+          return (
+            <li
+              key={bloc}
+              data-bloc={bloc}
+              className="flex items-baseline justify-between text-small"
+            >
+              <span className="text-content-secondary">
+                {BLOC_LABEL[bloc] ?? bloc}
+              </span>
+              <span className="flex items-baseline gap-1.5">
+                <span className="tabular text-content-primary">
+                  {(share * 100).toFixed(1)}%
+                </span>
+                {moving && (
+                  <span
+                    data-bloc-change={bloc}
+                    className={`tabular text-label ${
+                      change > 0 ? 'text-verdigris-300' : 'text-oxblood-300'
+                    }`}
+                  >
+                    {change > 0 ? '↑' : '↓'} {change > 0 ? 'growing' : 'shrinking'}{' '}
+                    {(Math.abs(change) * 100).toFixed(0)}% since 1789
+                  </span>
+                )}
+              </span>
+            </li>
+          );
+        })}
+      </ul>
+
+      <p className="mt-1 text-small text-content-muted" data-testid={`bloc-note-${region.id}`}>
+        People belong to more than one of these at once, so the shares do not add
+        to a hundred.
+        {unrepresented >= 0.02 && (
+          <>
+            {' '}
+            A further{' '}
+            <span className="tabular">{(unrepresented * 100).toFixed(0)}%</span> of{' '}
+            {region.name} were enslaved and belonged to none of them, having been
+            allowed no political interest at all.
+          </>
+        )}
+      </p>
     </div>
   );
 }
