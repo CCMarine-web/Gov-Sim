@@ -1146,6 +1146,29 @@ Congress asks two different questions of the same data, and they need different 
 
 The square root is deliberate — salience rises with concentration and does so with diminishing returns. Without it the frontier's quotient alone would swamp every other consideration in the model.
 
+### 7.22 Sectional strain — the measure the map is coloured by
+
+*Phase 2 queue item 10, brief §6.2: "the map mode that should make the coming Civil War legible decades in advance." Implemented as `sectionalStrain()` in `src/sim/map.ts`.*
+
+**What it is, and what it is not.** A DERIVED PRESENTATION MEASURE: computed from simulated values for the purpose of colouring a map, never stored in `GameState`, never shown as a historical figure, and labelled on screen as derived. It is not a stat, nothing lags toward it, and no modifier acts on it. If it were stored it would need a ledger; because it is computed on demand from three quantities that each have one, it does not.
+
+```
+strain = enslavedShare × 130
+       + |regionSentiment − meanSentiment| × 0.55
+       + regionGrievance × 0.45
+                                    clamped to 0…100
+```
+
+**Term 1 — the enslaved share of a region's people.** Not a proxy for the conflict. It *is* the axis of it. A region a third of whose people are held in bondage has an interest that cannot be reconciled with one where almost none are, and every compromise from the Constitutional Convention to 1860 was an attempt to postpone that fact rather than resolve it. The coefficient is set so that the South's 35% enslaved population alone puts it near the middle of the scale on day one — which is correct, and is the whole point of the mode. A map on which 1789 looks calm would be a lie about 1789.
+
+**Term 2 — divergence of sentiment from the national mean, in absolute value.** A region that feels differently about the federal government from everyone else is a region pulling away, and *which direction it pulls in does not matter for this measure*. New England in 1814 was as far outside the union as South Carolina in 1832, in opposite directions. Signed divergence would show one and hide the other.
+
+**Term 3 — grievance.** What the government has actually done to the people here (§7.19). It is the term the player controls directly, and it is what makes the mode a warning rather than a diorama.
+
+**Why these weights.** The enslaved share is the largest because it was: it is a structural fact that does not decay, while sentiment and grievance both move. Sentiment divergence is weighted above grievance because a region can be aggrieved about a tax and still be firmly in the union — the whiskey rebels were not secessionists — whereas a region whose whole disposition has diverged is a different problem.
+
+**What it deliberately does not include.** Economic divergence. The North and South had different economies from the beginning and that alone did not strain the union; what strained it was that one of those economies rested on holding people in bondage, which term 1 already carries. Adding a prosperity gap would double-count the same fact and would also make ordinary regional inequality read as impending war.
+
 ---
 
 ## 8. Government type differences

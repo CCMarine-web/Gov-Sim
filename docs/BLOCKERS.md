@@ -168,3 +168,32 @@ documented model that says it is a model does not.
 mechanics — how a delegation votes, how sectional interest overrides party, how
 elections shift seats — do not depend on it and would be unchanged by better
 data.
+
+---
+
+## B-007 — Two map modes need systems that do not exist yet
+
+**Status:** open, deliberate, not blocking. Raised by Phase 2 queue item 10.
+
+The brief's map-mode list (§6.2) has nine entries. Seven are built. **Two are
+not, and building them now would mean fabricating the data they display.**
+
+| Mode | What it needs | Where that arrives |
+|---|---|---|
+| **Infrastructure** — roads, ports, postal routes | Public works tracked BY REGION. Today there is one national `cumulativeInfrastructure` figure and a spending programme; nothing says where a road was built. | Naturally with territorial expansion and internal improvements, which the brief puts in §6.3 |
+| **Military** — garrisons, forts, naval stations | Any military presence modelled at all. Today the model has military SPENDING and nothing it is spent on. | Queue item 12, war declaration paths |
+
+**Why they were not shipped as empty modes.** A mode that colours every state
+identically because there is nothing to colour by is worse than an absent one:
+it looks like a finding. And the alternative — distributing the national
+infrastructure figure across regions by population — would be exactly the quiet
+interpolation the brief forbids, dressed up as a map.
+
+**What would clear it.** For infrastructure, a per-region public-works stock that
+the infrastructure programme actually adds to, which is a small and defensible
+extension of the existing model rather than new data. For military, item 12.
+
+**What is NOT blocked.** The seven modes that shipped are the ones with real
+data behind them, including the two the brief singles out: sectional tension,
+"the map mode that should make the coming Civil War legible decades in advance",
+and compliance, "which makes rebellion risk visible".

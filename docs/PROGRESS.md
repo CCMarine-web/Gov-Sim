@@ -7,7 +7,7 @@ If you are resuming with no context: read `DESIGN.md` first, then this file,
 then `docs/DECISIONS.md` and `docs/BLOCKERS.md`. Then continue the **Phase 2
 queue** below, which is `gov-sim-phase2-brief.md` §9.
 
-**Last updated:** Phase 2 run of 2026-08-16, after queue item 9.
+**Last updated:** Phase 2 run of 2026-08-16, after queue item 10.
 
 ---
 
@@ -17,7 +17,7 @@ queue** below, which is `gov-sim-phase2-brief.md` §9.
 |---|---|
 | Production URL | <https://gov-sim.vercel.app> |
 | Deploy | auto-deploys from `main` on push |
-| Tests | 659 passing |
+| Tests | 686 passing |
 | Save schema | version **7** — v1 to v6 saves migrate forward, all six fixtures committed |
 | Gates | tests, lint, typecheck, production build — all green |
 | Database | Supabase, `save_games` table migrated, verified reachable from production |
@@ -38,7 +38,7 @@ queue** below, which is `gov-sim-phase2-brief.md` §9.
 | 7 — Congress and the republic path | **complete** — see below and D-030 to D-032 |
 | 8 — Bloc model | **complete** — see below and D-033 to D-035 |
 | 9 — Map view replacing the Desk | **complete** — see below and D-036 to D-038 |
-| 10 — Remaining map modes and state detail panel | not started |
+| 10 — Remaining map modes and state detail panel | **complete** — see below and D-039 to D-041 |
 | 11 — Diplomacy tab | not started |
 | 12 — War declaration paths | not started |
 | 13 — Cabinet competence and loyalty | not started |
@@ -531,8 +531,55 @@ arithmetic in the component, no colours in the engine.
 **Tests:** 28 in `sim/map.test.ts`, 13 in `components/game/map.test.tsx`. Human-eye
 checks are `docs/MANUAL-QA.md` §17.
 
-**Still to come in item 10:** population, sectional tension, infrastructure,
-military and compliance modes, and a fuller state detail panel.
+**Item 10 finished the job**, with two modes deliberately left out — see below.
+
+---
+
+### Item 10 — the rest of the map, and the state detail panel: complete
+
+**Seven modes of the brief's nine.** Political, support, economic and party came
+with item 9; population, sectional strain and compliance came with this one.
+
+**Population is the one economic-looking map on which states differ**, because
+the 1790 census counted them separately. Half history and half model, and the
+halves are separable: the census figures are cited, the growth applied to them is
+the region's, and the basis line says so.
+
+**Sectional strain is the mode the brief asked most of** — "the map mode that
+should make the coming Civil War legible decades in advance". It is a derived
+measure, computed on demand rather than stored: the enslaved share of a region's
+people, the absolute divergence of its sentiment from the union's, and the
+grievance the government has built there (`ECONOMY.md` §7.22).
+
+The first term is the largest, and the consequence is that **the South is already
+well up the scale on day one of a fresh game.** That is not a bug to be tuned
+out. A map on which 1789 looks calm would be a lie about 1789, and the only
+honest way to make the war legible in advance is for the thing that caused it to
+be visible from the start (D-040). Divergence is absolute rather than signed,
+because New England in 1814 was as far outside the union as South Carolina in
+1832 and a signed measure would show one and hide the other.
+
+**Compliance** is where a collapse of legitimacy becomes a collapse of receipts,
+and it names any episode of unrest running in the region.
+
+**Two modes were deliberately not built.** Infrastructure needs public works
+tracked by region and the model has one national figure; military needs any
+military presence at all and the model has spending with nothing it is spent on.
+Distributing a national figure across regions by population would look complete
+and be entirely fabricated. Logged as `BLOCKERS.md` B-007 with what would clear
+each (D-039).
+
+**The state detail panel** gives five of the brief's six things: population, the
+region's economy, sentiment, delegation with party shares, and active grievances
+with any running episode. The sixth — notable figures — does not exist in this
+project, so rather than invent a delegate the panel ends with a **"Not tracked"**
+block saying so, alongside the fact that the economy figures are regional and
+that roads and garrisons are not tracked by state (D-041). A place outside the
+union reads "not zero, none", because a zero would be a measurement and none was
+taken. Census figures appear in the steel reserved for historical data.
+
+**Tests:** 45 in `sim/map.test.ts`, 23 in `components/game/map.test.tsx`.
+Human-eye checks are `docs/MANUAL-QA.md` §18.
 
 ---
 

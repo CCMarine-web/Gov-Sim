@@ -36,8 +36,10 @@ import {
   MAP_MODE_DESCRIPTION,
   MAP_MODE_LABEL,
   mapView,
+  stateDetail,
   type MapCell,
   type MapMode,
+  type StateDetail,
 } from '@/sim/map';
 import type { GameState } from '@/sim/types';
 
@@ -74,6 +76,33 @@ const FILL: Record<MapMode, readonly string[]> = {
     'var(--color-map-party-2)',
     'var(--color-map-party-3)',
     'var(--color-map-party-divided)',
+  ],
+  // Population is a magnitude, so it takes the sequential scale.
+  population: [
+    'var(--color-map-seq-0)',
+    'var(--color-map-seq-1)',
+    'var(--color-map-seq-2)',
+    'var(--color-map-seq-3)',
+    'var(--color-map-seq-4)',
+    'var(--color-map-seq-5)',
+  ],
+  // Strain runs one way only — there is no "good" end — so it is the diverging
+  // scale read backwards, calm at the top and oxblood at the bottom.
+  tension: [
+    'var(--color-map-div-5)',
+    'var(--color-map-div-4)',
+    'var(--color-map-div-3)',
+    'var(--color-map-div-2)',
+    'var(--color-map-div-1)',
+    'var(--color-map-div-0)',
+  ],
+  compliance: [
+    'var(--color-map-div-0)',
+    'var(--color-map-div-1)',
+    'var(--color-map-div-2)',
+    'var(--color-map-div-3)',
+    'var(--color-map-div-4)',
+    'var(--color-map-div-5)',
   ],
 };
 
@@ -176,8 +205,12 @@ export function MapPanel({ state }: { state: GameState }) {
 
       <div className="space-y-3">
         <Legend view={view} mode={mode} />
-        {active ? (
-          <CellDetail cell={active} onClose={() => setSelected(null)} />
+        {active && selected ? (
+          <CellDetail
+            cell={active}
+            detail={stateDetail(state, selected, PARTIES)}
+            onClose={() => setSelected(null)}
+          />
         ) : (
           <section className="rounded-card border border-ink-400 bg-ink-700 p-3">
             <p className="text-small text-content-muted">
@@ -239,7 +272,40 @@ function Legend({ view, mode }: { view: ReturnType<typeof mapView>; mode: MapMod
   );
 }
 
-function CellDetail({ cell, onClose }: { cell: MapCell; onClose: () => void }) {
+/** One labelled figure, or an explicit absence. Never a blank. */
+function Figure({ label, value }: { label: string; value: string | null }) {
+  return (
+    <div className="flex items-baseline justify-between gap-3 py-0.5">
+      <span className="text-small text-content-secondary">{label}</span>
+      {value === null ? (
+        <span className="text-small text-content-muted">not tracked</span>
+      ) : (
+        <span className="tabular text-data-sm text-content-primary">{value}</span>
+      )}
+    </div>
+  );
+}
+
+/**
+ * THE STATE DETAIL PANEL (brief §6.2)
+ *
+ * "Clicking a state opens a detail panel: population, economy, sentiment,
+ *  delegation, active grievances, notable figures."
+ *
+ * Five of those six are here. The sixth, notable figures, is not — this project
+ * has no roster of who represented which state, and a plausible name would be a
+ * fabricated one. So the panel ends with what it does NOT track, stated plainly,
+ * because an absent row otherwise reads as a zero.
+ */
+function CellDetail({
+  cell,
+  detail,
+  onClose,
+}: {
+  cell: MapCell;
+  detail: StateDetail;
+  onClose: () => void;
+}) {
   return (
     <section
       className="rounded-card border border-ink-400 bg-ink-700 p-3"
@@ -247,7 +313,7 @@ function CellDetail({ cell, onClose }: { cell: MapCell; onClose: () => void }) {
       data-detail-code={cell.code}
     >
       <div className="flex items-baseline justify-between gap-2">
-        <h3 className="text-h2 text-content-primary">{cell.name}</h3>
+        <h3 className="text-h2 text-content-primary">{detail.name}</h3>
         <button
           type="button"
           onClick={onClose}
@@ -257,12 +323,148 @@ function CellDetail({ cell, onClose }: { cell: MapCell; onClose: () => void }) {
         </button>
       </div>
 
-      <p className="mt-1 text-small text-content-secondary">{cell.label}</p>
-      <p className="mt-2 text-small text-content-muted">{cell.detail}</p>
+      <p className="mt-0.5 text-small text-content-secondary">{detail.statusLabel}</p>
+      {detail.note && (
+        <p className="mt-1 text-small text-content-muted">{detail.note}</p>
+      )}
 
-      {cell.value !== null && (
-        <p className="mt-2 border-t border-ink-400 pt-2 tabular text-data-sm text-content-primary">
-          {cell.value.toFixed(0)}
+      {/* --- What this mode is showing for this cell -------------------- */}
+      <p className="mt-2 border-t border-ink-400 pt-2 text-small text-content-muted">
+        {cell.detail}
+      </p>
+
+      {/* --- The figures ------------------------------------------------ */}
+      {detail.region ? (
+        <div className="mt-2 border-t border-ink-400 pt-2" data-testid="detail-figures">
+          <p className="text-label uppercase tracking-wider text-content-muted">
+            {detail.region.name} — {detail.region.dominantIndustry}
+          </p>
+          <div className="mt-1">
+            <Figure
+              label="Population"
+              value={
+                detail.population === null
+                  ? null
+                  : Math.round(detail.population).toLocaleString('en-US')
+              }
+            />
+            <Figure
+              label="Prosperity"
+              value={detail.prosperity === null ? null : detail.prosperity.toFixed(0)}
+            />
+            <Figure
+              label="Sentiment"
+              value={detail.sentiment === null ? null : detail.sentiment.toFixed(0)}
+            />
+            <Figure
+              label="Compliance"
+              value={
+                detail.compliance === null ? null : `${detail.compliance.toFixed(0)}%`
+              }
+            />
+            <Figure
+              label="Sectional strain"
+              value={
+                detail.sectionalStrain === null
+                  ? null
+                  : detail.sectionalStrain.toFixed(0)
+              }
+            />
+          </div>
+
+          {/* Census figures ARE history, so steel is permitted here. (UI.md §9) */}
+          {detail.censusPopulation1790 !== null && (
+            <p className="mt-1 text-small text-steel-400" data-testid="detail-census">
+              1790 census:{' '}
+              <span className="tabular">
+                {detail.censusPopulation1790.toLocaleString('en-US')}
+              </span>
+              {detail.enslavedPopulation1790 !== null &&
+                detail.enslavedPopulation1790 > 0 && (
+                  <>
+                    , of whom{' '}
+                    <span className="tabular">
+                      {detail.enslavedPopulation1790.toLocaleString('en-US')}
+                    </span>{' '}
+                    were enslaved
+                  </>
+                )}
+            </p>
+          )}
+        </div>
+      ) : (
+        <p className="mt-2 border-t border-ink-400 pt-2 text-small text-content-muted">
+          This model simulates no economy or sentiment outside the union, so there
+          are no figures for it — not zero, none.
+        </p>
+      )}
+
+      {/* --- Its delegation --------------------------------------------- */}
+      {detail.delegation && (
+        <div className="mt-2 border-t border-ink-400 pt-2" data-testid="detail-delegation">
+          <p className="text-label uppercase tracking-wider text-content-muted">
+            Delegation
+          </p>
+          <Figure
+            label="House"
+            value={`${detail.delegation.houseSeats}`}
+          />
+          <Figure
+            label="Senate"
+            value={`${detail.delegation.senateSeats}`}
+          />
+          <ul className="mt-1 space-y-0.5">
+            {detail.delegation.byParty.map((p) => (
+              <li
+                key={p.party}
+                className="flex items-baseline justify-between text-small"
+              >
+                <span className="text-content-secondary">{p.party}</span>
+                <span className="tabular text-content-primary">
+                  {(p.share * 100).toFixed(0)}%
+                </span>
+              </li>
+            ))}
+          </ul>
+        </div>
+      )}
+
+      {/* --- What the government has done to it ------------------------- */}
+      {detail.grievance && detail.grievance.level >= 1 && (
+        <div className="mt-2 border-t border-ink-400 pt-2" data-testid="detail-grievance">
+          <p className="text-label uppercase tracking-wider text-content-muted">
+            Grievance
+          </p>
+          <Figure label="Level" value={detail.grievance.level.toFixed(0)} />
+          {detail.grievance.episode && (
+            <p className="mt-0.5 text-small text-oxblood-300">
+              {detail.grievance.episode.severity} since{' '}
+              {formatLongDate(detail.grievance.episode.startedDay)}
+              {detail.grievance.principal &&
+                `, led by the ${detail.grievance.principal}`}
+              .
+            </p>
+          )}
+        </div>
+      )}
+
+      {/* --- What is NOT here, so a gap is never read as a zero ---------- */}
+      <div className="mt-2 border-t border-ink-400 pt-2" data-testid="detail-not-tracked">
+        <p className="text-label uppercase tracking-wider text-content-muted">
+          Not tracked
+        </p>
+        <ul className="mt-1 space-y-0.5">
+          {detail.whatIsNotTracked.map((line) => (
+            <li key={line} className="text-small text-content-muted">
+              · {line}
+            </li>
+          ))}
+        </ul>
+      </div>
+
+      {detail.sources.length > 0 && (
+        <p className="mt-2 border-t border-ink-400 pt-2 text-small text-steel-400">
+          {detail.sources.join('; ')}
         </p>
       )}
     </section>

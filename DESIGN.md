@@ -549,7 +549,11 @@ Representing it honestly in the model *is* the version that isn't sanitized. Omi
 
 **What each outline actually WAS is real data.** `src/content/map/territory.ts` records a status history per outline — `state`, `organized_territory`, `unorganized`, `petitioning`, `foreign`, `disputed`, `native_nation` — with a source citation on every record. It is benchmark data under §12.2, so nothing in it is interpolated: Rhode Island is *outside the union* in April 1789 and the map colours it accordingly, Ohio is the Northwest Territory, Louisiana is Spanish, and the record runs through to 1861 so the sectional crisis is legible on the map decades in advance.
 
-**Modes are simulation, not presentation.** `src/sim/map.ts` returns a bucket index and a WORD for each cell; the component turns a bucket into a design token. Four modes shipped in item 9 — political, support, economic, party — with the rest in item 10.
+**Modes are simulation, not presentation.** `src/sim/map.ts` returns a bucket index and a WORD for each cell; the component turns a bucket into a design token. **Seven modes**: political, support, economic and party (item 9), then population, sectional strain and compliance (item 10).
+
+**Sectional strain** is the one the brief asks most of — "the map mode that should make the coming Civil War legible decades in advance". It is a derived measure rather than a stored stat: the enslaved share of a region’s people, the absolute divergence of its sentiment from the union’s, and its grievance (`docs/ECONOMY.md` §7.22). The first term is the largest, so the South is already well up the scale in 1789 — which is correct, and is the point.
+
+**Two of the brief’s nine modes were deliberately not built.** Infrastructure needs public works tracked by region; military needs any military presence at all. The model has neither, and distributing a national figure across regions by population would look complete and be fabricated. `docs/BLOCKERS.md` B-007 records what would clear each.
 
 **Two honesty rules the map enforces in code:**
 

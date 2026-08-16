@@ -754,3 +754,65 @@ name it had on that date — "Territory South of the River Ohio", not "Tennessee
 If you can get a run to 1860, the map should be recognisably the country of that
 year: Texas and California in, Kansas still a territory. That is the map the
 sectional crisis was fought over, and it should be legible.
+
+---
+
+## 18. The rest of the map, and the state detail panel
+
+*Phase 2, queue item 10. `DECISIONS.md` D-039 to D-041, `ECONOMY.md` §7.22.*
+
+**18.1 — Seven modes, not four**
+Political, Support, Economic, Party, Population, Sectional strain, Compliance.
+*Problem if:* Infrastructure or Military have appeared. They were deliberately
+not built, because the model has nothing to draw them from — see B-007. If
+someone has shipped them, check very carefully where the numbers came from.
+
+**18.2 — Population is the one economic-looking map where states differ**
+Switch to Population. Virginia should be visibly larger than Georgia, and New
+York than Delaware. The legend note should say the 1790 census figures are real
+and the growth applied to them is the region's.
+*Problem if:* every state in a region is the same size. The census says they
+were not.
+
+**18.3 — Sectional strain shows the South from day one**
+Start a fresh game and open Sectional strain immediately. The South should
+already be well up the scale. **That is correct and is not a bug.** A third of
+its people were enslaved, that is the axis the conflict was fought on, and a map
+where 1789 looks calm would be lying about 1789.
+
+**18.4 — And it responds to what you do**
+Decree repeatedly against one region, or tax it hard, until grievance builds.
+Its strain should rise. Then alienate a region in the opposite direction — make
+one adore the government while the others are cool — and watch that one's strain
+rise too.
+*Problem if:* only unhappiness raises strain. A region that feels utterly
+differently from everyone else is pulling away whichever way it leans.
+
+**18.5 — Compliance is the rebellion warning**
+Push a region into unrest. On the Compliance map it should slide down the bands,
+and clicking it should name the episode running there.
+*Problem if:* compliance stays green through an armed rising.
+
+**18.6 — The detail panel says where each figure comes from**
+Click Virginia. You should get the region's prosperity, sentiment, compliance
+and strain; the delegation with its seats and party shares; the 1790 census
+figures in the steel reserved for historical data, including how many people
+were enslaved.
+*Problem if:* the census figures are in the same colour as simulated ones.
+
+**18.7 — And it says what it does not know**
+The panel should end with a "Not tracked" list: no roster of members, the
+economy figures are regional, no roads or garrisons by state.
+*Problem if:* that block is gone. Without it a missing row reads as a zero, and
+the brief asked for notable figures which this model genuinely does not have.
+
+**18.8 — Outside the union means none, not zero**
+Click Spanish Louisiana in the 1790s. It should say the model simulates no
+economy or sentiment outside the union, and that this is "not zero, none".
+*Problem if:* it shows a prosperity of 0. That would be a measurement, and none
+was taken.
+
+**18.9 — The record is cited**
+Any territory you click should show the act or treaty behind its status —
+"Act of 26 May 1790" for the Southwest Territory, the Louisiana Purchase Treaty
+for Louisiana.

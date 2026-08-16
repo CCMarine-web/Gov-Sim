@@ -1,7 +1,7 @@
 /**
  * THE MAP
  *
- * Phase 2 brief §6, queue item 9. Four claims a test should be able to falsify:
+ * Phase 2 brief §6, queue items 9 and 10. Claims a test should be able to falsify:
  *
  *   1. The political map shows the country AS IT WAS on the date, not as it is
  *      now — eleven states in April 1789, and Rhode Island outside the union.
@@ -12,6 +12,10 @@
  *      rather than implying a precision that is not there.
  *   4. Party is genuinely per state, and is labelled a model rather than a
  *      record.
+ *   5. (Item 10) Population, sectional strain and compliance each measure
+ *      something real, say which part of it is history and which is model, and
+ *      the detail panel states what it does NOT track so a gap is never read as
+ *      a zero.
  */
 
 import { describe, expect, it } from 'vitest';
@@ -27,6 +31,8 @@ import {
   isSimulated,
   mapView,
   regionForState,
+  sectionalStrain,
+  stateDetail,
   statusOn,
 } from './map';
 import type { GameState } from './types';
@@ -357,5 +363,247 @@ describe('the geometry is usable', () => {
     expect(isSimulated('organized_territory')).toBe(false);
     expect(isSimulated('foreign')).toBe(false);
     expect(isSimulated('native_nation')).toBe(false);
+  });
+});
+
+// ============================================================================
+// QUEUE ITEM 10 — THE REMAINING MODES
+// ============================================================================
+
+describe('population is half history and half model, and says which half', () => {
+  it('differs between two states of the same region', () => {
+    const view = mapView(on('1795-01-01'), 'population', CODES);
+    const va = view.cells.find((c) => c.code === 'VA')!;
+    const ga = view.cells.find((c) => c.code === 'GA')!;
+
+    // The census says they differed, so this is the one economic-looking map on
+    // which states in one region are allowed to disagree.
+    expect(va.regionId).toBe(ga.regionId);
+    expect(va.value!).toBeGreaterThan(ga.value!);
+  });
+
+  it('separates the cited figure from the modelled growth, in words', () => {
+    const view = mapView(on('1795-01-01'), 'population', CODES);
+
+    expect(view.basis).toContain('1790 census');
+    expect(view.basis).toContain('no state-level demography');
+    expect(view.cells.find((c) => c.code === 'VA')!.detail).toContain('census figure');
+  });
+
+  it('grows a state as its region grows', () => {
+    const early = mapView(on('1790-01-01'), 'population', CODES);
+    const late = mapView(run(createTestGame(), 2600), 'population', CODES);
+
+    const before = early.cells.find((c) => c.code === 'VA')!.value!;
+    const after = late.cells.find((c) => c.code === 'VA')!.value!;
+    expect(after).toBeGreaterThan(before);
+  });
+
+  it('gives an unadmitted territory no population at all', () => {
+    const view = mapView(on('1795-01-01'), 'population', CODES);
+    const ohio = view.cells.find((c) => c.code === 'OH')!;
+
+    expect(ohio.value).toBeNull();
+    expect(ohio.detail).toContain('census did not count it');
+  });
+});
+
+describe('sectional strain is the map the civil war should be visible on', () => {
+  it('puts the South under more strain than New England at the founding', () => {
+    const view = mapView(on('1790-01-01'), 'tension', CODES);
+    const va = view.cells.find((c) => c.code === 'VA')!;
+    const ma = view.cells.find((c) => c.code === 'MA')!;
+
+    // A third of the South's people were held in bondage. That is not a proxy
+    // for the conflict; it is the axis of it.
+    expect(va.value!).toBeGreaterThan(ma.value!);
+  });
+
+  it('rises when a region is aggrieved and pulling away', () => {
+    const base = createTestGame();
+    const strained: GameState = {
+      ...base,
+      day: isoToDay('1795-01-01'),
+      regions: base.regions.map((r) =>
+        r.id === 'south' ? { ...r, sentiment: -90 } : r,
+      ),
+      grievance: {
+        ...base.grievance,
+        byRegion: { ...base.grievance.byRegion, south: 70 },
+      },
+    };
+
+    const calm = mapView(on('1795-01-01'), 'tension', CODES);
+    const angry = mapView(strained, 'tension', CODES);
+
+    expect(angry.cells.find((c) => c.code === 'VA')!.value!).toBeGreaterThan(
+      calm.cells.find((c) => c.code === 'VA')!.value!,
+    );
+  });
+
+  it('counts divergence in either direction, because either is pulling away', () => {
+    const base = { ...createTestGame(), day: isoToDay('1795-01-01') };
+    const devoted: GameState = {
+      ...base,
+      regions: base.regions.map((r) =>
+        r.id === 'new_england' ? { ...r, sentiment: 95 } : { ...r, sentiment: -5 },
+      ),
+    };
+
+    const ne = devoted.regions.find((r) => r.id === 'new_england')!;
+    // A region that feels utterly differently from everyone else is a region
+    // apart, whichever way it is leaning.
+    expect(sectionalStrain(devoted, ne)).toBeGreaterThan(
+      sectionalStrain(base, base.regions.find((r) => r.id === 'new_england')!),
+    );
+  });
+
+  it('says on screen that it is a derived measure, not a stored or historical one', () => {
+    const view = mapView(on('1795-01-01'), 'tension', CODES);
+
+    expect(view.basis).toContain('derived measure');
+    expect(view.basis).toContain('not a historical figure');
+  });
+
+  it('stays inside its range however bad things get', () => {
+    const base = createTestGame();
+    const ruined: GameState = {
+      ...base,
+      regions: base.regions.map((r) => ({ ...r, sentiment: -100 })),
+      grievance: {
+        ...base.grievance,
+        byRegion: { new_england: 100, mid_atlantic: 100, south: 100, frontier: 100 },
+      },
+    };
+
+    for (const region of ruined.regions) {
+      const strain = sectionalStrain(ruined, region);
+      expect(strain).toBeGreaterThanOrEqual(0);
+      expect(strain).toBeLessThanOrEqual(100);
+    }
+  });
+});
+
+describe('compliance makes rebellion visible before it happens', () => {
+  it('bands a region by what it actually remits', () => {
+    const base = createTestGame();
+    const evading: GameState = {
+      ...base,
+      day: isoToDay('1795-01-01'),
+      regions: base.regions.map((r) =>
+        r.id === 'frontier' ? { ...r, compliance: 30 } : r,
+      ),
+    };
+
+    const view = mapView(evading, 'compliance', CODES);
+    const ky = view.cells.find((c) => c.code === 'KY')!;
+
+    expect(ky.bucket).toBe(0);
+    expect(ky.label).toContain('does not run here');
+  });
+
+  it('names a running episode of unrest in the detail line', () => {
+    const base = createTestGame();
+    const risen: GameState = {
+      ...base,
+      day: isoToDay('1795-01-01'),
+      grievance: {
+        ...base.grievance,
+        episodes: [
+          {
+            id: 'unrest:frontier:1',
+            regionId: 'frontier',
+            severity: 'defiance',
+            drivenBy: 'frontier_settlers',
+            startedDay: 1,
+            endedDay: null,
+          },
+        ],
+      },
+    };
+
+    const view = mapView(risen, 'compliance', CODES);
+    expect(view.cells.find((c) => c.code === 'KY')!.detail).toContain('defiance');
+  });
+});
+
+// ============================================================================
+// THE STATE DETAIL PANEL
+// ============================================================================
+
+describe('the state detail panel', () => {
+  it('gives a state its figures, its delegation and its census record', () => {
+    const detail = stateDetail(createTestGame(), 'VA', PARTIES);
+
+    expect(detail.name).toBe('Virginia');
+    expect(detail.region?.id).toBe('south');
+    expect(detail.population).toBeGreaterThan(0);
+    expect(detail.censusPopulation1790).toBe(747_610);
+    expect(detail.enslavedPopulation1790).toBe(292_627);
+    expect(detail.delegation?.houseSeats).toBeGreaterThan(0);
+    expect(detail.delegation?.byParty.length).toBeGreaterThan(0);
+  });
+
+  it('names a territory what it was called, and cites the record', () => {
+    const detail = stateDetail(on('1793-01-01'), 'TN', PARTIES);
+
+    expect(detail.name).toBe('Territory South of the River Ohio');
+    expect(detail.statusLabel).toBe('Organised territory');
+    expect(detail.sources.length).toBeGreaterThan(0);
+  });
+
+  it('returns nulls rather than zeroes for a place the model does not simulate', () => {
+    const detail = stateDetail(on('1795-01-01'), 'LA', PARTIES);
+
+    // A zero would say the model measured Spanish Louisiana and found nothing.
+    expect(detail.region).toBeNull();
+    expect(detail.population).toBeNull();
+    expect(detail.prosperity).toBeNull();
+    expect(detail.sentiment).toBeNull();
+    expect(detail.delegation).toBeNull();
+  });
+
+  it('says what it does not track, so a gap is never read as a zero', () => {
+    const detail = stateDetail(createTestGame(), 'VA', PARTIES);
+
+    expect(detail.whatIsNotTracked.length).toBeGreaterThan(0);
+    // The brief asks for notable figures. There is no roster of members in this
+    // project, and a plausible name would be a fabricated one.
+    expect(detail.whatIsNotTracked.join(' ')).toContain('roster of members');
+    expect(detail.whatIsNotTracked.join(' ')).toContain('regional figures');
+  });
+
+  it('carries the grievance and any episode running in the region', () => {
+    const base = createTestGame();
+    const risen: GameState = {
+      ...base,
+      grievance: {
+        ...base.grievance,
+        byRegion: { ...base.grievance.byRegion, south: 62 },
+        episodes: [
+          {
+            id: 'unrest:south:1',
+            regionId: 'south',
+            severity: 'defiance',
+            drivenBy: 'planters',
+            startedDay: 1,
+            endedDay: null,
+          },
+        ],
+      },
+    };
+
+    const detail = stateDetail(risen, 'VA', PARTIES);
+    expect(detail.grievance?.level).toBe(62);
+    expect(detail.grievance?.episode?.severity).toBe('defiance');
+    expect(detail.grievance?.principal).toBe('planters');
+  });
+
+  it('resolves the delegation forward through the renaming of the parties', () => {
+    const detail = stateDetail(on('1795-01-01'), 'VA', PARTIES);
+    const names = detail.delegation!.byParty.map((p) => p.party).join(' ');
+
+    expect(names).toContain('Federalist');
+    expect(names).not.toContain('Pro-Administration');
   });
 });

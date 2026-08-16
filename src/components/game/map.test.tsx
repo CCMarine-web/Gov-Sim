@@ -3,7 +3,7 @@
 /**
  * THE MAP ON SCREEN
  *
- * Phase 2 brief §6, queue item 9. What the interface has to get right:
+ * Phase 2 brief §6, queue items 9 and 10. What the interface has to get right:
  *
  *   - The map is the main view, and every mode is one click away.
  *   - The modern-outline simplification is stated ON THE MAP, because the brief
@@ -36,7 +36,7 @@ describe('the map draws the country', () => {
     expect(container.querySelector('[data-map-cell="VA"]')).not.toBeNull();
   });
 
-  it('offers the four modes the brief asks for', () => {
+  it('offers the four modes item 9 required', () => {
     const { container } = render(<MapPanel state={createTestGame()} />);
 
     for (const mode of ['political', 'support', 'economic', 'party']) {
@@ -152,5 +152,141 @@ describe('clicking a state says what it was', () => {
   it('prompts rather than showing an empty panel', () => {
     const { container } = render(<MapPanel state={createTestGame()} />);
     expect(container.textContent).toContain('Click any state or territory');
+  });
+});
+
+// ============================================================================
+// QUEUE ITEM 10 — THE REST OF THE MODES, AND THE DETAIL PANEL
+// ============================================================================
+
+describe('the remaining map modes', () => {
+  it('offers all seven', () => {
+    const { container } = render(<MapPanel state={createTestGame()} />);
+
+    for (const mode of [
+      'political',
+      'support',
+      'economic',
+      'party',
+      'population',
+      'tension',
+      'compliance',
+    ]) {
+      expect(container.querySelector(`[data-map-mode="${mode}"]`), mode).not.toBeNull();
+    }
+  });
+
+  it('colours two states of one region differently on the population map', () => {
+    const { container } = render(<MapPanel state={on('1795-01-01')} />);
+    fireEvent.click(container.querySelector('[data-map-mode="population"]')!);
+
+    const va = container.querySelector('[data-map-cell="VA"]')!.getAttribute('fill');
+    const ga = container.querySelector('[data-map-cell="GA"]')!.getAttribute('fill');
+
+    // The 1790 census says Virginia and Georgia were not the same size, so the
+    // one map that can show it should.
+    expect(va).not.toBe(ga);
+  });
+
+  it('says on the strain map that the measure is derived, not historical', () => {
+    const { container } = render(<MapPanel state={on('1795-01-01')} />);
+    fireEvent.click(container.querySelector('[data-map-mode="tension"]')!);
+
+    const legend = container.querySelector('[data-testid="map-legend"]')!;
+    expect(legend.textContent).toContain('derived measure');
+    expect(legend.textContent).toContain('enslaved share');
+  });
+
+  it('names the compliance bands in words a player can act on', () => {
+    const { container } = render(<MapPanel state={on('1795-01-01')} />);
+    fireEvent.click(container.querySelector('[data-map-mode="compliance"]')!);
+
+    const legend = container.querySelector('[data-testid="map-legend"]')!;
+    expect(legend.textContent).toContain('Federal law does not run here');
+    expect(legend.textContent).toContain('Nearly complete');
+  });
+});
+
+describe('the state detail panel', () => {
+  it('shows the region figures, the delegation and the census record', () => {
+    const { container } = render(<MapPanel state={on('1795-01-01')} />);
+    fireEvent.click(container.querySelector('[data-map-cell="VA"]')!);
+
+    const detail = container.querySelector('[data-testid="map-detail"]')!;
+    expect(detail.querySelector('[data-testid="detail-figures"]')).not.toBeNull();
+    expect(detail.querySelector('[data-testid="detail-delegation"]')).not.toBeNull();
+
+    expect(detail.textContent).toContain('Prosperity');
+    expect(detail.textContent).toContain('Sentiment');
+    expect(detail.textContent).toContain('Sectional strain');
+  });
+
+  it('presents the census figures as history, in the steel reserved for it', () => {
+    const { container } = render(<MapPanel state={on('1795-01-01')} />);
+    fireEvent.click(container.querySelector('[data-map-cell="VA"]')!);
+
+    const census = container.querySelector('[data-testid="detail-census"]')!;
+    // steel-* is reserved for historical/benchmark data. (UI.md §9)
+    expect(census.className).toContain('steel');
+    expect(census.textContent).toContain('1790 census');
+    expect(census.textContent).toContain('were enslaved');
+  });
+
+  it('says what it does not track, rather than leaving rows out', () => {
+    const { container } = render(<MapPanel state={on('1795-01-01')} />);
+    fireEvent.click(container.querySelector('[data-map-cell="VA"]')!);
+
+    const missing = container.querySelector('[data-testid="detail-not-tracked"]')!;
+    // The brief asks for notable figures. There is no roster of members here,
+    // and a plausible name would be a fabricated one — so the panel says so.
+    expect(missing.textContent).toContain('Not tracked');
+    expect(missing.textContent).toContain('roster of members');
+  });
+
+  it('says none rather than zero for a place outside the union', () => {
+    const { container } = render(<MapPanel state={on('1795-01-01')} />);
+    fireEvent.click(container.querySelector('[data-map-cell="LA"]')!);
+
+    const detail = container.querySelector('[data-testid="map-detail"]')!;
+    expect(detail.textContent).toContain('Spanish Louisiana');
+    expect(detail.textContent).toContain('not zero, none');
+    expect(detail.querySelector('[data-testid="detail-figures"]')).toBeNull();
+  });
+
+  it('shows a running episode of unrest where there is one', () => {
+    const base = createTestGame();
+    const risen: GameState = {
+      ...base,
+      grievance: {
+        ...base.grievance,
+        byRegion: { ...base.grievance.byRegion, south: 62 },
+        episodes: [
+          {
+            id: 'unrest:south:1',
+            regionId: 'south',
+            severity: 'defiance',
+            drivenBy: 'planters',
+            startedDay: 1,
+            endedDay: null,
+          },
+        ],
+      },
+    };
+
+    const { container } = render(<MapPanel state={risen} />);
+    fireEvent.click(container.querySelector('[data-map-cell="VA"]')!);
+
+    const grievance = container.querySelector('[data-testid="detail-grievance"]')!;
+    expect(grievance.textContent).toContain('defiance');
+    expect(grievance.textContent).toContain('planters');
+  });
+
+  it('cites the record behind the status', () => {
+    const { container } = render(<MapPanel state={on('1793-01-01')} />);
+    fireEvent.click(container.querySelector('[data-map-cell="TN"]')!);
+
+    const detail = container.querySelector('[data-testid="map-detail"]')!;
+    expect(detail.textContent).toContain('Territory South of the River Ohio');
+    expect(detail.textContent).toContain('26 May 1790');
   });
 });

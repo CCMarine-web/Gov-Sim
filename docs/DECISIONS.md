@@ -1234,3 +1234,100 @@ limit, and it is declared in the basis line under the legend rather than left to
 look like a per-state result. The one mode that is genuinely per state is party,
 because delegations are; and that one carries the opposite warning, that the
 seat counts are history while the split is a model (B-006).
+
+---
+
+## D-039 — Two of the nine map modes were not built, on purpose
+
+**Date:** 2026-08-16 (Phase 2, queue item 10)
+**Status:** implemented as a deliberate omission. Logged as `BLOCKERS.md` B-007.
+
+The brief lists nine map modes. Seven shipped. **Infrastructure and military did
+not, because the model has nothing to draw them from.** There is one national
+`cumulativeInfrastructure` figure and no record of where a road was built; there
+is military SPENDING and nothing it is spent on.
+
+**The tempting wrong answer** is to distribute the national figure across regions
+by population and call it an infrastructure map. It would look complete, it would
+be entirely fabricated, and it is precisely what brief §10 rule 1 forbids: "no
+quiet interpolation to make a map mode look complete."
+
+**The second wrong answer** is to ship the modes empty. A map that colours every
+state identically because there is nothing to colour by does not read as "no
+data" — it reads as a finding, that the country is uniform. Worse than absent.
+
+**Decision: build the seven with real data behind them, and log the two.**
+Infrastructure needs a per-region public-works stock that the existing programme
+adds to — a small extension, not new data. Military arrives with queue item 12.
+Both are recorded with what would clear them.
+
+**Worth noting what this did not cost.** The two modes the brief singles out both
+shipped: sectional strain, "the map mode that should make the coming Civil War
+legible decades in advance", and compliance, "which makes rebellion risk
+visible".
+
+---
+
+## D-040 — Sectional strain is a derived measure, and the first term is slavery
+
+**Date:** 2026-08-16 (Phase 2, queue item 10)
+**Status:** implemented. Model in `ECONOMY.md` §7.22.
+
+**The problem.** Sectional tension exists as a national stat. A map needs it per
+region, and there is no per-region stored value — nor should there be, because
+inventing one would mean a new stat with its own ledger, its own lag and its own
+calibration, for the sake of a colour.
+
+**Decision: compute it on demand from three quantities that each already have a
+ledger**, and label it on screen as derived rather than stored or historical.
+Enslaved share, absolute divergence of sentiment from the national mean, and
+grievance.
+
+**The first term is the enslaved share, and it is the largest.** Not as a proxy
+for the conflict — it *is* the axis of it. The consequence is that the South is
+already well up the scale on day one of a fresh game, and that is not a bug to be
+tuned out. **A map on which 1789 looks calm would be a lie about 1789.** The
+brief asked for a mode that makes the coming war legible decades in advance; the
+only honest way to do that is for the thing that caused it to be visible from the
+start.
+
+**Divergence is absolute, not signed.** A region that feels utterly differently
+from everyone else is pulling away whichever direction it pulls in. New England
+in 1814 was as far outside the union as South Carolina in 1832. A signed measure
+would show one and hide the other.
+
+**What was deliberately left out: economic divergence.** North and South had
+different economies from the beginning and that alone did not strain the union.
+What strained it was that one of those economies rested on holding people in
+bondage — which the first term already carries. Adding a prosperity gap would
+double-count it, and would make ordinary regional inequality read as impending
+war.
+
+---
+
+## D-041 — The detail panel states what it does not track
+
+**Date:** 2026-08-16 (Phase 2, queue item 10)
+**Status:** implemented
+
+The brief's state detail panel lists six things: "population, economy, sentiment,
+delegation, active grievances, notable figures." Five exist in the model.
+**Notable figures does not** — this project has cabinet officers and their
+tenures, which are national, and no roster of who represented which state.
+
+Three options, and only one is defensible:
+
+1. **Leave the row out.** A player then cannot tell the difference between "this
+   state has no notable figures" and "the game does not model them".
+2. **Fill it with plausible names.** The one rule in this project with no
+   exceptions, broken for a subheading.
+3. **Say what is not tracked.** Chosen.
+
+So the panel ends with a "Not tracked" block: no roster of members; the economy
+figures are regional and shared with the rest of the region; roads, ports and
+garrisons are not tracked by state. Each is a fact about the MODEL rather than an
+apology, and each tells the player how to read everything above it.
+
+The same reasoning governs a cell outside the union, which reads "This model
+simulates no economy or sentiment outside the union, so there are no figures for
+it — **not zero, none.**" A zero would be a measurement. There was none.
