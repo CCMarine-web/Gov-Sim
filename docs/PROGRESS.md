@@ -7,7 +7,7 @@ If you are resuming with no context: read `DESIGN.md` first, then this file,
 then `docs/DECISIONS.md` and `docs/BLOCKERS.md`. Then continue the queue in
 `gov-sim-autonomous-run.md` §5 without asking anything.
 
-**Last updated:** autonomous run of 2026-08-15, after Item 1.
+**Last updated:** autonomous run of 2026-08-15, after Item 2.
 
 ---
 
@@ -17,7 +17,7 @@ then `docs/DECISIONS.md` and `docs/BLOCKERS.md`. Then continue the queue in
 |---|---|
 | Production URL | <https://gov-sim.vercel.app> |
 | Deploy | auto-deploys from `main` on push |
-| Tests | 224 passing |
+| Tests | 236 passing |
 | Gates | tests, lint, typecheck, production build — all green |
 | Database | Supabase, `save_games` table migrated, verified reachable from production |
 
@@ -28,7 +28,7 @@ then `docs/DECISIONS.md` and `docs/BLOCKERS.md`. Then continue the queue in
 | Item | Status |
 |---|---|
 | 1 — Treasury screen | **complete** |
-| 2 — Supabase auth and save/load | not started |
+| 2 — Supabase auth and save/load | **built; cloud path awaits two env vars** |
 | 3 — History comparison view | not started |
 | 4 — Government screen | not started |
 | 5 — Full acceptance pass | not started |
@@ -95,12 +95,46 @@ the excise compliance collapse being visible in it.
 
 ---
 
+## Item 2 — auth and save/load: built, cloud path dormant
+
+Built:
+
+- `src/sim/migrations/` — the load path. Same version loads; older with a
+  registered path migrates forward; older without one, newer than this build,
+  malformed JSON, and non-save files all **refuse readably**. Never throws.
+  16 tests, including a guard against a migration that forgets to bump the
+  version and would otherwise loop forever.
+- `src/lib/saves/` — one `SaveStore` interface, two implementations
+  (`localStore`, `cloudStore`), and a facade that picks between them. A failed
+  cloud write falls back to local and says so; a network hiccup cannot destroy
+  a run.
+- `src/lib/saves/autosave.ts` — subscribes to the **store**, never the tick
+  path. Writes on in-game month turnover with a 60s real-time floor.
+- `/api/saves` and `/api/saves/[slot]` — list, write, read, delete. Every query
+  scoped to the authenticated user id.
+- `SaveMenu` — four slots, sign-in by emailed link, sync-local-upward.
+
+**Not active:** `NEXT_PUBLIC_SUPABASE_URL` and `NEXT_PUBLIC_SUPABASE_ANON_KEY`
+are unset in both local and production. See `docs/ENV-SETUP.md` for exactly
+where to get them and what else to configure in Supabase. Setting them
+activates the cloud path with no code change.
+
+**Consequence for acceptance criterion 7:** the local half is done and testable;
+the cross-device half cannot be verified until those variables exist.
+
+> ⚠️ **Authorization note for anyone touching the save routes.** Prisma connects
+> as the database owner and **bypasses Row Level Security**. The `getUserId()`
+> check in each route handler is the only thing separating one player's saves
+> from another's. A route that forgets it is a data leak, not a bug.
+
+---
+
 ## What to do next
 
-Item 2: Supabase auth and save/load. Note `BLOCKERS.md` B-004 — the two
-`NEXT_PUBLIC_SUPABASE_*` variables are not configured, so build behind a clean
-interface with the local-storage fallback fully working, write
-`docs/ENV-SETUP.md`, and move on rather than stalling.
+Item 3: the History comparison view. It is **not blocked** — shipping the
+honest gap state is the deliverable. Build the full view, fill what is
+sourceable, and render the explicit unavailable state for the rest. See
+`BLOCKERS.md` B-001 and B-002 for what is missing and why.
 
 ---
 

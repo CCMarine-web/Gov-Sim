@@ -14,10 +14,12 @@ import { useCallback, useEffect, useState } from 'react';
 import { PHASE_1_CONTENT } from '@/content';
 import { setSpeed, toggle } from '@/runtime/gameLoop';
 import { useGameStore } from '@/store/gameStore';
+import { startAutosave, stopAutosave } from '@/lib/saves/autosave';
 import { CommandBar } from './CommandBar';
 import { ChronicleFeed } from './ChronicleFeed';
 import { EventModal } from './EventModal';
 import { LeftNav, type SectionId } from './LeftNav';
+import { SaveMenu } from './SaveMenu';
 import {
   Chronicle,
   Desk,
@@ -41,6 +43,14 @@ const SECTION_TITLE: Record<SectionId, string> = {
 export function GameShell() {
   const snapshot = useGameStore((s) => s.snapshot);
   const [section, setSection] = useState<SectionId>('desk');
+  const [savesOpen, setSavesOpen] = useState(false);
+
+  // Autosave subscribes to the store, never to the tick. Idempotent, so Strict
+  // Mode's double-invoke does not double-subscribe.
+  useEffect(() => {
+    startAutosave();
+    return () => stopAutosave();
+  }, []);
 
   const pendingId = snapshot?.eventState.pendingDecisions[0]?.eventId ?? null;
 
@@ -108,9 +118,18 @@ export function GameShell() {
         />
 
         <main className="min-w-0 flex-1 overflow-y-auto p-3">
-          <h1 className="mb-3 font-serif text-h1 text-content-primary">
-            {SECTION_TITLE[section]}
-          </h1>
+          <div className="mb-3 flex items-baseline justify-between">
+            <h1 className="font-serif text-h1 text-content-primary">
+              {SECTION_TITLE[section]}
+            </h1>
+            <button
+              type="button"
+              onClick={() => setSavesOpen(true)}
+              className="rounded-card border border-ink-400 px-3 py-1 text-small text-content-secondary hover:bg-ink-500"
+            >
+              Saved games
+            </button>
+          </div>
 
           {section === 'desk' && <Desk state={snapshot} />}
           {section === 'treasury' && <TreasuryPanel state={snapshot} />}
@@ -124,6 +143,9 @@ export function GameShell() {
         <ChronicleFeed />
       </div>
 
+      {savesOpen && <SaveMenu onClose={() => setSavesOpen(false)} />}
+
+      {/* Rendered last so a decision always sits above the save menu. */}
       {pendingEvent && <EventModal event={pendingEvent} state={snapshot} />}
     </div>
   );
