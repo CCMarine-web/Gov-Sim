@@ -84,6 +84,13 @@ for (let i = 0; i < 900; i++) {
 // --- Downgrade to the requested format --------------------------------------
 type Loose = Record<string, unknown>;
 
+/** v8 → v7: there was no diplomacy. */
+function downgradeToV7(current: Loose): Loose {
+  const out = { ...current, schemaVersion: 7 };
+  delete (out as Loose).diplomacy;
+  return out;
+}
+
 /** v7 → v6: blocs were a static table, not state. */
 function downgradeToV6(current: Loose): Loose {
   const out = { ...current, schemaVersion: 6 };
@@ -166,6 +173,7 @@ function downgradeToV1(current: Loose, played: GameState): Loose {
 }
 
 let fixture: Loose = JSON.parse(JSON.stringify(state));
+if (version <= 7) fixture = downgradeToV7(fixture);
 if (version <= 6) fixture = downgradeToV6(fixture);
 if (version <= 5) fixture = downgradeToV5(fixture);
 if (version <= 4) fixture = downgradeToV4(fixture);

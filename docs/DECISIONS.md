@@ -1331,3 +1331,82 @@ apology, and each tells the player how to read everything above it.
 The same reasoning governs a cell outside the union, which reads "This model
 simulates no economy or sentiment outside the union, so there are no figures for
 it — **not zero, none.**" A zero would be a measurement. There was none.
+
+---
+
+## D-042 — A treaty is a modifier, not a mechanism
+
+**Date:** 2026-08-16 (Phase 2, queue item 11)
+**Status:** implemented
+
+**The brief left no room here**, and it was right to: trade agreements "must
+flow through the same model, not a parallel one."
+
+So a treaty's effects are `ModifierTemplate`s, aimed at the same targets a bill
+aims at, written into the same ledger, with the same phase-in ramp and a new
+`sourceType: 'treaty'`. Tribute is added to the **civil outlay line** rather
+than deducted through some private channel of its own.
+
+**Why this matters more than it looks.** The obvious implementation is a
+`tradeAgreementBonus` field that the trade calculation reads. It would work, and
+it would create a second economy that could silently disagree with the first —
+a tariff and a treaty could both claim the same trade and the Treasury would
+have no way to reconcile them. With the ledger, the stat popover explains
+Pinckney's Treaty and the whiskey excise side by side, in the same arithmetic,
+and they sum to what is on the screen.
+
+**The test that proves it** does not check a treaty's effect. It checks that
+`explainStat` returns a contribution whose `sourceType` is `treaty` and whose
+effect is part of the same total — that is, that the ledger sees it at all.
+
+---
+
+## D-043 — The world of 1789 does not start at zero
+
+**Date:** 2026-08-16 (Phase 2, queue item 11)
+**Status:** implemented
+
+Every foreign power starts at a reasoned relation rather than at neutral.
+Britain at −35, France at +55, Algiers at −50, Morocco at +25.
+
+**Because that is the country the player inherits.** Britain still held the
+northwestern forts it had agreed to give up in 1783. France was owed money and
+independence and had a defensive alliance still in force. Algiers was taking
+American ships and ransoming their crews. Morocco had signed in 1786 and kept
+it. Almost every diplomatic option in the first decade was constrained by that
+inheritance, and a world starting at zero would turn the decade into a blank
+sheet the player writes on — which is precisely the "historical rails vs
+historical pressure" distinction in DESIGN.md §1.1 pillar 3, applied abroad.
+
+**The corollary is that relations decay toward the baseline, not toward zero.**
+The reasons Britain was cool did not go away because a minister had a good year.
+A government that stops working at a relationship loses what it bought, so the
+envoy is a standing cost rather than a purchase — and the envoy is deliberately
+weak, because one that transformed a relationship would let a player buy their
+way past every treaty prerequisite in a single action.
+
+---
+
+## D-044 — A migrated save inherits the world, not a diplomatic history
+
+**Date:** 2026-08-16 (Phase 2, queue item 11)
+**Status:** implemented
+
+`v7ToV8` seeds relations at their 1789 baselines and **signs nothing.**
+
+The alternative worth naming, because it is superficially attractive: award a
+save the treaties that were historically concluded by its date. A save from 1798
+would load with the Jay Treaty and Pinckney's Treaty in force, which is what
+"really happened", and the country would look right.
+
+**It is the worst option of the three.** Inventing a relation would attribute to
+the player a diplomatic posture they never took. Awarding them treaties
+attributes to them an **accomplishment** — the Jay Treaty cost 120 political
+capital and was the most contested measure of the decade, and handing it over
+because the calendar says so would be crediting a player with the hardest thing
+in the item.
+
+So a v7 save from 1798 resumes with Britain still cool and nothing signed. That
+is a country that took a different path, not a broken one, and it is the same
+answer `v4ToV5` gave for grievance and `v6ToV7` for blocs: a save records no
+history of a system it did not have.

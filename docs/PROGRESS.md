@@ -7,7 +7,7 @@ If you are resuming with no context: read `DESIGN.md` first, then this file,
 then `docs/DECISIONS.md` and `docs/BLOCKERS.md`. Then continue the **Phase 2
 queue** below, which is `gov-sim-phase2-brief.md` §9.
 
-**Last updated:** Phase 2 run of 2026-08-16, after queue item 10.
+**Last updated:** Phase 2 run of 2026-08-16, after queue item 11.
 
 ---
 
@@ -17,8 +17,8 @@ queue** below, which is `gov-sim-phase2-brief.md` §9.
 |---|---|
 | Production URL | <https://gov-sim.vercel.app> |
 | Deploy | auto-deploys from `main` on push |
-| Tests | 686 passing |
-| Save schema | version **7** — v1 to v6 saves migrate forward, all six fixtures committed |
+| Tests | 735 passing |
+| Save schema | version **8** — v1 to v7 saves migrate forward, all seven fixtures committed |
 | Gates | tests, lint, typecheck, production build — all green |
 | Database | Supabase, `save_games` table migrated, verified reachable from production |
 | Phase | **2 — in progress.** Phase 1 shipped. |
@@ -39,7 +39,7 @@ queue** below, which is `gov-sim-phase2-brief.md` §9.
 | 8 — Bloc model | **complete** — see below and D-033 to D-035 |
 | 9 — Map view replacing the Desk | **complete** — see below and D-036 to D-038 |
 | 10 — Remaining map modes and state detail panel | **complete** — see below and D-039 to D-041 |
-| 11 — Diplomacy tab | not started |
+| 11 — Diplomacy tab | **complete** — see below and D-042 to D-044 |
 | 12 — War declaration paths | not started |
 | 13 — Cabinet competence and loyalty | not started |
 | 14 — Theming, asset registry, audio abstraction | not started |
@@ -580,6 +580,61 @@ taken. Census figures appear in the steel reserved for historical data.
 
 **Tests:** 45 in `sim/map.test.ts`, 23 in `components/game/map.test.tsx`.
 Human-eye checks are `docs/MANUAL-QA.md` §18.
+
+---
+
+### Item 11 — the Diplomacy tab: complete
+
+**Fourteen foreign powers as modelled entities**: Britain, France, Spain, the
+Dutch, Portugal; Algiers, Morocco, Tripoli, Tunis; and the Northwestern
+Confederacy, Muscogee, Cherokee, Haudenosaunee and Shawnee. Each with a dated
+ruler list, its own interests, factual context and sources.
+
+**Native nations are in the same list as Britain**, with the same fields and the
+same requirements, because the brief said so and it is right: "sovereign
+polities with their own interests, diplomacy, and military capacity, not map
+obstacles… the historical record here is ugly and the game shouldn't launder
+it." The Northwestern Confederacy's land strength is the third highest of any
+power in the game, because it destroyed two American armies.
+
+**Treaties use the ledger. There is no second economy.** A treaty's effects are
+`ModifierTemplate`s aimed at the same targets a bill aims at, with the same
+phase-in ramp and a new `sourceType: 'treaty'`. Tribute goes into the **civil
+outlay line** rather than through a private channel. The Treasury cannot tell a
+treaty from a tariff, and the stat popover explains Pinckney's Treaty and the
+whiskey excise side by side (D-042).
+
+**Thirteen treaties**, nine of them actually concluded — Jay, Pinckney,
+Mortefontaine, Algiers, Tripoli, New York, Holston, Greenville, Canandaigua —
+one sought and never obtained, and three counterfactuals whose notes say exactly
+what they are departing from. Signing the Jay Treaty raises Britain sharply and
+drops France sharply, because that is what happened.
+
+**The world of 1789 does not start at zero.** Britain at −35 for the
+northwestern forts, France at +55 for the alliance of 1778, Algiers at −50 for
+the ships it was taking, Morocco at +25 for the treaty it kept. Relations decay
+back toward each power's own baseline rather than toward neutral, so an envoy is
+a standing cost rather than a purchase — and the envoy is deliberately weak,
+because one that transformed a relationship would let a player buy past every
+treaty prerequisite in a single action (D-043).
+
+**The data-integrity rule applies abroad.** Britain's population is the 1801
+census and the panel says 1801. **Most of the others are null**, with a stated
+reason — nobody counted the Muscogee in 1790, and Cherokee estimates follow a
+smallpox epidemic and a decade of war. Naval and land strength are calibration
+constants and the screen says on its face that strength is a model.
+
+**Schema version 8**, `migrations/v7ToV8.ts`, with a committed v7 fixture. It
+seeds the 1789 baselines and **signs nothing** — awarding a 1798 save the
+treaties historically concluded by then would credit the player with the hardest
+achievement in the item (D-044).
+
+**Tests:** 28 in `sim/diplomacy.test.ts`, 16 in
+`components/game/diplomacy.test.tsx`, 5 more in `migrations.test.ts`. Human-eye
+checks are `docs/MANUAL-QA.md` §19.
+
+**Left for item 12:** declaring war. `PowerRelation.atWar` exists and every
+query already respects it; the declaration paths that set it are the next item.
 
 ---
 

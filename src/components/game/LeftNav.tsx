@@ -13,6 +13,7 @@ import {
   Landmark,
   LayoutGrid,
   Map,
+  Globe,
   Scale,
   ScrollText,
   Users,
@@ -25,6 +26,7 @@ export type SectionId =
   | 'treasury'
   | 'legislation'
   | 'congress'
+  | 'diplomacy'
   | 'regions'
   | 'government'
   | 'history'
@@ -41,6 +43,7 @@ const ITEMS: NavItem[] = [
   { id: 'treasury', label: 'Treasury', Icon: Coins },
   { id: 'legislation', label: 'Legislation', Icon: Scale },
   { id: 'congress', label: 'Congress', Icon: Users },
+  { id: 'diplomacy', label: 'Diplomacy', Icon: Globe },
   { id: 'regions', label: 'Regions', Icon: LayoutGrid },
   { id: 'government', label: 'Government', Icon: Landmark },
   { id: 'history', label: 'History', Icon: BookOpen },

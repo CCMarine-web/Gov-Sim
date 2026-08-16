@@ -31,7 +31,7 @@ import type { TaxBase } from './taxBases';
  * migrated forward or refused cleanly — never crashed, never silently loaded
  * into a broken state. (DESIGN.md Rule 8)
  */
-export const SCHEMA_VERSION = 7;
+export const SCHEMA_VERSION = 8;
 
 // ============================================================================
 // GOVERNMENT AND REGIONS
@@ -57,7 +57,9 @@ export type ModifierSourceType =
   | 'event'
   | 'policy'
   | 'structural'
-  | 'crisis';
+  | 'crisis'
+  /** A treaty with a foreign power. Same ledger, same rules. (brief §7) */
+  | 'treaty';
 
 /**
  * A single tracked contribution to a stat.
@@ -825,6 +827,14 @@ export interface GameState {
    * more artisans rather than merely happier ones.
    */
   blocs: BlocState;
+  /**
+   * The world outside. (brief §7)
+   *
+   * Relations with every foreign power, the treaties in force, and what those
+   * treaties cost every year. The treaties themselves act on the economy
+   * through the modifier ledger, exactly as bills do.
+   */
+  diplomacy: DiplomacyState;
 
   // --- the ledger ---
   activeModifiers: Modifier[];
@@ -1356,4 +1366,47 @@ export interface ContentPack {
    * explicitly and get exactly that.
    */
   offices: Office[];
+}
+
+// ============================================================================
+// DIPLOMACY (brief §7, queue item 11)
+// ============================================================================
+
+/** Where we stand with one foreign power. */
+export interface PowerRelation {
+  powerId: string;
+  /** −100…+100. Plain words for it come from `relationWord`. */
+  relation: number;
+  /**
+   * Set by queue item 12, which builds the declaration paths. Present now
+   * because every query that asks "can this be signed" has to ask it, and a
+   * field added later would mean a migration for a boolean.
+   */
+  atWar: boolean;
+  /** The last day a mission was sent. For the UI, so a player can pace them. */
+  lastEnvoyDay: number | null;
+}
+
+/** A treaty the United States has actually concluded. */
+export interface TreatyRecord {
+  treatyId: string;
+  powerId: string;
+  signedDay: number;
+  /** null = still in force. */
+  endedDay: number | null;
+  /** Whether it ended by repudiation rather than by expiry or agreement. */
+  breached: boolean;
+}
+
+/** Tribute owed every year while a treaty stands. */
+export interface TributeObligation {
+  powerId: string;
+  treatyId: string;
+  annualAmount: number;
+}
+
+export interface DiplomacyState {
+  relations: Record<string, PowerRelation>;
+  treaties: TreatyRecord[];
+  tributeDue: TributeObligation[];
 }

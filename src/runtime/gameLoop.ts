@@ -24,8 +24,10 @@
  * development. Starting an already-running loop is a no-op.
  */
 
+import { TREATY_BY_ID } from '@/content/diplomacy/treaties';
 import { advanceDay, resolveDecision } from '@/sim/advanceDay';
 import { amendBill, enactBill, repealBill } from '@/sim/bills';
+import { breachTreaty, sendEnvoy, signTreaty } from '@/sim/diplomacy';
 import { NO_TACTICS, type BillTactics } from '@/sim/congress';
 import { createGame, type NewGameOptions } from '@/sim/createGame';
 import { enactPolicy } from '@/sim/policy';
@@ -481,6 +483,42 @@ export function repealLegislation(billId: string): void {
   const result = repealBill(loop.game, findBill(billId));
   loop.game = result.state;
   loop.pendingEffects.push(...result.effects);
+  publish(true);
+}
+
+/**
+ * Send a minister to a foreign power. (brief §7)
+ *
+ * Silently does nothing when it cannot be afforded, exactly as the legislation
+ * actions do: the panel already disables the control and states the price, and
+ * a second refusal path here would be a second source of truth about what is
+ * possible.
+ */
+export function sendMinister(powerId: string): void {
+  if (!loop.game) return;
+  const result = sendEnvoy(loop.game, powerId);
+  if (!result.ok) return;
+  loop.game = result.state;
+  publish(true);
+}
+
+/** Conclude a treaty. */
+export function concludeTreaty(treatyId: string): void {
+  if (!loop.game) return;
+  const treaty = TREATY_BY_ID[treatyId];
+  if (!treaty) return;
+  const result = signTreaty(loop.game, treaty);
+  if (!result.ok) return;
+  loop.game = result.state;
+  publish(true);
+}
+
+/** Repudiate one. It costs relations, and it costs standing at home. */
+export function repudiateTreaty(treatyId: string): void {
+  if (!loop.game) return;
+  const result = breachTreaty(loop.game, treatyId);
+  if (!result.ok) return;
+  loop.game = result.state;
   publish(true);
 }
 

@@ -1069,3 +1069,45 @@ export const RANGES = {
   percent: { min: 0, max: 100 },
   sentiment: { min: -100, max: 100 },
 } as const;
+
+
+// ============================================================================
+// DIPLOMACY (brief §7, ECONOMY.md §7.23)
+// ============================================================================
+
+/** Relations run from implacable hostility to alliance in all but name. */
+export const RELATION_RANGE = { min: -100, max: 100 } as const;
+
+/**
+ * What a diplomatic mission costs, and what it buys.
+ *
+ * Deliberately a poor exchange rate. Diplomacy in this period was slow: a
+ * minister took months to arrive and years to accomplish anything, and a single
+ * mission that transformed a relationship would make every treaty prerequisite
+ * meaningless — the player would buy their way to any threshold in one action.
+ * The cost is real political capital, so an envoy competes with legislation for
+ * the same reserve, which is the trade-off that makes the choice interesting.
+ */
+export const ENVOY_CAPITAL_COST = 14;
+export const ENVOY_RELATION_GAIN = 6;
+
+/**
+ * How much of the gap back to a power’s BASELINE closes each month.
+ *
+ * Toward the baseline, not toward zero. The reasons Britain was cool and France
+ * warm in 1789 did not go away because a minister had a good year, and a
+ * government that stops working at a relationship loses what it bought. Two per
+ * cent a month is a half-life of about three years — slow enough that a treaty
+ * concluded on the strength of a good relation is not immediately at risk.
+ */
+export const DIPLOMATIC_DECAY_PER_MONTH = 0.02;
+
+/**
+ * What breaking a treaty costs.
+ *
+ * The relation cost is the larger of the two, but the LEGITIMACY cost is the
+ * interesting one: a government that does not keep its word is worth less at
+ * home as well as abroad. Repudiation is available, and it is not free.
+ */
+export const TREATY_BREACH_RELATION_COST = 55;
+export const TREATY_BREACH_LEGITIMACY_COST = 9;

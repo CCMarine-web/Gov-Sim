@@ -12,7 +12,7 @@
 
 import { useCallback, useEffect, useState } from 'react';
 import { PHASE_1_CONTENT } from '@/content';
-import { setSpeed, toggle } from '@/runtime/gameLoop';
+import { concludeTreaty, sendMinister, setSpeed, toggle } from '@/runtime/gameLoop';
 import { SPEEDS } from '@/runtime/speeds';
 import { useGameStore } from '@/store/gameStore';
 import { startAutosave, stopAutosave } from '@/lib/saves/autosave';
@@ -26,6 +26,7 @@ import { Chronicle, Desk, Regions } from './sections';
 import { MapPanel } from './MapPanel';
 import { LegislationPanel } from './LegislationPanel';
 import { CongressPanel } from './CongressPanel';
+import { DiplomacyPanel } from './DiplomacyPanel';
 import { GovernmentPanel } from './GovernmentPanel';
 import { HistoryPanel } from './HistoryPanel';
 import { TreasuryPanel } from './TreasuryPanel';
@@ -35,6 +36,7 @@ const SECTION_TITLE: Record<SectionId, string> = {
   treasury: 'Treasury',
   legislation: 'Legislation',
   congress: 'Congress',
+  diplomacy: 'Diplomacy',
   regions: 'Regions',
   government: 'Government',
   history: 'History',
@@ -183,6 +185,13 @@ export function GameShell() {
           {section === 'treasury' && <TreasuryPanel state={snapshot} />}
           {section === 'legislation' && <LegislationPanel state={snapshot} />}
           {section === 'congress' && <CongressPanel state={snapshot} />}
+          {section === 'diplomacy' && (
+            <DiplomacyPanel
+              state={snapshot}
+              onEnvoy={sendMinister}
+              onSign={concludeTreaty}
+            />
+          )}
           {section === 'regions' && <Regions state={snapshot} />}
           {section === 'government' && <GovernmentPanel state={snapshot} />}
           {section === 'history' && <HistoryPanel state={snapshot} />}

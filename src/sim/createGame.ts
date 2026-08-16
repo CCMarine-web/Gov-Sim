@@ -24,6 +24,7 @@ import {
 */
 import { PARTIES as partyData, STATE_SEATS as seatData } from '@/content/government/congress';
 import { seedBlocs } from './blocs';
+import { seedDiplomacy } from './diplomacy';
 import { seatCongress } from './congress';
 import { START, START_DEBT_RATE, START_TRADE_CAPACITY } from './calibration';
 import {
@@ -473,6 +474,13 @@ export function createGame(options: NewGameOptions): GameState {
       membershipByRegion: blocs.membership,
     }),
     blocs,
+    /*
+      THE WORLD OF 1789, and it is not a neutral one. Britain still holds the
+      northwestern forts, France is owed both money and gratitude, Algiers is
+      taking American ships. Each starting relation is reasoned beside its power
+      in src/content/diplomacy/powers.ts. (brief §7)
+    */
+    diplomacy: seedDiplomacy(),
 
     activeModifiers: [],
 

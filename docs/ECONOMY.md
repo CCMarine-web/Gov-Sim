@@ -1169,6 +1169,50 @@ strain = enslavedShare × 130
 
 **What it deliberately does not include.** Economic divergence. The North and South had different economies from the beginning and that alone did not strain the union; what strained it was that one of those economies rested on holding people in bondage, which term 1 already carries. Adding a prosperity gap would double-count the same fact and would also make ordinary regional inequality read as impending war.
 
+### 7.23 Diplomacy — relations, treaties and tribute
+
+*Phase 2 brief §7, queue item 11. Model in `src/sim/diplomacy.ts`; the powers and treaties are content, in `src/content/diplomacy/`.*
+
+#### Treaties use the ledger. There is no second economy.
+
+The brief is unambiguous: trade agreements "must flow through the same model, not a parallel one." So a treaty's effects are `ModifierTemplate`s aimed at the same targets a bill aims at — `nation.tradeCapacity`, `region.frontier.prosperity`, `nation.stability` — written into the same ledger with the same phase-in ramp and a `sourceType` of `treaty`.
+
+The consequence worth stating: **the Treasury cannot tell a treaty from a tariff.** Pinckney's Treaty and the whiskey excise argue with the same economy on the same terms, and the stat popover explains them side by side. A treaty that opened trade through a private channel would be a second model that could silently disagree with the first.
+
+Tribute is the same discipline applied to money: the annuities under the Algiers, Tripoli and Native treaties are added to the **civil outlay line**, not deducted through a separate channel. They are charges on the Treasury and they look like it.
+
+#### Relations
+
+One number per power, −100 to +100, with a word attached at every level so it is never a bare figure or a colour.
+
+**Starting values are not neutral, and that is the design.** Britain is at −35 because it still held the northwestern forts; France at +55 because the alliance of 1778 was real and recent and the United States owed it both money and independence; Algiers at −50 because it was taking American ships. Each is reasoned beside its power in the content file. A world that started at zero would make the first decade's diplomacy a blank sheet, when in fact almost every option the government had was constrained by an inheritance.
+
+| Constant | Value | Reasoning |
+|---|---:|---|
+| `ENVOY_CAPITAL_COST` | 14 | A mission is a real call on the same reserve legislation draws from |
+| `ENVOY_RELATION_GAIN` | 6 | Deliberately a poor exchange rate — see below |
+| `DIPLOMATIC_DECAY_PER_MONTH` | 0.02 | Half-life about three years, back toward the power's own baseline |
+| `TREATY_BREACH_RELATION_COST` | 55 | |
+| `TREATY_BREACH_LEGITIMACY_COST` | 9 | |
+
+**Why an envoy buys so little.** Diplomacy in this period was slow: a minister took months to arrive and years to accomplish anything. More to the point, a mission that transformed a relationship would make every treaty prerequisite meaningless, because the player could buy their way to any threshold in a single action. Small, repeatable, and paid for in the currency that legislation also needs is what makes it a choice.
+
+**Decay runs toward each power's baseline, not toward zero.** The reasons Britain was cool and France warm did not go away because a minister had a good year. A government that stops working at a relationship loses what it bought — which is what makes the envoy a standing cost rather than a purchase.
+
+#### Treaty prerequisites, and why a refusal explains itself
+
+`treatyStatus` returns a reason in every negative case — not yet, too late, at war, relations too low with the figure needed, or a named treaty that must come first. This is the same contract `billStatus` has, and for the same reason: a control the player cannot use must say what would change that.
+
+The prerequisites are historical rather than mechanical. Full commercial reciprocity with Britain requires the Jay Treaty first and a relation of +55, because it is what Jay was sent to get and did not get; Britain held the stronger position and had no reason to concede it. Buying New Orleans requires Pinckney's Treaty and a relation of +60, and Spain refused throughout — it came into American hands only because Napoleon sold it in 1803, which nobody in this period negotiated for.
+
+#### The data-integrity rule applies abroad
+
+The brief: "Real 1790s figures where sourced, honest gaps where not — the same data-integrity rule applies to foreign nations as to our own."
+
+So a power's population is either cited with the year it is FOR — Britain's is the 1801 census, because no earlier count exists, and the panel says 1801 — or `null` with a stated reason. **Most are null.** Nobody counted the Muscogee in 1790, estimates for the Cherokee vary widely and follow a smallpox epidemic and a decade of war, and a plausible number in a panel would be a fabricated one.
+
+Naval and land strength are **calibration constants**, not history: nobody published a comparable index in 1790. They are reasoned in the content file and the screen says on its face that strength is a model.
+
 ---
 
 ## 8. Government type differences

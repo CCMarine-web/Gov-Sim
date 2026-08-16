@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { advanceDay, resolveDecision } from '../advanceDay';
+import { POWERS } from '@/content/diplomacy/powers';
 import { driftBlocs } from '../blocs';
 import { BLOC_MEMBERSHIP_1790 } from '../calibration';
 import { createTestGame } from '../createGame';
@@ -12,6 +13,7 @@ import v3Fixture from './fixtures/v3-republic-day900.json';
 import v4Fixture from './fixtures/v4-republic-day900.json';
 import v5Fixture from './fixtures/v5-republic-day900.json';
 import v6Fixture from './fixtures/v6-republic-day900.json';
+import v7Fixture from './fixtures/v7-republic-day900.json';
 import { MIGRATIONS, migrateToCurrent, parseSave } from './index';
 
 describe('loading a save of the current version', () => {
@@ -802,5 +804,88 @@ describe('the v6 fixture gains a country that can change', () => {
     expect(outcome.state.day).toBe(raw.day);
     expect(outcome.state.congress).toEqual(raw.congress);
     expect(outcome.state.grievance).toEqual(raw.grievance);
+  });
+});
+
+/**
+ * THE v7 FIXTURE
+ *
+ * A real save in the version 7 format, at day 900 — 16 October 1791. There was
+ * no diplomacy in v7 at all, so the migration has to give the save a world, and
+ * it has to give it the RIGHT one: the world of 1789, with nothing signed.
+ * (DECISIONS.md D-044)
+ */
+describe('the v7 fixture gains a world it has not yet acted in', () => {
+  const raw = JSON.parse(JSON.stringify(v7Fixture)) as Record<string, unknown>;
+
+  it('is genuinely a v7 save, with no diplomacy in it', () => {
+    expect(raw.schemaVersion).toBe(7);
+    expect(raw.diplomacy).toBeUndefined();
+    // And it carries bloc state, so v7 is what it says it is.
+    expect(raw.blocs).toBeDefined();
+  });
+
+  it('starts every relation at its 1789 baseline', () => {
+    const outcome = migrateToCurrent(JSON.parse(JSON.stringify(raw)));
+    expect(outcome.ok).toBe(true);
+    if (!outcome.ok) return;
+
+    for (const power of POWERS) {
+      expect(
+        outcome.state.diplomacy.relations[power.id].relation,
+        power.id,
+      ).toBe(power.startingRelation);
+    }
+  });
+
+  it('signs nothing on the player’s behalf', () => {
+    const outcome = migrateToCurrent(JSON.parse(JSON.stringify(raw)));
+    expect(outcome.ok).toBe(true);
+    if (!outcome.ok) return;
+
+    /*
+      A v7 save from 1791 has no diplomatic history because it could not have
+      one. Awarding it the treaties that were historically signed by its date
+      would credit the player with achievements they never had the opportunity
+      to attempt — worse than inventing a relation, because it is inventing an
+      accomplishment.
+    */
+    expect(outcome.state.diplomacy.treaties).toEqual([]);
+    expect(outcome.state.diplomacy.tributeDue).toEqual([]);
+  });
+
+  it('keeps everything the migration is not about', () => {
+    const outcome = migrateToCurrent(JSON.parse(JSON.stringify(raw)));
+    expect(outcome.ok).toBe(true);
+    if (!outcome.ok) return;
+
+    expect(outcome.state.day).toBe(raw.day);
+    expect(outcome.state.blocs).toEqual(raw.blocs);
+    expect(outcome.state.congress).toEqual(raw.congress);
+    expect(outcome.state.grievance).toEqual(raw.grievance);
+  });
+
+  it('produces a state that still simulates', () => {
+    const outcome = migrateToCurrent(JSON.parse(JSON.stringify(raw)));
+    expect(outcome.ok).toBe(true);
+    if (!outcome.ok) return;
+
+    let state = outcome.state;
+    for (let i = 0; i < 40; i++) {
+      state = advanceDay(state, PHASE_1_CONTENT).state;
+      while (state.eventState.pendingDecisions.length > 0) {
+        const pending = state.eventState.pendingDecisions[0];
+        const event = PHASE_1_CONTENT.events.find((e) => e.id === pending.eventId)!;
+        state = resolveDecision(
+          state,
+          PHASE_1_CONTENT,
+          pending.eventId,
+          event.options[0].id,
+        ).state;
+      }
+    }
+
+    expect(Number.isFinite(state.nation.gdp)).toBe(true);
+    expect(Object.keys(state.diplomacy.relations).length).toBe(POWERS.length);
   });
 });

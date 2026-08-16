@@ -816,3 +816,85 @@ was taken.
 Any territory you click should show the act or treaty behind its status —
 "Act of 26 May 1790" for the Southwest Territory, the Louisiana Purchase Treaty
 for Louisiana.
+
+---
+
+## 19. Diplomacy
+
+*Phase 2, queue item 11. `DECISIONS.md` D-042 to D-044, `ECONOMY.md` §7.23.*
+
+**19.1 — The world is there, and it is not neutral**
+Open Diplomacy on day one. Britain should be cool, France warm, Algiers
+hostile, Morocco friendly. Each power should name its government and its ruler.
+*Problem if:* everybody starts at zero. The first decade's diplomacy was
+constrained by an inheritance and the screen should show it.
+
+**19.2 — Governments change with the date**
+Look at France in 1791, then play to 1793, 1796 and 1800. Louis XVI, then the
+National Convention, then the Directory, then Bonaparte.
+*Problem if:* the ruler never changes.
+
+**19.3 — Gaps are gaps, and say why**
+Look at the Cherokee, the Muscogee, Spain. Where there is no population figure
+the panel should say "no verified figure" and explain — estimates vary, nobody
+counted, no source at the required standard.
+*Problem if:* you see a dash, a zero, or a number with no citation. The rule
+that governs our own figures governs theirs.
+
+**19.4 — Native nations are polities, not scenery**
+They should be in the same list as Britain, with rulers, interests, sources and
+a real military strength. The Northwestern Confederacy's context should mention
+St Clair's defeat and Greenville.
+*Problem if:* they are grouped as obstacles, or their strength is nil. They
+destroyed two American armies.
+
+**19.5 — A minister costs, and buys little**
+Send one to Britain. Political capital should drop by the stated amount and the
+relation should improve slightly. Send several: it should take many missions to
+move a relationship far.
+*Problem if:* one mission transforms a relationship. Then every treaty
+prerequisite can be bought past in a single action.
+
+**19.6 — And stopping loses it**
+Improve a relation substantially, then play a few years without touching it. It
+should drift back toward where it started — not to zero, toward that power's own
+baseline.
+
+**19.7 — A treaty you cannot sign says why**
+Open Britain and look at full commercial reciprocity. It should say relations
+are too poor and name the figure needed. Open it before 1794 and the Jay Treaty
+should say it is not available yet; after 1798, that the moment has passed.
+*Problem if:* any treaty is greyed out with no reason.
+
+**19.8 — A treaty changes the actual economy**
+Sign Pinckney's Treaty. Over the following year or two the frontier's prosperity
+and sentiment should rise on the Regions screen and the map. Open the stat
+popover on frontier prosperity: **the treaty should be a named line in the
+breakdown**, alongside any laws.
+*Problem if:* the effect appears but the treaty is not in the breakdown. Then
+there are two economies.
+
+**19.9 — And it does not land all at once**
+The effect should phase in over months, like a statute does.
+
+**19.10 — Pleasing one power displeases another**
+Sign the Jay Treaty. Britain should improve sharply and France should fall
+sharply. That is what happened.
+
+**19.11 — Tribute is real money, every year**
+Sign the treaty with Algiers. The one-off cost should come out of the balance
+immediately, and the civil outlay line in Treasury should rise by the annual
+tribute and stay risen.
+*Problem if:* tribute is invisible in the Treasury. It was about a fifth of
+federal spending and hiding it would misrepresent the decade.
+
+**19.12 — Breaking your word costs at home**
+Repudiate a treaty. Its effects should leave the ledger immediately, relations
+should fall hard, and legitimacy should drop.
+*Problem if:* repudiation is free, or the effects linger.
+
+**19.13 — An old save inherits the world but not the achievements**
+Load a save made before this update. Relations should be at their 1789
+baselines and **nothing should be signed** — even if the save's date is after
+the Jay Treaty was historically concluded. A treaty is something the player
+earns.

@@ -694,7 +694,8 @@ See Rule 8 (§5). Migrations are pure `vN → vN+1` functions in `/src/sim/migra
 | 4 | Bills replace laws; modifiers gain a phase-in ramp (§7.4, brief §4) | `v3ToV4.ts` | `fixtures/v4-republic-day900.json` |
 | 5 | Grievance, unrest, and a ruler who can die (brief §2.1) | `v4ToV5.ts` | `fixtures/v5-republic-day900.json` |
 | 6 | Congress, parties and the seat record (§9.4, brief §2.2) | `v5ToV6.ts` | `fixtures/v6-republic-day900.json` |
-| 7 | Blocs become state: overlapping membership that policy can move (brief §1) | `v6ToV7.ts` | — (current) |
+| 7 | Blocs become state: overlapping membership that policy can move (brief §1) | `v6ToV7.ts` | `fixtures/v7-republic-day900.json` |
+| 8 | Diplomacy: relations, treaties and tribute (brief §7) | `v7ToV8.ts` | — (current) |
 
 A fixture is **generated once and never regenerated**, by `scripts/make-fixture.mts <version>` — which *refuses* to overwrite one that already exists. A fixture rebuilt from current code stops recording the old format and becomes a restatement of the new one, which would make its migration test pass by construction and prove nothing. That rule used to be a comment; it is now behaviour.
 
@@ -703,6 +704,7 @@ Every migration must state whether it is **behaviour-preserving** or a deliberat
 - `v1ToV2` is behaviour-preserving. The three founding instances reproduce the three old formulas arithmetically, and the test asserts a migrated save's revenue is unchanged.
 - `v2ToV3` **adds** a mechanic that did not exist, so there is no prior behaviour to preserve. It seeds the new reserve generously rather than at zero: the mechanic is new, so its absence in the old save was not the player's choice, and charging them for it would be the wrong way round.
 - `v3ToV4` is behaviour-preserving where it can be and honest where it cannot. Carried-forward bills get `enactedDay: 0`, because no enactment day was ever recorded and there is no way to recover one — the founding is the honest answer, and the day the player happened to upgrade would be a fabrication in the game's own record of itself. Existing modifiers get `rampDays: 0`, because they were applied under a build with no phase-in and were therefore fully in force; retro-fitting a ramp would weaken effects the player has already been living with.
+- `v7ToV8` seeds relations at their 1789 baselines and **signs nothing**. Awarding a save the treaties that were historically concluded by its date would credit the player with an accomplishment they never had the opportunity to attempt — the Jay Treaty cost 120 political capital and was the most contested measure of the decade (`docs/DECISIONS.md` D-044).
 - `v6ToV7` seeds the FOUNDING shares and takes the save’s own present as its baseline. Deriving shares from the current economy would invent a decade of occupational change the player never caused; measuring against 1789 figures the save does not contain is impossible. So the country is what it is and changes from there, and a migrated save behaves like a new game begun on its own date (`docs/DECISIONS.md` D-035).
 - `v5ToV6` seats a Congress **as of the save's own day**, from the historical seat record and the save's current regional sentiment — not a fresh 1789 Congress, which would hand a save made in 1796 a legislature that had not existed for seven years. It cannot recover the sitting Senate class, because a v5 save has no record of one, so the Senate starts matching the House and the two diverge from the next election onward. That is a one-time loss of nuance in a migrated save rather than a fabricated history, which is the right way round.
 - `v4ToV5` seeds grievance **empty**, and that is the only defensible answer. Grievance is a record of things the government did to particular blocs, and a v4 save contains no such record. Deriving a starting grievance from, say, current regional sentiment would invent a history of decrees the player never issued and then hold them to it.
@@ -765,7 +767,7 @@ A refined version of the initial sketch. Full field-level definitions live in `/
 ```ts
 interface GameState {
   // --- identity & versioning ---
-  schemaVersion: number;         // current: 7 (v1-v6 migrate; see §11.4)
+  schemaVersion: number;         // current: 8 (v1-v7 migrate; see §11.4)
   gameId: string;
   createdAtISO: string;          // wall-clock, set once; never read by the sim
   contentVersion: string;
@@ -799,6 +801,10 @@ interface GameState {
   // membership per region, drifting monthly toward what the economy and the
   // statute book imply. docs/ECONOMY.md §7.21.
   blocs: BlocState;
+  // Phase 2 §7. The world outside: relations with every foreign power, the
+  // treaties in force, and what they cost each year. Treaties act on the
+  // economy through the SAME ledger bills use — there is no second economy.
+  diplomacy: DiplomacyState;
 
   // --- the ledger ---
   activeModifiers: Modifier[];

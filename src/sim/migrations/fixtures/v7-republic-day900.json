@@ -1,0 +1,1996 @@
+{
+  "schemaVersion": 7,
+  "gameId": "test-game",
+  "createdAtISO": "1789-04-30T00:00:00.000Z",
+  "contentVersion": "test",
+  "rng": {
+    "seed": 20260815,
+    "state": 20260815,
+    "calls": 0
+  },
+  "day": 900,
+  "governmentType": "republic",
+  "ruler": {
+    "name": "George Washington",
+    "houseName": "Federalist",
+    "title": "President",
+    "birthYear": 1732,
+    "heirName": null,
+    "reignNumber": 0,
+    "accededDay": 0,
+    "portraitId": null
+  },
+  "nation": {
+    "population": 4239036.342731153,
+    "laborForce": 1525730.0707583234,
+    "agriculturalOutput": 134617176.058705,
+    "manufacturingOutput": 37285822.588561825,
+    "tradeVolume": 45363717.36762636,
+    "tradeCapacity": 49141928.36601155,
+    "gdp": 208120035.3275999,
+    "stability": 52.656582993112075,
+    "legitimacy": 74.50175659402461,
+    "legitimacyBase": 62.894552129285906,
+    "sectionalTension": 40.710046592869155,
+    "administrativeCapacity": 100,
+    "modelTargets": {
+      "stability": 42.23378222471203,
+      "sectionalTension": 36.4016885649706
+    }
+  },
+  "regions": [
+    {
+      "id": "new_england",
+      "name": "New England",
+      "states": [
+        {
+          "code": "VT",
+          "name": "Vermont",
+          "population1790": 85539,
+          "enslavedPopulation1790": 16
+        },
+        {
+          "code": "NH",
+          "name": "New Hampshire",
+          "population1790": 141885,
+          "enslavedPopulation1790": 158
+        },
+        {
+          "code": "ME",
+          "name": "Maine (District of Massachusetts)",
+          "population1790": 96540,
+          "enslavedPopulation1790": 0
+        },
+        {
+          "code": "MA",
+          "name": "Massachusetts",
+          "population1790": 378787,
+          "enslavedPopulation1790": 0
+        },
+        {
+          "code": "RI",
+          "name": "Rhode Island",
+          "population1790": 68825,
+          "enslavedPopulation1790": 948
+        },
+        {
+          "code": "CT",
+          "name": "Connecticut",
+          "population1790": 237946,
+          "enslavedPopulation1790": 2764
+        }
+      ],
+      "population": 1089272.5634565772,
+      "enslavedPopulation": 4192.987554102099,
+      "laborForce": 348651.9687021169,
+      "agriculturalOutput": 26031879.65418574,
+      "manufacturingOutput": 14791789.499742953,
+      "tradeVolume": 10773013.873994756,
+      "prosperity": 51.93408246950476,
+      "prosperityTrend": -0.2786206829893487,
+      "sentiment": 22.06460529457527,
+      "compliance": 96.18952889287443,
+      "dominantIndustry": "Shipping, fishing, and nascent manufacturing",
+      "tariffExposure": 1.3,
+      "exciseExposure": 0.4,
+      "landExposure": 0.8,
+      "baselineOutputPerCapita": 37.67659249671723,
+      "baseProsperity": 55,
+      "baseSentiment": 33.44801996899273,
+      "modelTargets": {
+        "prosperity": 48.72800997317896,
+        "sentiment": 19.58331101421584,
+        "compliance": 95.46063057037202
+      },
+      "baselineTaxBurden": 0.13
+    },
+    {
+      "id": "mid_atlantic",
+      "name": "Mid-Atlantic",
+      "states": [
+        {
+          "code": "NY",
+          "name": "New York",
+          "population1790": 340120,
+          "enslavedPopulation1790": 21324
+        },
+        {
+          "code": "NJ",
+          "name": "New Jersey",
+          "population1790": 184139,
+          "enslavedPopulation1790": 11423
+        },
+        {
+          "code": "PA",
+          "name": "Pennsylvania",
+          "population1790": 434373,
+          "enslavedPopulation1790": 3737
+        },
+        {
+          "code": "DE",
+          "name": "Delaware",
+          "population1790": 59094,
+          "enslavedPopulation1790": 8887
+        }
+      ],
+      "population": 1098550.5754923152,
+      "enslavedPopulation": 48974.221117139416,
+      "laborForce": 361885.8982079399,
+      "agriculturalOutput": 30107980.684645534,
+      "manufacturingOutput": 11259048.297854869,
+      "tradeVolume": 10916401.842129197,
+      "prosperity": 52.67501678024012,
+      "prosperityTrend": -0.48190878005936355,
+      "sentiment": 18.174165435791195,
+      "compliance": 95.92487676656259,
+      "dominantIndustry": "Mixed farming, milling, and commerce",
+      "tariffExposure": 1,
+      "exciseExposure": 0.7,
+      "landExposure": 1,
+      "baselineOutputPerCapita": 37.85576377235076,
+      "baseProsperity": 58,
+      "baseSentiment": 37.44954319377453,
+      "modelTargets": {
+        "prosperity": 47.12971960807964,
+        "sentiment": 14.021687358678443,
+        "compliance": 94.48802060567601
+      },
+      "baselineTaxBurden": 0.1
+    },
+    {
+      "id": "south",
+      "name": "The South",
+      "states": [
+        {
+          "code": "MD",
+          "name": "Maryland",
+          "population1790": 319728,
+          "enslavedPopulation1790": 103036
+        },
+        {
+          "code": "VA",
+          "name": "Virginia",
+          "population1790": 747610,
+          "enslavedPopulation1790": 292627
+        },
+        {
+          "code": "NC",
+          "name": "North Carolina",
+          "population1790": 393751,
+          "enslavedPopulation1790": 100572
+        },
+        {
+          "code": "SC",
+          "name": "South Carolina",
+          "population1790": 249073,
+          "enslavedPopulation1790": 107094
+        },
+        {
+          "code": "GA",
+          "name": "Georgia",
+          "population1790": 82548,
+          "enslavedPopulation1790": 29264
+        }
+      ],
+      "population": 1933507.7338095165,
+      "enslavedPopulation": 682276.2509573566,
+      "laborForce": 773702.5944894245,
+      "agriculturalOutput": 74273164.61402753,
+      "manufacturingOutput": 10941614.121856583,
+      "tradeVolume": 22487444.48054412,
+      "prosperity": 49.689215344154086,
+      "prosperityTrend": -0.21056112565636198,
+      "sentiment": -12.974711755842453,
+      "compliance": 87.42747485208753,
+      "dominantIndustry": "Staple-crop plantation agriculture",
+      "tariffExposure": 1.2,
+      "exciseExposure": 0.3,
+      "landExposure": 1.1,
+      "baselineOutputPerCapita": 44.305774497845036,
+      "baseProsperity": 52,
+      "baseSentiment": -0.06148392208670117,
+      "modelTargets": {
+        "prosperity": 47.266300338278256,
+        "sentiment": -13.28950538591789,
+        "compliance": 86.70080130776759
+      },
+      "baselineTaxBurden": 0.12
+    },
+    {
+      "id": "frontier",
+      "name": "The Frontier",
+      "states": [
+        {
+          "code": "KY",
+          "name": "Kentucky",
+          "population1790": 73677,
+          "enslavedPopulation1790": 12430
+        },
+        {
+          "code": "SW",
+          "name": "Southwest Territory",
+          "population1790": 35691,
+          "enslavedPopulation1790": 3417
+        }
+      ],
+      "population": 117705.46997274333,
+      "enslavedPopulation": 17055.067137170507,
+      "laborForce": 41489.60935884192,
+      "agriculturalOutput": 4204151.105846208,
+      "manufacturingOutput": 293370.66910741973,
+      "tradeVolume": 1186857.1709582885,
+      "prosperity": 23.414519474675778,
+      "prosperityTrend": -1.4934511033002948,
+      "sentiment": -61.039863958509045,
+      "compliance": 79.6589410206393,
+      "dominantIndustry": "Subsistence farming and distilling",
+      "tariffExposure": 0.4,
+      "exciseExposure": 2.2,
+      "landExposure": 1.3,
+      "baselineOutputPerCapita": 38.407096403859185,
+      "baseProsperity": 40,
+      "baseSentiment": -7.136079240680562,
+      "modelTargets": {
+        "prosperity": 6.229461798675594,
+        "sentiment": -74.18844988127093,
+        "compliance": 74.68451325710095
+      },
+      "baselineTaxBurden": 0.04000000000000001
+    }
+  ],
+  "treasury": {
+    "balance": 424481.0756765072,
+    "debtPrincipal": 93430437.40319157,
+    "debtWeightedRate": 0.04568795668042571,
+    "creditRating": 41.957788845346926,
+    "emergencyBorrowing": false,
+    "missedPayments": 0,
+    "receiptsYTD": {
+      "customs": 3555089.398767472,
+      "excise": 1631832.2777897518,
+      "land": 0,
+      "other": 122357.35925933183
+    },
+    "outlaysYTD": {
+      "debtService": 3375888.2070166916,
+      "military": 490904.10958904325,
+      "civil": 427561.64383561775,
+      "infrastructure": 193986.30136986356
+    },
+    "annualisedReceipts": {
+      "customs": 4536371.736762636,
+      "excise": 2541320.888724514,
+      "land": 0,
+      "other": 154547.29829695745
+    },
+    "annualisedOutlays": {
+      "debtService": 4268645.776710242,
+      "military": 620000,
+      "civil": 540000,
+      "infrastructure": 245000
+    },
+    "receiptLines": [
+      {
+        "taxId": "tax_impost",
+        "name": "Impost of 1789",
+        "createdByBillId": null,
+        "base": "imports",
+        "bucket": "customs",
+        "rate": 0.1,
+        "assessedBase": 45363717.36762636,
+        "gross": 4536371.736762636,
+        "lostToCollection": 0,
+        "lostToNonCompliance": 0,
+        "net": 4536371.736762636
+      },
+      {
+        "taxId": "tax_spirits",
+        "name": "Whiskey Excise of 1791",
+        "createdByBillId": "whiskey_excise_1791",
+        "base": "spirits",
+        "bucket": "excise",
+        "rate": 0.25,
+        "assessedBase": 11500000,
+        "gross": 2875000,
+        "lostToCollection": 0,
+        "lostToNonCompliance": 333679.1112754862,
+        "net": 2541320.888724514
+      },
+      {
+        "taxId": "tax_land",
+        "name": "Direct tax on land",
+        "createdByBillId": null,
+        "base": "land",
+        "bucket": "land",
+        "rate": 0,
+        "assessedBase": 95000000,
+        "gross": 0,
+        "lostToCollection": 0,
+        "lostToNonCompliance": 0,
+        "net": 0
+      },
+      {
+        "taxId": "tax_sales",
+        "name": "General Tax on Retail Sales",
+        "createdByBillId": "general_sales_tax",
+        "base": "sales",
+        "bucket": "other",
+        "rate": 0.005,
+        "assessedBase": 18909329.85119935,
+        "gross": 94546.64925599676,
+        "lostToCollection": 51820.94744543618,
+        "lostToNonCompliance": 8178.403513603131,
+        "net": 34547.29829695745
+      }
+    ],
+    "outlayLines": [
+      {
+        "programId": "debt_service",
+        "name": "Debt service",
+        "createdByBillId": null,
+        "category": "debtService",
+        "annualAmount": 4268645.776710242
+      },
+      {
+        "programId": "prog_military",
+        "name": "Army and militia",
+        "createdByBillId": null,
+        "category": "military",
+        "annualAmount": 620000
+      },
+      {
+        "programId": "prog_civil",
+        "name": "Civil establishment",
+        "createdByBillId": null,
+        "category": "civil",
+        "annualAmount": 310000
+      },
+      {
+        "programId": "prog_infrastructure",
+        "name": "Roads, posts and lighthouses",
+        "createdByBillId": null,
+        "category": "infrastructure",
+        "annualAmount": 130000
+      },
+      {
+        "programId": "prog_lighthouses",
+        "name": "Lighthouses and public piers",
+        "createdByBillId": "lighthouse_act_1789",
+        "category": "infrastructure",
+        "annualAmount": 15000
+      },
+      {
+        "programId": "prog_internal_improvements",
+        "name": "Roads and canals",
+        "createdByBillId": "national_road_programme",
+        "category": "infrastructure",
+        "annualAmount": 100000
+      },
+      {
+        "programId": "prog_emancipation_fund",
+        "name": "Emancipation compensation fund",
+        "createdByBillId": "gradual_emancipation_federal",
+        "category": "civil",
+        "annualAmount": 200000
+      },
+      {
+        "programId": "prog_national_university",
+        "name": "National university",
+        "createdByBillId": "national_university",
+        "category": "civil",
+        "annualAmount": 30000
+      }
+    ],
+    "lastYearReceipts": 4531312.595414932,
+    "lastYearOutlays": 4775389.450196809
+  },
+  "policies": {
+    "taxes": [
+      {
+        "id": "tax_impost",
+        "name": "Impost of 1789",
+        "createdByBillId": null,
+        "base": "imports",
+        "rate": 0.1,
+        "exemptions": [
+          "Goods carried in American-built and American-owned vessels paid a reduced duty"
+        ],
+        "collectionEfficiency": 1,
+        "enactedDay": 0,
+        "repealedDay": null
+      },
+      {
+        "id": "tax_spirits",
+        "name": "Whiskey Excise of 1791",
+        "createdByBillId": "whiskey_excise_1791",
+        "base": "spirits",
+        "rate": 0.25,
+        "exemptions": [
+          "Spirits distilled from domestic materials in small private stills paid a lower flat rate"
+        ],
+        "collectionEfficiency": 1,
+        "enactedDay": 661,
+        "repealedDay": null
+      },
+      {
+        "id": "tax_land",
+        "name": "Direct tax on land",
+        "createdByBillId": null,
+        "base": "land",
+        "rate": 0,
+        "exemptions": [],
+        "collectionEfficiency": 1,
+        "enactedDay": 0,
+        "repealedDay": null
+      },
+      {
+        "id": "tax_sales",
+        "name": "General Tax on Retail Sales",
+        "createdByBillId": "general_sales_tax",
+        "base": "sales",
+        "rate": 0.005,
+        "exemptions": [
+          "Provisions and unmilled grain"
+        ],
+        "collectionEfficiency": 0.4,
+        "enactedDay": 400,
+        "repealedDay": null
+      }
+    ],
+    "programs": [
+      {
+        "id": "prog_military",
+        "name": "Army and militia",
+        "createdByBillId": null,
+        "category": "military",
+        "annualAmount": 620000,
+        "enactedDay": 0,
+        "repealedDay": null
+      },
+      {
+        "id": "prog_civil",
+        "name": "Civil establishment",
+        "createdByBillId": null,
+        "category": "civil",
+        "annualAmount": 310000,
+        "enactedDay": 0,
+        "repealedDay": null
+      },
+      {
+        "id": "prog_infrastructure",
+        "name": "Roads, posts and lighthouses",
+        "createdByBillId": null,
+        "category": "infrastructure",
+        "annualAmount": 130000,
+        "enactedDay": 0,
+        "repealedDay": null
+      },
+      {
+        "id": "prog_lighthouses",
+        "name": "Lighthouses and public piers",
+        "createdByBillId": "lighthouse_act_1789",
+        "category": "infrastructure",
+        "annualAmount": 15000,
+        "enactedDay": 400,
+        "repealedDay": null
+      },
+      {
+        "id": "prog_internal_improvements",
+        "name": "Roads and canals",
+        "createdByBillId": "national_road_programme",
+        "category": "infrastructure",
+        "annualAmount": 100000,
+        "enactedDay": 400,
+        "repealedDay": null
+      },
+      {
+        "id": "prog_emancipation_fund",
+        "name": "Emancipation compensation fund",
+        "createdByBillId": "gradual_emancipation_federal",
+        "category": "civil",
+        "annualAmount": 200000,
+        "enactedDay": 400,
+        "repealedDay": null
+      },
+      {
+        "id": "prog_national_university",
+        "name": "National university",
+        "createdByBillId": "national_university",
+        "category": "civil",
+        "annualAmount": 30000,
+        "enactedDay": 400,
+        "repealedDay": null
+      }
+    ],
+    "bills": [
+      {
+        "billId": "general_sales_tax",
+        "enactedDay": 400,
+        "repealedDay": null,
+        "sliderValue": 0.005
+      },
+      {
+        "billId": "tonnage_act_1789",
+        "enactedDay": 400,
+        "repealedDay": null,
+        "sliderValue": null
+      },
+      {
+        "billId": "commercial_discrimination_against_britain",
+        "enactedDay": 400,
+        "repealedDay": null,
+        "sliderValue": 0.02
+      },
+      {
+        "billId": "judiciary_act_1789",
+        "enactedDay": 400,
+        "repealedDay": null,
+        "sliderValue": null
+      },
+      {
+        "billId": "lighthouse_act_1789",
+        "enactedDay": 400,
+        "repealedDay": null,
+        "sliderValue": 15000
+      },
+      {
+        "billId": "national_road_programme",
+        "enactedDay": 400,
+        "repealedDay": null,
+        "sliderValue": 100000
+      },
+      {
+        "billId": "census_act_1790",
+        "enactedDay": 400,
+        "repealedDay": null,
+        "sliderValue": null
+      },
+      {
+        "billId": "naturalization_act_1790",
+        "enactedDay": 400,
+        "repealedDay": null,
+        "sliderValue": null
+      },
+      {
+        "billId": "gradual_emancipation_federal",
+        "enactedDay": 400,
+        "repealedDay": null,
+        "sliderValue": 200000
+      },
+      {
+        "billId": "national_university",
+        "enactedDay": 400,
+        "repealedDay": null,
+        "sliderValue": 30000
+      },
+      {
+        "billId": "bank_of_the_united_states",
+        "enactedDay": 800,
+        "repealedDay": null,
+        "sliderValue": null
+      },
+      {
+        "billId": "coinage_act_1792",
+        "enactedDay": 800,
+        "repealedDay": null,
+        "sliderValue": null
+      }
+    ],
+    "cumulativeInfrastructure": 0
+  },
+  "politicalCapital": {
+    "current": 112.05158093462215,
+    "modelTargets": {
+      "accrual": 1.7829685290610509,
+      "cap": 112.05158093462215
+    },
+    "accrualPerDay": 1.7829685290610509,
+    "cap": 112.05158093462215,
+    "emergency": null,
+    "totalAccrued": 170.7416242854303,
+    "totalSpent": 519,
+    "totalWasted": 1417.9726034436283
+  },
+  "grievance": {
+    "byBloc": {
+      "planters": 11.474471098477595,
+      "merchants": 6.0196858039343155,
+      "frontier_settlers": 2.794854123255219,
+      "artisans": 2.3648765658313398,
+      "financiers": 3.654809238102979,
+      "clergy": 1.7199102296955193,
+      "seamen": 0,
+      "small_farmers": 6.861355210374618
+    },
+    "byRegion": {
+      "new_england": 6.9227028180894,
+      "mid_atlantic": 8.960923132010812,
+      "south": 16.457224670792762,
+      "frontier": 2.549111648778612
+    },
+    "episodes": []
+  },
+  "congress": {
+    "number": 2,
+    "convenedDay": 673,
+    "delegations": [
+      {
+        "stateCode": "NH",
+        "regionId": "new_england",
+        "houseSeats": 3,
+        "senateSeats": 2,
+        "share": {
+          "pro_administration": 0.38090209073480713,
+          "anti_administration": 0.6190979092651928
+        },
+        "senateShare": {
+          "pro_administration": 0.36986477950615193,
+          "anti_administration": 0.6301352204938482
+        }
+      },
+      {
+        "stateCode": "MA",
+        "regionId": "new_england",
+        "houseSeats": 8,
+        "senateSeats": 2,
+        "share": {
+          "pro_administration": 0.38090209073480713,
+          "anti_administration": 0.6190979092651928
+        },
+        "senateShare": {
+          "pro_administration": 0.36986477950615193,
+          "anti_administration": 0.6301352204938482
+        }
+      },
+      {
+        "stateCode": "CT",
+        "regionId": "new_england",
+        "houseSeats": 5,
+        "senateSeats": 2,
+        "share": {
+          "pro_administration": 0.38090209073480713,
+          "anti_administration": 0.6190979092651928
+        },
+        "senateShare": {
+          "pro_administration": 0.36986477950615193,
+          "anti_administration": 0.6301352204938482
+        }
+      },
+      {
+        "stateCode": "NY",
+        "regionId": "mid_atlantic",
+        "houseSeats": 6,
+        "senateSeats": 2,
+        "share": {
+          "pro_administration": 0.3842185538498552,
+          "anti_administration": 0.6157814461501449
+        },
+        "senateShare": {
+          "pro_administration": 0.3778704273189607,
+          "anti_administration": 0.6221295726810394
+        }
+      },
+      {
+        "stateCode": "NJ",
+        "regionId": "mid_atlantic",
+        "houseSeats": 4,
+        "senateSeats": 2,
+        "share": {
+          "pro_administration": 0.3842185538498552,
+          "anti_administration": 0.6157814461501449
+        },
+        "senateShare": {
+          "pro_administration": 0.3778704273189607,
+          "anti_administration": 0.6221295726810394
+        }
+      },
+      {
+        "stateCode": "PA",
+        "regionId": "mid_atlantic",
+        "houseSeats": 8,
+        "senateSeats": 2,
+        "share": {
+          "pro_administration": 0.3842185538498552,
+          "anti_administration": 0.6157814461501449
+        },
+        "senateShare": {
+          "pro_administration": 0.3778704273189607,
+          "anti_administration": 0.6221295726810394
+        }
+      },
+      {
+        "stateCode": "DE",
+        "regionId": "mid_atlantic",
+        "houseSeats": 1,
+        "senateSeats": 2,
+        "share": {
+          "pro_administration": 0.3842185538498552,
+          "anti_administration": 0.6157814461501449
+        },
+        "senateShare": {
+          "pro_administration": 0.3778704273189607,
+          "anti_administration": 0.6221295726810394
+        }
+      },
+      {
+        "stateCode": "MD",
+        "regionId": "south",
+        "houseSeats": 6,
+        "senateSeats": 2,
+        "share": {
+          "pro_administration": 0.2407647326829226,
+          "anti_administration": 0.7592352673170774
+        },
+        "senateShare": {
+          "pro_administration": 0.2558588121660229,
+          "anti_administration": 0.7441411878339772
+        }
+      },
+      {
+        "stateCode": "VA",
+        "regionId": "south",
+        "houseSeats": 10,
+        "senateSeats": 2,
+        "share": {
+          "pro_administration": 0.2407647326829226,
+          "anti_administration": 0.7592352673170774
+        },
+        "senateShare": {
+          "pro_administration": 0.2558588121660229,
+          "anti_administration": 0.7441411878339772
+        }
+      },
+      {
+        "stateCode": "SC",
+        "regionId": "south",
+        "houseSeats": 5,
+        "senateSeats": 2,
+        "share": {
+          "pro_administration": 0.2407647326829226,
+          "anti_administration": 0.7592352673170774
+        },
+        "senateShare": {
+          "pro_administration": 0.2558588121660229,
+          "anti_administration": 0.7441411878339772
+        }
+      },
+      {
+        "stateCode": "GA",
+        "regionId": "south",
+        "houseSeats": 3,
+        "senateSeats": 2,
+        "share": {
+          "pro_administration": 0.2407647326829226,
+          "anti_administration": 0.7592352673170774
+        },
+        "senateShare": {
+          "pro_administration": 0.2558588121660229,
+          "anti_administration": 0.7441411878339772
+        }
+      },
+      {
+        "stateCode": "NC",
+        "regionId": "south",
+        "houseSeats": 5,
+        "senateSeats": 2,
+        "share": {
+          "pro_administration": 0.2407647326829226,
+          "anti_administration": 0.7592352673170774
+        },
+        "senateShare": {
+          "pro_administration": 0.2407647326829226,
+          "anti_administration": 0.7592352673170774
+        }
+      },
+      {
+        "stateCode": "RI",
+        "regionId": "new_england",
+        "houseSeats": 1,
+        "senateSeats": 2,
+        "share": {
+          "pro_administration": 0.38090209073480713,
+          "anti_administration": 0.6190979092651928
+        },
+        "senateShare": {
+          "pro_administration": 0.38090209073480713,
+          "anti_administration": 0.6190979092651928
+        }
+      },
+      {
+        "stateCode": "VT",
+        "regionId": "new_england",
+        "houseSeats": 2,
+        "senateSeats": 2,
+        "share": {
+          "pro_administration": 0.38090209073480713,
+          "anti_administration": 0.6190979092651928
+        },
+        "senateShare": {
+          "pro_administration": 0.38090209073480713,
+          "anti_administration": 0.6190979092651928
+        }
+      }
+    ],
+    "cooldowns": {},
+    "obligations": [],
+    "defeats": 0,
+    "whipped": {}
+  },
+  "blocs": {
+    "membership": {
+      "new_england": {
+        "planters": 0.001999013800530244,
+        "merchants": 0.03599601255976956,
+        "frontier_settlers": 0.004046345463778436,
+        "artisans": 0.09968027057348722,
+        "financiers": 0.004979211821010425,
+        "clergy": 0.021967521945774508,
+        "seamen": 0.04796269370337955,
+        "small_farmers": 0.5500678495304351
+      },
+      "mid_atlantic": {
+        "planters": 0.011644956264981486,
+        "merchants": 0.03971138659363732,
+        "frontier_settlers": 0.01213983471035215,
+        "artisans": 0.10955314485781674,
+        "financiers": 0.007959385948943033,
+        "clergy": 0.015962603077360343,
+        "seamen": 0.026205804149161686,
+        "small_farmers": 0.550068053501833
+      },
+      "south": {
+        "planters": 0.05369289908131107,
+        "merchants": 0.014904461694305201,
+        "frontier_settlers": 0.010115185003073603,
+        "artisans": 0.03988297636178391,
+        "financiers": 0.001989745559117651,
+        "clergy": 0.011985480329184488,
+        "seamen": 0.007963486103118526,
+        "small_farmers": 0.42298591543800906
+      },
+      "frontier": {
+        "planters": 0.01999034261590813,
+        "merchants": 0.007890719327797212,
+        "frontier_settlers": 0.8089853132259285,
+        "artisans": 0.029619853931671103,
+        "financiers": 0.0009704011536497198,
+        "clergy": 0.007912011232101161,
+        "seamen": 0.0009954570457967624,
+        "small_farmers": 0.5000604013556145
+      }
+    },
+    "baseDrivers": {
+      "new_england": {
+        "tradePerHead": 10.113570824497966,
+        "manufacturingPerHead": 13.651497693107371,
+        "agriculturePerHead": 24.025094803609857,
+        "enslavedShare": 0.003849346522413578,
+        "prosperity": 55,
+        "population": 1009522
+      },
+      "mid_atlantic": {
+        "tradePerHead": 10.161665974981474,
+        "manufacturingPerHead": 10.30337162587593,
+        "agriculturePerHead": 27.552392146474833,
+        "enslavedShare": 0.044580761423015626,
+        "prosperity": 58,
+        "population": 1017726
+      },
+      "south": {
+        "tradePerHead": 11.893049732595474,
+        "manufacturingPerHead": 5.688880439717367,
+        "agriculturePerHead": 38.61689405812766,
+        "enslavedShare": 0.35286967775044487,
+        "prosperity": 52,
+        "population": 1792710
+      },
+      "frontier": {
+        "tradePerHead": 10.309660823961066,
+        "manufacturingPerHead": 2.505272044089108,
+        "agriculturePerHead": 35.90182435977008,
+        "enslavedShare": 0.14489613049520883,
+        "prosperity": 40,
+        "population": 109368
+      }
+    },
+    "lastDriftDay": 884
+  },
+  "activeModifiers": [
+    {
+      "id": "event:quaker_petitions_1790:nation.sectionalTension",
+      "source": "Antislavery petitions tabled",
+      "sourceType": "event",
+      "target": "nation.sectionalTension",
+      "value": 5,
+      "isPercentage": false,
+      "startDay": 287,
+      "endDay": null,
+      "rampDays": 0
+    },
+    {
+      "id": "law:general_sales_tax:nation.legitimacy",
+      "source": "A General Tax on Retail Sales",
+      "sourceType": "law",
+      "target": "nation.legitimacy",
+      "value": 0,
+      "isPercentage": false,
+      "startDay": 400,
+      "endDay": null,
+      "rampDays": 730
+    },
+    {
+      "id": "law:general_sales_tax:nation.stability",
+      "source": "A General Tax on Retail Sales",
+      "sourceType": "law",
+      "target": "nation.stability",
+      "value": 0,
+      "isPercentage": false,
+      "startDay": 400,
+      "endDay": null,
+      "rampDays": 730
+    },
+    {
+      "id": "law:tonnage_act_1789:region.new_england.prosperity",
+      "source": "The Tonnage Act of 1789",
+      "sourceType": "law",
+      "target": "region.new_england.prosperity",
+      "value": 4,
+      "isPercentage": false,
+      "startDay": 400,
+      "endDay": null,
+      "rampDays": 120
+    },
+    {
+      "id": "law:tonnage_act_1789:region.mid_atlantic.prosperity",
+      "source": "The Tonnage Act of 1789",
+      "sourceType": "law",
+      "target": "region.mid_atlantic.prosperity",
+      "value": 3,
+      "isPercentage": false,
+      "startDay": 400,
+      "endDay": null,
+      "rampDays": 120
+    },
+    {
+      "id": "law:tonnage_act_1789:region.south.prosperity",
+      "source": "The Tonnage Act of 1789",
+      "sourceType": "law",
+      "target": "region.south.prosperity",
+      "value": -2,
+      "isPercentage": false,
+      "startDay": 400,
+      "endDay": null,
+      "rampDays": 120
+    },
+    {
+      "id": "law:tonnage_act_1789:bloc.seamen.new_england",
+      "source": "The Tonnage Act of 1789",
+      "sourceType": "law",
+      "target": "bloc.seamen.new_england",
+      "value": 0.2,
+      "isPercentage": true,
+      "startDay": 400,
+      "endDay": null,
+      "rampDays": 120
+    },
+    {
+      "id": "law:tonnage_act_1789:bloc.seamen.mid_atlantic",
+      "source": "The Tonnage Act of 1789",
+      "sourceType": "law",
+      "target": "bloc.seamen.mid_atlantic",
+      "value": 0.15,
+      "isPercentage": true,
+      "startDay": 400,
+      "endDay": null,
+      "rampDays": 120
+    },
+    {
+      "id": "law:tonnage_act_1789:bloc.merchants.new_england",
+      "source": "The Tonnage Act of 1789",
+      "sourceType": "law",
+      "target": "bloc.merchants.new_england",
+      "value": 0.1,
+      "isPercentage": true,
+      "startDay": 400,
+      "endDay": null,
+      "rampDays": 120
+    },
+    {
+      "id": "law:commercial_discrimination_against_britain:nation.tradeCapacity",
+      "source": "Commercial Discrimination against Great Britain",
+      "sourceType": "law",
+      "target": "nation.tradeCapacity",
+      "value": 0,
+      "isPercentage": true,
+      "startDay": 400,
+      "endDay": null,
+      "rampDays": 150
+    },
+    {
+      "id": "law:commercial_discrimination_against_britain:region.new_england.prosperity",
+      "source": "Commercial Discrimination against Great Britain",
+      "sourceType": "law",
+      "target": "region.new_england.prosperity",
+      "value": 0,
+      "isPercentage": false,
+      "startDay": 400,
+      "endDay": null,
+      "rampDays": 150
+    },
+    {
+      "id": "law:commercial_discrimination_against_britain:nation.legitimacy",
+      "source": "Commercial Discrimination against Great Britain",
+      "sourceType": "law",
+      "target": "nation.legitimacy",
+      "value": 0,
+      "isPercentage": false,
+      "startDay": 400,
+      "endDay": 1495,
+      "rampDays": 150
+    },
+    {
+      "id": "law:commercial_discrimination_against_britain:bloc.artisans.new_england",
+      "source": "Commercial Discrimination against Great Britain",
+      "sourceType": "law",
+      "target": "bloc.artisans.new_england",
+      "value": 0,
+      "isPercentage": true,
+      "startDay": 400,
+      "endDay": null,
+      "rampDays": 150
+    },
+    {
+      "id": "law:commercial_discrimination_against_britain:bloc.artisans.mid_atlantic",
+      "source": "Commercial Discrimination against Great Britain",
+      "sourceType": "law",
+      "target": "bloc.artisans.mid_atlantic",
+      "value": 0,
+      "isPercentage": true,
+      "startDay": 400,
+      "endDay": null,
+      "rampDays": 150
+    },
+    {
+      "id": "law:commercial_discrimination_against_britain:bloc.merchants.new_england",
+      "source": "Commercial Discrimination against Great Britain",
+      "sourceType": "law",
+      "target": "bloc.merchants.new_england",
+      "value": 0,
+      "isPercentage": true,
+      "startDay": 400,
+      "endDay": null,
+      "rampDays": 150
+    },
+    {
+      "id": "law:commercial_discrimination_against_britain:bloc.merchants.mid_atlantic",
+      "source": "Commercial Discrimination against Great Britain",
+      "sourceType": "law",
+      "target": "bloc.merchants.mid_atlantic",
+      "value": 0,
+      "isPercentage": true,
+      "startDay": 400,
+      "endDay": null,
+      "rampDays": 150
+    },
+    {
+      "id": "law:judiciary_act_1789:nation.stability",
+      "source": "The Judiciary Act of 1789",
+      "sourceType": "law",
+      "target": "nation.stability",
+      "value": 5,
+      "isPercentage": false,
+      "startDay": 400,
+      "endDay": null,
+      "rampDays": 270
+    },
+    {
+      "id": "law:judiciary_act_1789:nation.legitimacy",
+      "source": "The Judiciary Act of 1789",
+      "sourceType": "law",
+      "target": "nation.legitimacy",
+      "value": 4,
+      "isPercentage": false,
+      "startDay": 400,
+      "endDay": null,
+      "rampDays": 270
+    },
+    {
+      "id": "law:lighthouse_act_1789:region.new_england.prosperity",
+      "source": "The Lighthouse Act of 1789",
+      "sourceType": "law",
+      "target": "region.new_england.prosperity",
+      "value": 0,
+      "isPercentage": false,
+      "startDay": 400,
+      "endDay": null,
+      "rampDays": 180
+    },
+    {
+      "id": "law:lighthouse_act_1789:region.mid_atlantic.prosperity",
+      "source": "The Lighthouse Act of 1789",
+      "sourceType": "law",
+      "target": "region.mid_atlantic.prosperity",
+      "value": 0,
+      "isPercentage": false,
+      "startDay": 400,
+      "endDay": null,
+      "rampDays": 180
+    },
+    {
+      "id": "law:lighthouse_act_1789:nation.legitimacy",
+      "source": "The Lighthouse Act of 1789",
+      "sourceType": "law",
+      "target": "nation.legitimacy",
+      "value": 0,
+      "isPercentage": false,
+      "startDay": 400,
+      "endDay": null,
+      "rampDays": 180
+    },
+    {
+      "id": "law:national_road_programme:region.frontier.prosperity",
+      "source": "A National System of Roads and Canals",
+      "sourceType": "law",
+      "target": "region.frontier.prosperity",
+      "value": 0,
+      "isPercentage": false,
+      "startDay": 400,
+      "endDay": null,
+      "rampDays": 730
+    },
+    {
+      "id": "law:national_road_programme:region.mid_atlantic.prosperity",
+      "source": "A National System of Roads and Canals",
+      "sourceType": "law",
+      "target": "region.mid_atlantic.prosperity",
+      "value": 0,
+      "isPercentage": false,
+      "startDay": 400,
+      "endDay": null,
+      "rampDays": 730
+    },
+    {
+      "id": "law:national_road_programme:nation.sectionalTension",
+      "source": "A National System of Roads and Canals",
+      "sourceType": "law",
+      "target": "nation.sectionalTension",
+      "value": 0,
+      "isPercentage": false,
+      "startDay": 400,
+      "endDay": null,
+      "rampDays": 730
+    },
+    {
+      "id": "law:national_road_programme:nation.legitimacy",
+      "source": "A National System of Roads and Canals",
+      "sourceType": "law",
+      "target": "nation.legitimacy",
+      "value": 0,
+      "isPercentage": false,
+      "startDay": 400,
+      "endDay": null,
+      "rampDays": 730
+    },
+    {
+      "id": "law:national_road_programme:bloc.frontier_settlers.frontier",
+      "source": "A National System of Roads and Canals",
+      "sourceType": "law",
+      "target": "bloc.frontier_settlers.frontier",
+      "value": 0,
+      "isPercentage": true,
+      "startDay": 400,
+      "endDay": null,
+      "rampDays": 730
+    },
+    {
+      "id": "law:national_road_programme:bloc.merchants.mid_atlantic",
+      "source": "A National System of Roads and Canals",
+      "sourceType": "law",
+      "target": "bloc.merchants.mid_atlantic",
+      "value": 0,
+      "isPercentage": true,
+      "startDay": 400,
+      "endDay": null,
+      "rampDays": 730
+    },
+    {
+      "id": "law:census_act_1790:nation.legitimacy",
+      "source": "The Census Act of 1790",
+      "sourceType": "law",
+      "target": "nation.legitimacy",
+      "value": 2,
+      "isPercentage": false,
+      "startDay": 400,
+      "endDay": null,
+      "rampDays": 540
+    },
+    {
+      "id": "law:census_act_1790:nation.stability",
+      "source": "The Census Act of 1790",
+      "sourceType": "law",
+      "target": "nation.stability",
+      "value": 2,
+      "isPercentage": false,
+      "startDay": 400,
+      "endDay": null,
+      "rampDays": 540
+    },
+    {
+      "id": "law:naturalization_act_1790:nation.legitimacy",
+      "source": "The Naturalization Act of 1790",
+      "sourceType": "law",
+      "target": "nation.legitimacy",
+      "value": 2,
+      "isPercentage": false,
+      "startDay": 400,
+      "endDay": null,
+      "rampDays": 180
+    },
+    {
+      "id": "law:naturalization_act_1790:region.mid_atlantic.prosperity",
+      "source": "The Naturalization Act of 1790",
+      "sourceType": "law",
+      "target": "region.mid_atlantic.prosperity",
+      "value": 2,
+      "isPercentage": false,
+      "startDay": 400,
+      "endDay": null,
+      "rampDays": 180
+    },
+    {
+      "id": "law:gradual_emancipation_federal:nation.sectionalTension",
+      "source": "A Federal Plan of Gradual Emancipation",
+      "sourceType": "law",
+      "target": "nation.sectionalTension",
+      "value": 35,
+      "isPercentage": false,
+      "startDay": 400,
+      "endDay": null,
+      "rampDays": 1825
+    },
+    {
+      "id": "law:gradual_emancipation_federal:nation.legitimacy",
+      "source": "A Federal Plan of Gradual Emancipation",
+      "sourceType": "law",
+      "target": "nation.legitimacy",
+      "value": -10,
+      "isPercentage": false,
+      "startDay": 400,
+      "endDay": null,
+      "rampDays": 1825
+    },
+    {
+      "id": "law:gradual_emancipation_federal:nation.stability",
+      "source": "A Federal Plan of Gradual Emancipation",
+      "sourceType": "law",
+      "target": "nation.stability",
+      "value": -12,
+      "isPercentage": false,
+      "startDay": 400,
+      "endDay": null,
+      "rampDays": 1825
+    },
+    {
+      "id": "law:gradual_emancipation_federal:bloc.planters.south",
+      "source": "A Federal Plan of Gradual Emancipation",
+      "sourceType": "law",
+      "target": "bloc.planters.south",
+      "value": -0.4,
+      "isPercentage": true,
+      "startDay": 400,
+      "endDay": null,
+      "rampDays": 1825
+    },
+    {
+      "id": "law:gradual_emancipation_federal:bloc.planters.mid_atlantic",
+      "source": "A Federal Plan of Gradual Emancipation",
+      "sourceType": "law",
+      "target": "bloc.planters.mid_atlantic",
+      "value": -0.5,
+      "isPercentage": true,
+      "startDay": 400,
+      "endDay": null,
+      "rampDays": 1825
+    },
+    {
+      "id": "law:gradual_emancipation_federal:bloc.small_farmers.south",
+      "source": "A Federal Plan of Gradual Emancipation",
+      "sourceType": "law",
+      "target": "bloc.small_farmers.south",
+      "value": 0.12,
+      "isPercentage": true,
+      "startDay": 400,
+      "endDay": null,
+      "rampDays": 1825
+    },
+    {
+      "id": "law:national_university:nation.sectionalTension",
+      "source": "A National University",
+      "sourceType": "law",
+      "target": "nation.sectionalTension",
+      "value": 0,
+      "isPercentage": false,
+      "startDay": 400,
+      "endDay": null,
+      "rampDays": 1095
+    },
+    {
+      "id": "law:national_university:nation.legitimacy",
+      "source": "A National University",
+      "sourceType": "law",
+      "target": "nation.legitimacy",
+      "value": 0,
+      "isPercentage": false,
+      "startDay": 400,
+      "endDay": null,
+      "rampDays": 1095
+    },
+    {
+      "id": "law:national_university:region.mid_atlantic.prosperity",
+      "source": "A National University",
+      "sourceType": "law",
+      "target": "region.mid_atlantic.prosperity",
+      "value": 0,
+      "isPercentage": false,
+      "startDay": 400,
+      "endDay": null,
+      "rampDays": 1095
+    },
+    {
+      "id": "law:assumption_1790:nation.legitimacy",
+      "source": "Funding Act of 1790",
+      "sourceType": "law",
+      "target": "nation.legitimacy",
+      "value": 6,
+      "isPercentage": false,
+      "startDay": 416,
+      "endDay": null,
+      "rampDays": 0
+    },
+    {
+      "id": "law:bank_1791:nation.stability",
+      "source": "Bank of the United States",
+      "sourceType": "law",
+      "target": "nation.stability",
+      "value": 4,
+      "isPercentage": false,
+      "startDay": 620,
+      "endDay": null,
+      "rampDays": 0
+    },
+    {
+      "id": "law:bank_of_the_united_states:nation.stability",
+      "source": "Bank of the United States",
+      "sourceType": "law",
+      "target": "nation.stability",
+      "value": 4,
+      "isPercentage": false,
+      "startDay": 800,
+      "endDay": null,
+      "rampDays": 365
+    },
+    {
+      "id": "law:bank_of_the_united_states:region.new_england.prosperity",
+      "source": "Bank of the United States",
+      "sourceType": "law",
+      "target": "region.new_england.prosperity",
+      "value": 3,
+      "isPercentage": false,
+      "startDay": 800,
+      "endDay": null,
+      "rampDays": 365
+    },
+    {
+      "id": "law:bank_of_the_united_states:region.mid_atlantic.prosperity",
+      "source": "Bank of the United States",
+      "sourceType": "law",
+      "target": "region.mid_atlantic.prosperity",
+      "value": 4,
+      "isPercentage": false,
+      "startDay": 800,
+      "endDay": null,
+      "rampDays": 365
+    },
+    {
+      "id": "law:bank_of_the_united_states:bloc.financiers.mid_atlantic",
+      "source": "Bank of the United States",
+      "sourceType": "law",
+      "target": "bloc.financiers.mid_atlantic",
+      "value": 0.35,
+      "isPercentage": true,
+      "startDay": 800,
+      "endDay": null,
+      "rampDays": 365
+    },
+    {
+      "id": "law:bank_of_the_united_states:bloc.financiers.new_england",
+      "source": "Bank of the United States",
+      "sourceType": "law",
+      "target": "bloc.financiers.new_england",
+      "value": 0.25,
+      "isPercentage": true,
+      "startDay": 800,
+      "endDay": null,
+      "rampDays": 365
+    },
+    {
+      "id": "law:bank_of_the_united_states:bloc.financiers.south",
+      "source": "Bank of the United States",
+      "sourceType": "law",
+      "target": "bloc.financiers.south",
+      "value": 0.12,
+      "isPercentage": true,
+      "startDay": 800,
+      "endDay": null,
+      "rampDays": 365
+    },
+    {
+      "id": "law:coinage_act_1792:nation.legitimacy",
+      "source": "The Coinage Act of 1792",
+      "sourceType": "law",
+      "target": "nation.legitimacy",
+      "value": 3,
+      "isPercentage": false,
+      "startDay": 800,
+      "endDay": null,
+      "rampDays": 540
+    },
+    {
+      "id": "law:coinage_act_1792:nation.stability",
+      "source": "The Coinage Act of 1792",
+      "sourceType": "law",
+      "target": "nation.stability",
+      "value": 2,
+      "isPercentage": false,
+      "startDay": 800,
+      "endDay": null,
+      "rampDays": 540
+    }
+  ],
+  "eventState": {
+    "firedEventIds": [
+      "quaker_petitions_1790",
+      "assumption_1790",
+      "bank_1791",
+      "whiskey_excise_1791"
+    ],
+    "chosenOptions": {
+      "quaker_petitions_1790": "table_petitions",
+      "assumption_1790": "assume_full",
+      "bank_1791": "charter_bank",
+      "whiskey_excise_1791": "enact_full"
+    },
+    "pendingDecisions": [],
+    "scheduledEvents": [
+      {
+        "eventId": "whiskey_rebellion_1794",
+        "fireOnDay": 1891
+      }
+    ]
+  },
+  "flags": {
+    "petitions_tabled": true,
+    "assumption_passed": true,
+    "bill_unlocked:bank_of_the_united_states": true,
+    "bank_chartered": true,
+    "excise_enacted": true
+  },
+  "log": [
+    {
+      "id": "founding",
+      "day": 0,
+      "tier": "enactment",
+      "category": "system",
+      "title": "The United States is founded",
+      "body": "George Washington takes the oath of office as President of the United States.",
+      "relatedEventId": null
+    },
+    {
+      "id": "287:quaker_petitions_1790:decision",
+      "day": 287,
+      "tier": "decision",
+      "category": "event",
+      "title": "The Antislavery Petitions",
+      "body": "You chose: Accept the committee report and table the petitions",
+      "relatedEventId": "quaker_petitions_1790"
+    },
+    {
+      "id": "400:bill:general_sales_tax",
+      "day": 400,
+      "tier": "enactment",
+      "category": "legislation",
+      "title": "A General Tax on Retail Sales",
+      "body": "Set at 0.5%. Cost 70.0 political capital. and $250,000. Effects phase in over 730 days.",
+      "relatedEventId": null
+    },
+    {
+      "id": "400:bill:tonnage_act_1789",
+      "day": 400,
+      "tier": "enactment",
+      "category": "legislation",
+      "title": "The Tonnage Act of 1789",
+      "body": "Cost 12.0 political capital. and $15,000. Effects phase in over 120 days.",
+      "relatedEventId": null
+    },
+    {
+      "id": "400:bill:commercial_discrimination_against_britain",
+      "day": 400,
+      "tier": "enactment",
+      "category": "legislation",
+      "title": "Commercial Discrimination against Great Britain",
+      "body": "Set at 2.0%. Cost 40.0 political capital. and $10,000. Effects phase in over 150 days.",
+      "relatedEventId": null
+    },
+    {
+      "id": "400:bill:judiciary_act_1789",
+      "day": 400,
+      "tier": "enactment",
+      "category": "legislation",
+      "title": "The Judiciary Act of 1789",
+      "body": "Cost 20.0 political capital. and $180,000. Effects phase in over 270 days.",
+      "relatedEventId": null
+    },
+    {
+      "id": "400:bill:lighthouse_act_1789",
+      "day": 400,
+      "tier": "enactment",
+      "category": "legislation",
+      "title": "The Lighthouse Act of 1789",
+      "body": "Funded at $15,000. Cost 6.0 political capital. and $10,000. Effects phase in over 180 days.",
+      "relatedEventId": null
+    },
+    {
+      "id": "400:bill:national_road_programme",
+      "day": 400,
+      "tier": "enactment",
+      "category": "legislation",
+      "title": "A National System of Roads and Canals",
+      "body": "Funded at $100,000. Cost 50.0 political capital. and $120,000. Effects phase in over 730 days.",
+      "relatedEventId": null
+    },
+    {
+      "id": "400:bill:census_act_1790",
+      "day": 400,
+      "tier": "enactment",
+      "category": "legislation",
+      "title": "The Census Act of 1790",
+      "body": "Cost 8.0 political capital. and $45,000. Effects phase in over 540 days.",
+      "relatedEventId": null
+    },
+    {
+      "id": "400:bill:naturalization_act_1790",
+      "day": 400,
+      "tier": "enactment",
+      "category": "legislation",
+      "title": "The Naturalization Act of 1790",
+      "body": "Cost 10.0 political capital. and $8,000. Effects phase in over 180 days.",
+      "relatedEventId": null
+    },
+    {
+      "id": "400:bill:gradual_emancipation_federal",
+      "day": 400,
+      "tier": "enactment",
+      "category": "legislation",
+      "title": "A Federal Plan of Gradual Emancipation",
+      "body": "Funded at $200,000. Cost 200.0 political capital. and $300,000. Effects phase in over 1825 days.",
+      "relatedEventId": null
+    },
+    {
+      "id": "400:bill:national_university",
+      "day": 400,
+      "tier": "enactment",
+      "category": "legislation",
+      "title": "A National University",
+      "body": "Funded at $30,000. Cost 40.0 political capital. and $100,000. Effects phase in over 1095 days.",
+      "relatedEventId": null
+    },
+    {
+      "id": "416:assumption_1790:decision",
+      "day": 416,
+      "tier": "decision",
+      "category": "event",
+      "title": "The Assumption of State Debts",
+      "body": "You chose: Assume the state debts in full",
+      "relatedEventId": "assumption_1790"
+    },
+    {
+      "id": "620:bank_1791:decision",
+      "day": 620,
+      "tier": "decision",
+      "category": "event",
+      "title": "A Bank of the United States",
+      "body": "You chose: Charter the Bank",
+      "relatedEventId": "bank_1791"
+    },
+    {
+      "id": "661:whiskey_excise_1791:decision",
+      "day": 661,
+      "tier": "decision",
+      "category": "event",
+      "title": "The Excise on Distilled Spirits",
+      "body": "You chose: Enact the excise at the full proposed rate",
+      "relatedEventId": "whiskey_excise_1791"
+    },
+    {
+      "id": "673:congress:2",
+      "day": 673,
+      "tier": "info",
+      "category": "system",
+      "title": "The Second Congress convenes",
+      "body": "The Second Congress is seated. In the House, Anti-Adm. lead with about 67 per cent. In the Senate, Anti-Adm. lead with about 67 per cent. The government must carry both.",
+      "relatedEventId": null
+    },
+    {
+      "id": "800:bill:bank_of_the_united_states",
+      "day": 800,
+      "tier": "enactment",
+      "category": "legislation",
+      "title": "Bank of the United States",
+      "body": "Cost 45.0 political capital. and $500,000. Effects phase in over 365 days.",
+      "relatedEventId": null
+    },
+    {
+      "id": "800:bill:coinage_act_1792",
+      "day": 800,
+      "tier": "enactment",
+      "category": "legislation",
+      "title": "The Coinage Act of 1792",
+      "body": "Cost 18.0 political capital. and $120,000. Effects phase in over 540 days.",
+      "relatedEventId": null
+    }
+  ],
+  "series": {
+    "days": [
+      0,
+      1,
+      32,
+      62,
+      93,
+      124,
+      154,
+      185,
+      215,
+      246,
+      277,
+      305,
+      336,
+      366,
+      397,
+      427,
+      458,
+      489,
+      519,
+      550,
+      580,
+      611,
+      642,
+      670,
+      701,
+      731,
+      762,
+      792,
+      823,
+      854,
+      884
+    ],
+    "population": [
+      3929326,
+      3939294.5936524225,
+      3949282.82639992,
+      3959292.3696583705,
+      3969324.4128917516,
+      3979379.8043675744,
+      3989459.151375855,
+      3999562.8914944697,
+      4009691.34319131,
+      4019844.741692679,
+      4030023.2643560157,
+      4040227.2251492185,
+      4050456.1131057846,
+      4060709.649435147,
+      4070987.7119432054,
+      4081291.9914384163,
+      4091626.7648716904,
+      4101991.900078085,
+      4112387.3726868443,
+      4122813.2951872735,
+      4133269.806967531,
+      4143757.1173243746,
+      4154288.078670297,
+      4164839.2649041563,
+      4175405.8566458765,
+      4185984.653513075,
+      4196573.7974982085,
+      4207172.372297487,
+      4217781.379961534,
+      4228402.262832402,
+      4239036.342731153
+    ],
+    "gdp": [
+      193044376.7669031,
+      193082585.41597006,
+      193315703.46878228,
+      193613873.21142972,
+      193958287.9351589,
+      194335618.06971923,
+      194736434.09035423,
+      195154080.5337771,
+      195583872.5589816,
+      196022523.05234286,
+      196467734.45593703,
+      196917908.23874876,
+      197376641.02309278,
+      197821895.45616862,
+      198259959.36632833,
+      200409588.822558,
+      200901660.47275016,
+      201508320.47124207,
+      202109890.4643312,
+      202709848.4807315,
+      203311536.3461777,
+      203916196.0364918,
+      204525544.91221818,
+      205475790.85601312,
+      206110506.47381148,
+      206592601.04250443,
+      206967942.6362199,
+      207274600.7875199,
+      207543653.53512546,
+      207819811.6839853,
+      208120035.3275999
+    ],
+    "debt": [
+      71060508.5,
+      71072803.79696165,
+      71072803.79696165,
+      71072803.79696165,
+      71072803.79696165,
+      71072803.79696165,
+      71072803.79696165,
+      71072803.79696165,
+      71072803.79696165,
+      71072803.79696165,
+      71072803.79696165,
+      71072803.79696165,
+      71072803.79696165,
+      71072803.79696165,
+      71072803.79696165,
+      92576430.0495192,
+      92661617.52885182,
+      92765661.70788135,
+      92866208.02013065,
+      92969914.46179149,
+      93070088.37970492,
+      93173363.75626965,
+      93276400.09953175,
+      93369229.33382522,
+      93369229.33382522,
+      93369229.33382522,
+      93369229.33382522,
+      93369229.33382522,
+      93430437.40319157,
+      93430437.40319157,
+      93430437.40319157
+    ],
+    "treasuryBalance": [
+      0,
+      0,
+      44364.90414256905,
+      87755.14374393072,
+      133069.13999149494,
+      178870.41980967944,
+      223677.92922107968,
+      270493.00043165684,
+      316309.90712197963,
+      364198.6292961411,
+      412647.5543947693,
+      456927.85651490727,
+      506543.3922724904,
+      555145.0913456947,
+      605986.351965216,
+      16604.105514109768,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0,
+      134205.1127508952,
+      264164.00273315236,
+      398349.53895799455,
+      527978.8767075669,
+      94836.41480568884,
+      227792.56297654903,
+      356159.14046230994
+    ],
+    "receipts": [
+      0,
+      4425559.2930454975,
+      4431112.906731814,
+      4436734.087184955,
+      4442471.458258388,
+      4448356.3560872795,
+      4454408.034330109,
+      4460637.356314179,
+      4467049.408578774,
+      4473645.346237816,
+      4480423.69183848,
+      4487381.245931962,
+      4494518.99697256,
+      4501813.167693463,
+      4509248.176180255,
+      4550054.812348786,
+      4557957.366714267,
+      4566175.740433163,
+      4574668.148685541,
+      4583420.902490367,
+      4592425.701829392,
+      4601674.201298657,
+      4611155.642231796,
+      7249720.24980026,
+      7250729.771872238,
+      7249489.751993501,
+      7246720.2197079,
+      7242985.613637034,
+      7239097.19872198,
+      7235439.136120334,
+      7232239.923784108
+    ],
+    "outlays": [
+      3902420.34,
+      3903198.324915248,
+      3903198.324915248,
+      3903198.324915248,
+      3903198.324915248,
+      3903198.324915248,
+      3903198.324915248,
+      3903198.324915248,
+      3903198.324915248,
+      3903198.324915248,
+      3903198.324915248,
+      3903198.324915248,
+      3903198.324915248,
+      3903198.324915248,
+      3903198.324915248,
+      5617740.737902552,
+      5623206.324521664,
+      5629926.580174229,
+      5636459.206364312,
+      5643231.918094756,
+      5649803.330053642,
+      5656604.503981369,
+      5663412.4905895665,
+      5669563.277088106,
+      5669563.277088106,
+      5669563.277088106,
+      5669563.277088106,
+      5669563.277088106,
+      5673645.776710242,
+      5673645.776710242,
+      5673645.776710242
+    ],
+    "stability": [
+      55,
+      54.184952001423056,
+      53.620357247960065,
+      53.230373670985166,
+      52.961482400373136,
+      52.77600965343711,
+      52.64751491104533,
+      52.55750975695866,
+      52.49312517418028,
+      52.445454612867906,
+      52.40837832128101,
+      52.39531851796459,
+      52.32380892604727,
+      52.218341453858855,
+      52.095231521723534,
+      52.15667737767397,
+      52.628044763032214,
+      53.067202686576884,
+      53.4860881268289,
+      53.89908466872766,
+      54.30942606085989,
+      54.724394440876594,
+      56.36939803405324,
+      56.864469048159435,
+      56.79602975768141,
+      56.33891828016502,
+      55.63649208693056,
+      54.78956592657051,
+      53.989739706410006,
+      53.28205212108335,
+      52.656582993112075
+    ],
+    "legitimacy": [
+      70,
+      69.82,
+      69.63865690018443,
+      69.45649080532394,
+      69.27385525641748,
+      69.09098733430797,
+      68.90804308209616,
+      68.7251224956107,
+      68.54228710879748,
+      68.35957232904734,
+      68.17699605582327,
+      67.99456467282087,
+      67.81230617150472,
+      67.63011041088691,
+      67.44791641604812,
+      73.91235276568763,
+      74.47410021813205,
+      75.03717676397879,
+      75.57727287994258,
+      76.14256198672871,
+      76.68465064625671,
+      76.90731445762508,
+      77.13078579753389,
+      77.04805974774179,
+      76.56742115254521,
+      76.10808184998461,
+      75.66428884252839,
+      75.23780438398623,
+      74.9513747029289,
+      74.722396233641,
+      74.50175659402461
+    ],
+    "sectionalTension": [
+      20,
+      19.501065605894496,
+      19.078582744592783,
+      18.720728115159368,
+      18.41753217707963,
+      18.16058152508475,
+      17.94277098105157,
+      17.758096573338882,
+      17.601482278891176,
+      17.46863474563475,
+      17.355921276860354,
+      18.027858584383644,
+      18.596416050446294,
+      19.077471269121386,
+      19.48445769198563,
+      20.29336652542011,
+      21.0320470653192,
+      21.71778185766403,
+      22.36123134113891,
+      22.976441258793123,
+      23.568682454303154,
+      24.1476882885664,
+      25.221854518663715,
+      27.24400296988719,
+      29.245215877633633,
+      31.241242995418002,
+      33.21112171515901,
+      35.13432685162186,
+      37.03728431395728,
+      38.90118798558566,
+      40.710046592869155
+    ]
+  },
+  "lastEconomyRecomputeDay": 884,
+  "paused": true
+}

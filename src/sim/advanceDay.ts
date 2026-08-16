@@ -28,6 +28,7 @@
  */
 
 import { blocWeights, driftBlocs } from './blocs';
+import { annualTribute, decayRelations } from './diplomacy';
 import {
   dayToDate,
   daysInYear,
@@ -437,10 +438,19 @@ export function recomputeEconomy(
     })),
   ];
 
+  /*
+    TRIBUTE IS AN OUTLAY LIKE ANY OTHER (brief §7). The treaties with Algiers
+    and Tripoli, and the annuities under the Native treaties, are annual
+    obligations of the Treasury — so they are counted in the civil line rather
+    than deducted through some separate channel. The Treasury cannot tell a
+    treaty from a statute, which is the point.
+  */
+  const tribute = annualTribute(state);
+
   const annualisedOutlays = {
     debtService,
     military: spendingFor(state.policies, day, 'military'),
-    civil: spendingFor(state.policies, day, 'civil'),
+    civil: spendingFor(state.policies, day, 'civil') + tribute,
     infrastructure: spendingFor(state.policies, day, 'infrastructure'),
   };
 
@@ -1169,6 +1179,14 @@ export function advanceDay(state: GameState, content: ContentPack): TickResult {
       this month's anger over last month's country.
     */
     next = { ...next, blocs: driftBlocs(next) };
+
+    /*
+      RELATIONS DRIFT BACK toward each power’s 1789 baseline, not toward zero.
+      The reasons Britain was cool and France warm did not go away because a
+      minister had a good year, so a government that stops working at a
+      relationship loses what it bought. (ECONOMY.md §7.23)
+    */
+    next = { ...next, diplomacy: decayRelations(next.diplomacy) };
 
     const weights = blocWeights(next);
     const decayed = decayGrievance(next.grievance, weights);
