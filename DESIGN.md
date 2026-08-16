@@ -639,6 +639,20 @@ A delegation's inclination is party line plus sectional interest. **Sectional in
 
 ---
 
+## 9.5 The causal web
+
+*Implemented in Phase 2, queue item 15. Model in `docs/ECONOMY.md` §7.26.*
+
+The modifier ledger is a causal graph — DESIGN.md has said so since Phase 1, and Rule 5 is what makes it one. Item 15 drew it.
+
+**It draws two kinds of edge**, and the second is the reason it is worth having. LEDGER edges are what the statute book is doing right now, read from `activeModifiers` and weighted by what each is contributing today. STRUCTURAL edges are how the country transmits an effect once it has one — a tariff suppresses trade, which cuts customs, which widens the deficit, which raises debt service, which crowds out everything else.
+
+Ledger edges alone would draw a bipartite fan with no path longer than one hop. The structural half comes from `src/content/causalLinks.ts`, which is the model’s own claims collected as data: each entry names the formula it describes and the ECONOMY.md section it comes from. **Nothing in the engine reads it** — the simulation runs on the formulas and this describes them, so a wrong edge draws a wrong picture and cannot produce a wrong number.
+
+**The screen opens focused rather than showing everything**, because a causal web that shows everything answers nothing. And the layout is deterministic rather than force-directed, so nodes do not wander while the clock runs (`docs/DECISIONS.md` D-055).
+
+---
+
 ## 10. Failure, and why there is no game over
 
 Pillar 2 says the player never leaves power. That is in direct tension with any conventional failure state, so failure is modeled differently.

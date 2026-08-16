@@ -1345,6 +1345,66 @@ The rules followed, and stated in the file itself:
 - A counterfactual appointment says it is one. Wayne was never Secretary of War; Gallatin did not take the Treasury until 1801.
 - The Government screen states on its face that the ratings are a model and not a verdict on anybody.
 
+### 7.26 The causal web — the model's own claims, as data
+
+*Phase 2 brief §9 item 15. Graph in `src/sim/causal.ts`, the declared links in `src/content/causalLinks.ts`, layout in `src/lib/graphLayout.ts`.*
+
+#### Two kinds of edge, and the second is the reason it is worth building
+
+**Ledger edges** come from `activeModifiers`: a law, a treaty, an appointment or a crisis pointing at a stat, weighted by what it is contributing *today* — ramped, so a statute half phased in draws a thinner line than one in full force.
+
+**Structural edges** come from `causalLinks.ts`: how the country transmits an effect once it has one.
+
+Ledger edges alone draw a bipartite fan — sources on one side, stats on the other, no path longer than a single hop. True, and not a web. The structure is what makes it one, and it is what lets the screen answer the question a player actually has: *why is this number moving, and what will it move next.*
+
+#### `causalLinks.ts` is a description, not a model
+
+**Nothing in the engine reads it.** The simulation runs on the formulas; this file describes them. A structural edge drawn here changes nothing about what the simulation does, and could not — that is what makes it safe to have.
+
+Every entry carries three things:
+
+- the **claim**, in the wording ECONOMY.md uses;
+- the **formula** it describes, by file and function;
+- the **section** of this document it comes from.
+
+That is what stops the picture and the model drifting apart. CLAUDE.md already requires that "every formula carries its causal claim as a comment above it, in plain English, matching the wording in ECONOMY.md" — this file is those claims collected, and a link with no formula behind it is a bug in one of the two.
+
+#### The fiscal spine
+
+The chain the whole game turns on, and the reason the screen defaults to the treasury balance:
+
+```
+tariff rate ──curve──▶ trade volume ──▶ customs ──▶ balance
+                                                     │
+                                                     ▼ (deficit)
+                                              debt principal
+                                                     │
+                                                     ▼
+                                              debt service ──▶ balance
+```
+
+That last arrow is a **real cycle**, and it is the mechanism by which insolvency compounds (DESIGN.md §10). It is also why path tracing is bounded and refuses to revisit a node: an unbounded walk would never return from it.
+
+The tariff link is marked `curve` rather than `+1` or `−1`, because it genuinely turns: revenue rises with the rate to 25% and falls after (§7.5). **Anything downstream of it therefore has no fixed sign**, and `tracePaths` returns `'curve'` for such a path rather than picking one. A screen that claimed "raising the tariff raises revenue" would be stating the single most common misunderstanding of this model as fact.
+
+#### Weights are for drawing, and say so
+
+A percentage modifier of 0.09 and a flat one of 9 are not comparable in their own units. The web maps both onto 0–1 **for line thickness only**; the honest numbers are in the stat popover, and the panel's hover says which is which.
+
+`actingOn()` reads `activeFor` on the same ledger `explainStat` reads, so the web and the popover cannot disagree about which sources are acting on a stat. A test asserts they return the same list — if they ever diverge, two screens are lying about the same number, which is the exact failure the ledger rule exists to prevent.
+
+#### Layout is deterministic, and that is a design decision
+
+Layered radial, in `src/lib/graphLayout.ts` — presentation, so not in `src/sim/`. Nodes grouped by family onto rings: the fiscal spine innermost, political and social around it, the ledger sources outermost pointing inward. That reads correctly — the statute book acts on the country from outside it.
+
+**Not force-directed**, for three reasons:
+
+1. **It would move.** The web is redrawn whenever the published snapshot changes — four times a second while the clock runs — and a force layout would re-settle each time. A screen whose nodes wander while the player reads it is unusable, and it is the same failure queue item 1 spent a day fixing on the command bar.
+2. **It would not be reproducible.** Two players on the same state would see different pictures.
+3. **It would need a library**, or a physics loop on the main thread, for a screen that should cost nothing to draw.
+
+The cost is more edge crossings than a force layout would allow. That is the right trade for a screen whose job is to be read rather than admired.
+
 ---
 
 ## 8. Government type differences

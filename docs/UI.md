@@ -811,7 +811,7 @@ Built roughly in this order.
 
 **Shell:** `<SettingsPanel>` · `<CommandBar>` · `<ClockControls>` · `<LeftNav>` · `<ChronicleFeed>` · `<FeedEntry>`
 
-**Screens:** `<TitleScreen>` · `<FoundingScreen>` · `<MapPanel>` (the main view since queue item 9) · `<Desk>` (now the summary beneath the map) · `<Treasury>` · `<Legislation>` · `<Regions>` · `<Government>` · `<History>` · `<Chronicle>` · `<EventModal>`
+**Screens:** `<CausalPanel>` (the causal web, item 15) · `<DiplomacyPanel>` · `<CongressPanel>` · `<TitleScreen>` · `<FoundingScreen>` · `<MapPanel>` (the main view since queue item 9) · `<Desk>` (now the summary beneath the map) · `<Treasury>` · `<Legislation>` · `<Regions>` · `<Government>` · `<History>` · `<Chronicle>` · `<EventModal>`
 
 ---
 

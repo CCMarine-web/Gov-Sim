@@ -1100,3 +1100,65 @@ Not just greyed out: the word should replace the percentage.
 This one is enforced by a test rather than by eye
 (`src/lib/theming.test.ts`), which reads the source of every component. If it
 ever fails, a colour has been hardcoded and is no longer skinnable.
+
+---
+
+## 23. The causal web
+
+*Phase 2, queue item 15. `DECISIONS.md` D-054 to D-056, `ECONOMY.md` §7.26.*
+
+**23.1 — It opens on a question, not on a hairball**
+Open "Causes". It should show the treasury balance with its neighbourhood — a
+few dozen nodes, not the whole model.
+*Problem if:* it opens on everything. A screen that answers all questions at
+once answers none.
+
+**23.2 — Clicking a node asks a question of it**
+Click customs. The panel should re-focus: what moves customs, and what customs
+moves next, each with the reason in words.
+
+**23.3 — The reasons are sentences, not labels**
+Every link in the side panels should carry a plain-English claim — "customs are
+levied on what actually crosses the wharf, not on what would have".
+*Problem if:* a link is only an arrow and a weight.
+
+**23.4 — Hovering a line says why it exists**
+Hover any edge in the diagram. A tooltip should give the causal claim.
+
+**23.5 — Both kinds of line are explained**
+Under the diagram: solid lines are how the country transmits an effect, dashed
+are what the statute book is doing now, thicker is stronger.
+*Problem if:* the two kinds are distinguished only by appearance with no key.
+
+**23.6 — What is acting right now matches the stat popover**
+Focus a stat that has laws on it — national stability after passing a few bills.
+The "what moves it" list should name exactly the same sources, with the same
+values, as the popover on that stat elsewhere in the game.
+*Problem if:* they differ by so much as a source. Two screens describing one
+number must agree; that is what the ledger is for.
+
+**23.7 — Follow a chain**
+From the treasury balance, click "Follow it further" on debt principal. You
+should get a path — balance → debt principal → debt service → balance — with the
+claim at each hop and a statement of the net effect.
+
+**23.8 — The tariff refuses to have a direction**
+Show everything, focus the tariff rate, and trace it to trade volume. The net
+effect should say **"not in one direction — a link on this path turns"**.
+*Problem if:* it claims a direction. Revenue rises with the rate to 25% and
+falls after; asserting a sign would put the model's most common
+misunderstanding on screen as a fact.
+
+**23.9 — Nothing moves when the clock runs**
+Start the clock at 4x and watch the web. Line weights may change as laws phase
+in; **nodes must not move at all.**
+*Problem if:* the layout settles or drifts. The layout is deterministic
+precisely so that reading it while time passes is possible.
+
+**23.10 — A screen with no causes says so**
+Focus something the model declares no cause for — cabinet competence. It should
+say nothing is acting on it and that this is an answer rather than a gap.
+
+**23.11 — The whole graph is available and honest about itself**
+"Everything at once" should show the full web, with a note saying it is worth
+looking at once and that focusing is the view that answers anything.

@@ -14,6 +14,7 @@ import {
   LayoutGrid,
   Map,
   Globe,
+  Network,
   Scale,
   ScrollText,
   Users,
@@ -30,6 +31,7 @@ export type SectionId =
   | 'diplomacy'
   | 'regions'
   | 'government'
+  | 'causal'
   | 'history'
   | 'chronicle';
 
@@ -47,6 +49,7 @@ const ITEMS: NavItem[] = [
   { id: 'diplomacy', label: COPY.nav.diplomacy, Icon: Globe },
   { id: 'regions', label: COPY.nav.regions, Icon: LayoutGrid },
   { id: 'government', label: COPY.nav.government, Icon: Landmark },
+  { id: 'causal', label: COPY.nav.causal, Icon: Network },
   { id: 'history', label: COPY.nav.history, Icon: BookOpen },
   { id: 'chronicle', label: COPY.nav.chronicle, Icon: ScrollText },
 ];

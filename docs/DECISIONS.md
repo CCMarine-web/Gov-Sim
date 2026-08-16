@@ -1690,3 +1690,92 @@ assert that mute actually mutes — behaviour with no observable effect yet.
 
 **The settings panel says the game is silent.** A mute toggle that appears to do
 nothing reads as a bug, and the true explanation is one sentence long.
+
+---
+
+## D-054 — The ledger is half the causal graph, and the smaller half
+
+**Date:** 2026-08-16 (Phase 2, queue item 15)
+**Status:** implemented
+
+The brief says "we already have the graph data; this is mostly rendering". The
+first half is true and the second turned out not to be, for a reason worth
+recording.
+
+**Drawn alone, the ledger is a bipartite fan.** Sources on one side, stats on
+the other, every path exactly one hop long. Every edge true, every weight
+honest, and it answers no question a player has — because "the Bank adds 4 to
+stability" is already on the stat popover, and drawing it in a circle adds
+nothing.
+
+**What a player actually wants to know is what happens NEXT**: the tariff cuts
+trade, which cuts customs, which widens the deficit, which raises debt service,
+which crowds out everything else. None of that is in the ledger. It is in the
+formulas — and CLAUDE.md already requires that every formula carry its causal
+claim as a comment in the wording ECONOMY.md uses.
+
+**So the second half of the graph is those claims, collected into
+`src/content/causalLinks.ts` as data.** Each entry names the formula it
+describes and the ECONOMY.md section it comes from, so the picture and the model
+cannot drift: a link with no formula behind it is a bug in one of the two.
+
+**Nothing in the engine reads that file**, and that is the guarantee that makes
+it safe. The simulation runs on the formulas; this describes them. A wrong edge
+draws a wrong picture and cannot produce a wrong number.
+
+---
+
+## D-055 — The layout is deterministic, and the view opens focused
+
+**Date:** 2026-08-16 (Phase 2, queue item 15)
+**Status:** implemented
+
+Two decisions, and both are really the same decision: **the screen is for
+reading, not for admiring.**
+
+**Not force-directed.** The obvious implementation of a causal web is a force
+simulation, and it is wrong here on three counts. It would MOVE — the web
+redraws whenever the published snapshot changes, four times a second while the
+clock runs, and a force layout would re-settle each time; a screen whose nodes
+wander while the player reads it is exactly the failure item 1 spent a day
+fixing on the command bar. It would not be REPRODUCIBLE, so two players on the
+same state would see different pictures. And it would need a library or a
+physics loop on the main thread for a screen that should cost nothing.
+
+So: layered radial, deterministic, one pass. The fiscal spine innermost, the
+ledger sources outermost pointing inward — which reads correctly, because the
+statute book acts on the country from outside it. The cost is more edge
+crossings, and that is the right trade.
+
+**It opens focused.** The failure mode of every causal-web screen ever built is
+the hairball: two hundred nodes, a thousand crossing edges, beautiful in a
+screenshot and useless in play, answering no question because it answers all of
+them at once. So the default view is one node and its neighbourhood, clicking a
+node re-focuses rather than expanding, and the whole graph is one click away and
+honestly labelled as the thing you look at once.
+
+**And a path reads as an argument.** `tracePaths` returns the nodes AND the
+claim at each hop, so "why is the deficit widening" is answered by a chain of
+sentences rather than by a number.
+
+---
+
+## D-056 — A path through the tariff has no sign, and the screen says so
+
+**Date:** 2026-08-16 (Phase 2, queue item 15)
+**Status:** implemented
+
+Most causal links have a direction: more grievance, less compliance. The
+tariff's does not. Revenue rises with the rate to 25% and falls after (§7.5),
+which is the single most consequential non-monotonicity in the model and the
+most commonly misunderstood thing about it.
+
+So `CausalLink.sign` admits a third value, `'curve'`, and **any path containing
+one has a net sign of `'curve'` rather than a product.** The trace panel says
+"not in one direction — a link on this path turns."
+
+**The alternative was to pick a sign**, presumably positive, on the grounds that
+it is true for most of the range. That would put the game's own most common
+misunderstanding on the screen as a fact, in the one view whose entire purpose is
+to explain what causes what. A model that cannot say "it depends, and here is
+where it turns" should not be drawing causal diagrams at all.

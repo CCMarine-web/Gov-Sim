@@ -39,6 +39,7 @@ import { audio } from '@/lib/audio';
 import { Chronicle, Desk, Regions } from './sections';
 import { MapPanel } from './MapPanel';
 import { LegislationPanel } from './LegislationPanel';
+import { CausalPanel } from './CausalPanel';
 import { CongressPanel } from './CongressPanel';
 import { DiplomacyPanel } from './DiplomacyPanel';
 import { GovernmentPanel } from './GovernmentPanel';
@@ -223,6 +224,7 @@ export function GameShell() {
           {section === 'government' && (
             <GovernmentPanel state={snapshot} onAppoint={appointOfficer} />
           )}
+          {section === 'causal' && <CausalPanel state={snapshot} />}
           {section === 'history' && <HistoryPanel state={snapshot} />}
           {section === 'chronicle' && <Chronicle state={snapshot} />}
         </main>

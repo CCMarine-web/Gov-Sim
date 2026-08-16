@@ -11,7 +11,7 @@ Four documents own four concerns: `DESIGN.md` (architecture and data model),
 `docs/ECONOMY.md` (every formula and constant), `docs/UI.md` (screens), and
 `docs/THEMING.md` (tokens, skins, assets, audio — added in item 14).
 
-**Last updated:** Phase 2 run of 2026-08-16, after queue item 14.
+**Last updated:** Phase 2 run of 2026-08-16, after queue item 15 — the last in the queue.
 
 ---
 
@@ -21,11 +21,11 @@ Four documents own four concerns: `DESIGN.md` (architecture and data model),
 |---|---|
 | Production URL | <https://gov-sim.vercel.app> |
 | Deploy | auto-deploys from `main` on push |
-| Tests | 865 passing |
+| Tests | 902 passing |
 | Save schema | version **10** — v1 to v9 saves migrate forward, all nine fixtures committed |
 | Gates | tests, lint, typecheck, production build — all green |
 | Database | Supabase, `save_games` table migrated, verified reachable from production |
-| Phase | **2 — in progress.** Phase 1 shipped. |
+| Phase | **2 — the §9 queue is complete.** All fifteen items shipped. |
 
 ---
 
@@ -47,7 +47,7 @@ Four documents own four concerns: `DESIGN.md` (architecture and data model),
 | 12 — War declaration paths | **complete** — see below and D-045 to D-047 |
 | 13 — Cabinet competence and loyalty | **complete** — see below and D-048 to D-050 |
 | 14 — Theming, asset registry, audio abstraction | **complete** — see below and D-051 to D-053 |
-| 15 — Causal web view | not started |
+| 15 — Causal web view | **complete** — see below and D-054 to D-056 |
 
 ### Item 1 — the number flicker: complete
 
@@ -816,6 +816,62 @@ paragraph in a `max-w-prose`.
 **Tests:** 30 in `lib/theming.test.ts`, 9 in `components/game/settings.test.tsx`.
 Human-eye checks are `docs/MANUAL-QA.md` §22 — and 22.2 is the important one:
 walk every screen in the Parchment skin and look for anything that stays dark.
+
+---
+
+### Item 15 — the causal web: complete
+
+**The brief was half right.** "We already have the graph data; this is mostly
+rendering." The data is there; the rendering was not the work.
+
+Drawn from the ledger alone, the graph is a **bipartite fan** — sources on one
+side, stats on the other, every path exactly one hop. Every edge true, every
+weight honest, and it answers nothing a player wants to know, because "the Bank
+adds 4 to stability" is already on the stat popover and drawing it in a circle
+adds nothing.
+
+**What a player wants is what happens next**, and that lives in the formulas
+rather than the ledger. CLAUDE.md already requires every formula to carry its
+causal claim as a comment in ECONOMY.md's wording, so item 15 collected those
+claims into `src/content/causalLinks.ts` as data — twenty-eight declared links,
+each naming the formula it describes and the ECONOMY.md section it comes from,
+so the picture and the model cannot drift (D-054).
+
+**Nothing in the engine reads that file.** The simulation runs on the formulas;
+this describes them. A wrong edge draws a wrong picture and cannot produce a
+wrong number.
+
+**It opens focused, and clicking re-focuses rather than expanding.** The failure
+mode of every causal-web screen ever built is the hairball — beautiful in a
+screenshot, useless in play, answering no question because it answers all of
+them at once. The whole graph is one click away and honestly labelled as the
+thing you look at once.
+
+**The layout is deterministic**, layered radial, one pass — not force-directed.
+A force layout would re-settle every time the snapshot publishes, four times a
+second while the clock runs, which is the same wandering-numbers failure item 1
+spent a day fixing on the command bar. The fiscal spine sits innermost and the
+ledger sources outermost pointing inward, because the statute book acts on the
+country from outside it (D-055).
+
+**A path reads as an argument.** `tracePaths` returns the nodes *and* the claim
+at each hop, so "why is the deficit widening" is answered by a chain of
+sentences. It is bounded and refuses to revisit a node, because the fiscal spine
+contains a real cycle: debt service feeds the balance, which is borrowed
+against, which raises the debt, which raises the service.
+
+**The tariff has no sign, and the screen says so.** Revenue rises with the rate
+to 25% and falls after, so `sign` admits a third value — `'curve'` — and any
+path containing one reports "not in one direction". Picking a sign would put the
+model's most commonly misunderstood behaviour on screen as a fact, in the one
+view whose entire purpose is explaining what causes what (D-056).
+
+**It cannot disagree with the stat popover.** `actingOn` reads `activeFor` on
+the same ledger `explainStat` reads, and a test asserts the two return the same
+list of sources with the same values.
+
+**Tests:** 25 in `sim/causal.test.ts`, 12 in `components/game/causal.test.tsx`.
+Human-eye checks are `docs/MANUAL-QA.md` §23.
 
 ---
 
