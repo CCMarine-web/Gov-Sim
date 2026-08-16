@@ -259,6 +259,38 @@ describe('the content plays through', () => {
     expect(fired.length).toBeGreaterThanOrEqual(6);
   });
 
+  it('fires at least 12, so the decade feels populated rather than sparse', () => {
+    expect(fired.length).toBeGreaterThanOrEqual(12);
+  });
+
+  it('fires each of the anchor events of the decade', () => {
+    const firedIds = fired.map((f) => f.eventId);
+    for (const id of [
+      'quaker_petitions_1790',
+      'assumption_1790',
+      'bank_1791',
+      'whiskey_excise_1791',
+      'bill_of_rights_1791',
+      'fugitive_slave_1793',
+      'neutrality_1793',
+      'yellow_fever_1793',
+      'whiskey_rebellion_1794',
+      'jay_treaty_1795',
+      'pinckney_treaty_1795',
+      'farewell_precedent_1796',
+      'xyz_affair_1798',
+      'alien_sedition_1798',
+    ]) {
+      expect(firedIds, `${id} never fired`).toContain(id);
+    }
+  });
+
+  it('fires them in chronological order', () => {
+    for (let i = 1; i < fired.length; i++) {
+      expect(fired[i].day).toBeGreaterThanOrEqual(fired[i - 1].day);
+    }
+  });
+
   it('fires each event on or after its historical date', () => {
     for (const record of fired) {
       const event = PHASE_1_CONTENT.events.find((e) => e.id === record.eventId)!;

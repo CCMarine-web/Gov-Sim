@@ -43,7 +43,10 @@ import { useGameStore, type Speed } from '@/store/gameStore';
 const MAX_DAYS_PER_FRAME = 10;
 
 /** The UI is published at most four times a second, at any speed. */
-const PUBLISH_INTERVAL_MS = 250;
+export const PUBLISH_INTERVAL_MS = 250;
+
+/** Exported so the frame-cap claim can be asserted rather than assumed. */
+export const MAX_DAYS_PER_FRAME_EXPORTED = 10;
 
 /** 1x is one in-game day per real second. */
 const MS_PER_DAY_AT_1X = 1000;
