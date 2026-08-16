@@ -105,6 +105,13 @@ export interface NationStats {
   agriculturalOutput: number;
   manufacturingOutput: number;
   tradeVolume: number;
+  /**
+   * Latent capacity to trade, before tariff suppression is applied.
+   * A lagged stock (τ = 24 months), which is why a tariff cut does not restore
+   * trade overnight — the player who wrecks trade with a punitive rate spends
+   * years digging out. (ECONOMY.md §7.5)
+   */
+  tradeCapacity: number;
   gdp: number;
   /** 0–100. */
   stability: number;
@@ -140,6 +147,13 @@ export interface Region {
   tradeVolume: number;
   /** 0–100 index. */
   prosperity: number;
+  /**
+   * Change in prosperity at the last monthly recompute.
+   * Sentiment depends on the DIRECTION conditions are moving, not only their
+   * level: a region getting poorer from a high base is angrier than one
+   * getting richer from a low base. (ECONOMY.md §7.12)
+   */
+  prosperityTrend: number;
   /** −100…+100 toward the federal government. */
   sentiment: number;
   /** 0–100. The share of assessed federal revenue actually remitted. */
@@ -155,6 +169,19 @@ export interface Region {
   landExposure: number;
   /** Baseline for the prosperity index; set at game creation. */
   baselineOutputPerCapita: number;
+  /**
+   * Day-0 equilibrium values, set at game creation and never changed.
+   *
+   * These make the founding a genuine equilibrium rather than a starting point
+   * the model immediately pulls away from. The seeded prosperity and sentiment
+   * already reflect the world as it stood in 1789, INCLUDING the tariff that
+   * existed then — so the model must treat the day-0 tax burden as neutral and
+   * respond to CHANGES from it. Without this the null run slides downhill from
+   * the first month for no reason the player caused.
+   */
+  baseProsperity: number;
+  baseSentiment: number;
+  baselineTaxBurden: number;
 }
 
 // ============================================================================

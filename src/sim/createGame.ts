@@ -18,6 +18,7 @@ import {
   seedPopulation,
 } from '@/content/regions/regions1790';
 import { START, START_DEBT_RATE, START_TRADE_CAPACITY } from './calibration';
+import { taxBurden } from './economy/fiscal';
 import {
   computeGdp,
   computeLaborForce,
@@ -102,6 +103,7 @@ export function createGame(options: NewGameOptions): GameState {
       // their hinterland. Assigned below, once national totals are known.
       tradeVolume: 0,
       prosperity: seedRegion.prosperity,
+      prosperityTrend: 0,
       sentiment,
       compliance: 85,
       dominantIndustry: seedRegion.dominantIndustry,
@@ -109,6 +111,19 @@ export function createGame(options: NewGameOptions): GameState {
       exciseExposure: seedRegion.exciseExposure,
       landExposure: seedRegion.landExposure,
       baselineOutputPerCapita: 0,
+      // Day-0 equilibrium. The seeded prosperity and sentiment already reflect
+      // the tariff that existed in 1789, so the founding tax burden is recorded
+      // as neutral and the model responds to changes from it.
+      baseProsperity: seedRegion.prosperity,
+      baseSentiment: sentiment,
+      baselineTaxBurden: taxBurden({
+        tariffRate: tariffRate,
+        exciseRate: START.exciseRate,
+        landTaxRate: START.landTaxRate,
+        tariffExposure: seedRegion.tariffExposure,
+        exciseExposure: seedRegion.exciseExposure,
+        landExposure: seedRegion.landExposure,
+      }),
     };
   });
 
@@ -180,6 +195,7 @@ export function createGame(options: NewGameOptions): GameState {
       agriculturalOutput,
       manufacturingOutput,
       tradeVolume,
+      tradeCapacity: START_TRADE_CAPACITY,
       gdp,
       stability,
       legitimacy,

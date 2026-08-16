@@ -743,7 +743,7 @@ Wide tolerances are intentional. The goal is a model that lands in the right *re
 6. Paying down debt raises the credit rating and lowers borrowing costs.
 7. A tariff rise raises Mid-Atlantic manufacturing output and lowers Southern sentiment in the same run.
 8. Regional sentiment divergence raises sectional tension even when mean sentiment is unchanged.
-9. A republic left alone loses legitimacy; a monarchy left alone does not.
+9. A republic left alone loses legitimacy substantially; a monarchy loses far less. *(Refined during implementation: a monarchy has no decay **term**, which is not the same as immunity to outcomes. It still converts prosperity into legitimacy at a reduced rate, so a monarchy presiding over worsening conditions does lose a little — which is correct and desirable. The claim is comparative, so the test is comparative.)*
 10. No policy change produces its full effect in under one month.
 
 **Determinism and serialization** are covered by `DESIGN.md` §15.
@@ -758,3 +758,32 @@ Wide tolerances are intentional. The goal is a model that lands in the right *re
 4. **Price level** — Phase 1 is nominal throughout. Fine for now, but real comparisons will eventually want a deflator.
 5. **Foreign demand shocks.** The 1793–1815 European wars massively boosted American shipping — the GDP series shows it plainly, jumping from $256M in 1793 to $390M in 1795. Phase 1 has no diplomacy system, so this arrives as scripted events adjusting `tradeCapacity`. That is honest for now, but it means a meaningful share of the boom is exogenous rather than earned. Worth flagging to the player in the History view so a windfall is not misread as good governance.
 6. **Whether `governmentOutput` should feed back into GDP at all** — including it matches the benchmark series, but it means deficit spending mechanically raises GDP. Defensible, and consistent with the source, but a player could discover it as an exploit. Watch it in the balance pass.
+
+7. **NOMINAL VERSUS REAL — the most significant open issue. Needs a decision.**
+
+   Discovered when the null-run validation (§10) was first executed. The model reaches roughly **$268M** by 1800 against a verified **$486M**. That gap is not a mis-tuned constant, and widening the tolerance would be exactly the kind of dishonesty this document exists to prevent.
+
+   The decomposition:
+
+   | | 1790 | 1800 | Growth |
+   |---|---:|---:|---:|
+   | Real US population | 3,929,326 | 5,308,483 | 3.05%/yr |
+   | Verified nominal GDP | $193M | $486M | 9.68%/yr |
+   | Verified nominal GDP per capita | $49.12 | $91.55 | **6.42%/yr** |
+   | **Our model, GDP per capita** | $49.12 | ~$49 | **~0%** |
+
+   **The model has no price level.** It is therefore effectively a constant-dollar (real) series, while the MeasuringWorth benchmark is nominal. Actual *real* per-capita growth in the 1790s was close to zero — almost the whole 6.42% was price inflation plus the exogenous shipping boom from the European wars after 1793.
+
+   So the model is not obviously wrong; **it is measuring a different thing from the benchmark.** This is precisely the definitional mismatch §7.6 warns about for government output, in a larger and less obvious form. Shipping it unaddressed would make the History view report a 45% shortfall as though it were the player's failure, which is the exact false signal the comparison view exists to prevent.
+
+   Three ways out, in order of preference:
+
+   **(a) Add a price level.** Introduce a deflator series driven by money supply, war demand, and trade disruption, and make the model produce nominal figures. Most faithful, most work, and gives us inflation as a governable phenomenon — which is good, since inflation is a real instrument of governance the game should eventually model.
+
+   **(b) Compare in real terms.** Source a price index (MeasuringWorth carries one), convert the benchmark to constant 1790 dollars, and compare real-to-real. Cheaper and immediately honest. Costs us nothing in Phase 1 and defers (a) to whenever inflation becomes a mechanic.
+
+   **(c) Label the axis and move on.** Show both series, mark ours "real" and theirs "nominal", and let the player interpret. Honest but weak — it makes the signature feature harder to read, which defeats its purpose.
+
+   **Recommendation: (b) for Phase 1, (a) later.** It makes the comparison correct now at low cost and does not foreclose adding a price level when inflation becomes a system the player can act on.
+
+   Until this is resolved the null-run test asserts what the model actually claims — per-capita stability — and pins the known ratio against 1800 so the gap cannot silently drift.
