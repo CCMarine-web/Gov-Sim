@@ -632,9 +632,7 @@ interface GameState {
   contentVersion: string;
 
   // --- determinism ---
-  seed: number;                  // immutable, set at game creation
-  rngState: number;              // current PRNG state — see note below
-  rngCalls: number;              // audit counter
+  rng: RngState;                 // { seed, state, calls } — see note below
 
   // --- time ---
   day: number;                   // integer days since 1789-04-30 (day 0)
@@ -663,7 +661,9 @@ interface GameState {
 }
 ```
 
-**Proposed refinement to flag for approval — `rngState`.** The brief specifies that the seed and call-count live in `GameState`. Reconstructing the generator from `seed` + `rngCalls` alone requires re-advancing it `rngCalls` times on every load, which is O(n) and grows through the run. Storing the PRNG's current state directly makes resume O(1). `seed` and `rngCalls` are both still stored — `seed` for provenance and reproducibility from scratch, `rngCalls` as an audit counter that the determinism test asserts against. This is a strict superset of what the brief asked for; flagging it because it is a change to a stated data model.
+**Refinement — `rng` (approved, implemented).** The brief specifies that the seed and call-count live in `GameState`. Reconstructing the generator from `seed` + `rngCalls` alone requires re-advancing it `rngCalls` times on every load, which is O(n) and grows through the run. Storing the PRNG's current state directly makes resume O(1). `seed` and `calls` are both still stored — `seed` for provenance and reproducibility from scratch, `calls` as an audit counter the determinism test asserts against.
+
+As implemented, the three values are grouped into a single `rng: RngState` object (`{ seed, state, calls }`) rather than three flat fields, so they travel with the functions that operate on them in `src/sim/rng.ts`. Same data, still plain JSON, still Rule 3 compliant. Verified by test: a generator serialized mid-run, round-tripped through JSON, and resumed continues an identical sequence.
 
 Supporting types:
 
