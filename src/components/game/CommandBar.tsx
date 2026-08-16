@@ -14,11 +14,8 @@ import { formatLongDate } from '@/sim/calendar';
 import { RANGES, TAU_MONTHS } from '@/sim/calibration';
 import { explainStat } from '@/sim/modifiers';
 import { pause, setSpeed, start } from '@/runtime/gameLoop';
-import {
-  useGameStore,
-  type Speed,
-  selectClock,
-} from '@/store/gameStore';
+import { SPEEDS, SPEED_TABLE } from '@/runtime/speeds';
+import { useGameStore, selectClock } from '@/store/gameStore';
 import {
   direction,
   formatCurrency,
@@ -26,8 +23,6 @@ import {
   formatPopulation,
 } from '@/lib/format';
 import { Stat } from '@/components/primitives/Stat';
-
-const SPEEDS: Speed[] = [1, 2, 5];
 
 export function CommandBar() {
   const snapshot = useGameStore((s) => s.snapshot);
@@ -175,22 +170,28 @@ function ClockControls({
         {clock.running ? '❚❚' : '▶'}
       </button>
 
-      {SPEEDS.map((speed) => (
-        <button
-          key={speed}
-          type="button"
-          onClick={() => setSpeed(speed)}
-          aria-pressed={clock.speed === speed}
-          aria-label={`Speed ${speed} times`}
-          className={`tabular rounded px-1 text-small ${
-            clock.speed === speed
-              ? 'border-b-2 border-brass-400 text-brass-300'
-              : 'text-content-muted hover:text-content-secondary'
-          }`}
-        >
-          {speed}x
-        </button>
-      ))}
+      {/* Buttons, labels and descriptions all come from the one speed table.
+          Nothing about the speeds is written down twice. (D-016) */}
+      {SPEEDS.map((speed) => {
+        const setting = SPEED_TABLE[speed];
+        return (
+          <button
+            key={speed}
+            type="button"
+            onClick={() => setSpeed(speed)}
+            aria-pressed={clock.speed === speed}
+            aria-label={`Speed ${setting.label} — ${setting.description}`}
+            title={setting.description}
+            className={`tabular rounded px-1 text-small ${
+              clock.speed === speed
+                ? 'border-b-2 border-brass-400 text-brass-300'
+                : 'text-content-muted hover:text-content-secondary'
+            }`}
+          >
+            {setting.label}
+          </button>
+        );
+      })}
 
       {/* The player must always be able to see WHY they are paused. */}
       {blocked && (

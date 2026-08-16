@@ -10,12 +10,19 @@
 
 import { useRef } from 'react';
 import { useFocusTrap } from '@/components/primitives/useFocusTrap';
+import { SPEEDS, SPEED_TABLE } from '@/runtime/speeds';
 
+/**
+ * The speed rows are generated from the table rather than transcribed. This
+ * sheet previously said "3 — Speed 5x", which was true at the time and would
+ * have quietly become a lie the moment the speeds were rebalanced. (D-016)
+ */
 const SHORTCUTS: Array<{ keys: string; action: string }> = [
   { keys: 'Space', action: 'Pause or resume the clock' },
-  { keys: '1', action: 'Speed 1x — one in-game day per second' },
-  { keys: '2', action: 'Speed 2x' },
-  { keys: '3', action: 'Speed 5x' },
+  ...SPEEDS.map((speed) => ({
+    keys: String(speed),
+    action: `Speed ${SPEED_TABLE[speed].label} — ${SPEED_TABLE[speed].description.toLowerCase()}`,
+  })),
   { keys: '?', action: 'Open this reference' },
   { keys: 'Esc', action: 'Close an overlay' },
   { keys: 'Tab', action: 'Move through the interface in reading order' },

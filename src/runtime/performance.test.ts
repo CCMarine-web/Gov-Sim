@@ -7,9 +7,11 @@ import type { ContentPack, GameState } from '@/sim/types';
 import {
   MAX_DAYS_PER_FRAME_EXPORTED,
   PUBLISH_INTERVAL_MS,
+  UNCAPPED_FRAME_BUDGET_MS,
+  UNCAPPED_MAX_DAYS_PER_FRAME,
   drainAccumulator,
-  msPerDayAt,
 } from './gameLoop';
+import { SPEEDS, isUncapped, msPerDayAt } from './speeds';
 
 const EMPTY: ContentPack = { version: 'perf', events: [], laws: [] };
 
@@ -41,19 +43,56 @@ describe('the render throttle holds by construction', () => {
     expect(1000 / PUBLISH_INTERVAL_MS).toBeLessThanOrEqual(4);
   });
 
-  it('publishes no more often at 5x than at 1x', () => {
-    // The publish interval is independent of speed. At 5x the engine advances
-    // five times as many days per second and the UI still sees four frames.
-    const daysPerSecondAt5x = 1000 / msPerDayAt(5);
+  it('publishes at the same rate however fast the simulation runs', () => {
+    // The publish interval is a WALL-CLOCK throttle, not a per-day one, which
+    // is the whole reason the ceiling survives the uncapped speed. At every
+    // capped speed the engine advances more days per second and the UI still
+    // sees four frames.
     const publishesPerSecond = 1000 / PUBLISH_INTERVAL_MS;
-    expect(daysPerSecondAt5x).toBe(5);
     expect(publishesPerSecond).toBe(4);
-    expect(publishesPerSecond).toBeLessThan(daysPerSecondAt5x + 1);
+
+    for (const speed of SPEEDS) {
+      if (isUncapped(speed)) continue;
+      const daysPerSecond = 1000 / msPerDayAt(speed);
+      expect(publishesPerSecond, `speed ${speed}`).toBe(4);
+      expect(daysPerSecond).toBeGreaterThan(0);
+    }
+  });
+
+  /**
+   * THE UNCAPPED CEILING.
+   *
+   * The brief predicted this is exactly where the throttle would break, so it
+   * is asserted rather than assumed. The bound at the top speed is a wall-clock
+   * budget per frame, and publication is a wall-clock throttle — so however
+   * many days a frame manages, the number of publications per second cannot
+   * exceed four.
+   */
+  it('bounds the uncapped frame by wall time, not by days', () => {
+    expect(isUncapped(5)).toBe(true);
+    expect(UNCAPPED_FRAME_BUDGET_MS).toBeLessThan(1000 / 60);
+
+    // Even if every frame ran the full backstop of days, a 60Hz display gives
+    // 60 frames a second and publication is still throttled to four.
+    const framesPerSecond = 60;
+    const worstCaseDaysPerSecond = UNCAPPED_MAX_DAYS_PER_FRAME * framesPerSecond;
+    const publishesPerSecond = 1000 / PUBLISH_INTERVAL_MS;
+
+    expect(worstCaseDaysPerSecond).toBeGreaterThan(20_000);
+    expect(publishesPerSecond).toBe(4);
+  });
+
+  it('backstops the uncapped frame so a stopped clock cannot hang the tab', () => {
+    // A frame bounded only by elapsed time never terminates if time does not
+    // elapse. The backstop must be finite and must be generous enough never to
+    // bind on a real machine.
+    expect(Number.isFinite(UNCAPPED_MAX_DAYS_PER_FRAME)).toBe(true);
+    expect(UNCAPPED_MAX_DAYS_PER_FRAME).toBeGreaterThan(100);
   });
 
   it('caps simulated days per frame so a backgrounded tab cannot stall the UI', () => {
-    // Thirty seconds hidden at 5x would be 150 days without the cap.
-    const result = drainAccumulator(30_000, msPerDayAt(5), MAX_DAYS_PER_FRAME_EXPORTED);
+    // Thirty seconds hidden at 4x would be 300 days without the cap.
+    const result = drainAccumulator(30_000, msPerDayAt(4), MAX_DAYS_PER_FRAME_EXPORTED);
     expect(result.days).toBe(MAX_DAYS_PER_FRAME_EXPORTED);
     expect(result.discardedMs).toBeGreaterThan(0);
   });

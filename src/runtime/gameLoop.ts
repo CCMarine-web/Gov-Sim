@@ -29,7 +29,8 @@ import { createGame, type NewGameOptions } from '@/sim/createGame';
 import { enactPolicy } from '@/sim/policy';
 import type { ProposedPolicy } from '@/sim/projection';
 import type { ContentPack, GameState, TickEffect } from '@/sim/types';
-import { useGameStore, type Speed } from '@/store/gameStore';
+import { useGameStore } from '@/store/gameStore';
+import { isUncapped, msPerDayAt, type Speed } from './speeds';
 
 /**
  * Never simulate more than this many days in a single frame.
@@ -48,8 +49,29 @@ export const PUBLISH_INTERVAL_MS = 250;
 /** Exported so the frame-cap claim can be asserted rather than assumed. */
 export const MAX_DAYS_PER_FRAME_EXPORTED = 10;
 
-/** 1x is one in-game day per real second. */
-const MS_PER_DAY_AT_1X = 1000;
+/**
+ * UNCAPPED SPEED — how much wall time one frame may spend simulating.
+ *
+ * At the top speed the accumulator is bypassed and the loop simulates days
+ * continuously until this budget is spent, then yields. 8ms is half a 60Hz
+ * frame, which leaves the browser room to paint and keeps the tab responsive
+ * while still handing the engine everything the machine will give it.
+ * (DESIGN.md §6.3, docs/DECISIONS.md D-016)
+ */
+export const UNCAPPED_FRAME_BUDGET_MS = 8;
+
+/**
+ * A backstop on the uncapped frame, NOT a cap on speed.
+ *
+ * A loop bounded only by wall-clock time never terminates if the clock does not
+ * advance — which is precisely the situation under a controllable test clock,
+ * and would also be the situation if `performance.now()` were ever coarsened
+ * for fingerprinting resistance. 400 days per frame is roughly 24,000 days per
+ * second at 60Hz, several times faster than any real machine reaches, so this
+ * never binds during play. It exists so that a stopped clock cannot hang the
+ * tab.
+ */
+export const UNCAPPED_MAX_DAYS_PER_FRAME = 400;
 
 // ============================================================================
 // PURE HELPERS (testable without a DOM)
@@ -89,10 +111,7 @@ export function drainAccumulator(
   return { days, remainderMs, discardedMs };
 }
 
-/** Real milliseconds per in-game day at a given speed. */
-export function msPerDayAt(speed: Speed): number {
-  return MS_PER_DAY_AT_1X / speed;
-}
+export { msPerDayAt, isUncapped } from './speeds';
 
 // ============================================================================
 // LOOP STATE
@@ -164,16 +183,36 @@ function syncClock(): void {
 // THE FRAME
 // ============================================================================
 
-function frame(): void {
-  if (!loop.running || !loop.game || !loop.content) {
-    loop.rafId = null;
-    return;
-  }
+/**
+ * Simulate one day.
+ *
+ * Returns true if the loop must halt on this day: a `pausesGame` event fired
+ * and the player has to answer it. Halting happens ON that day, and publishes
+ * immediately rather than waiting for the throttle, so a decision can never be
+ * missed because the clock was running fast. (DESIGN.md §6.3)
+ */
+function stepOneDay(): boolean {
+  const result = advanceDay(loop.game!, loop.content!);
+  loop.game = result.state;
+  loop.pendingEffects.push(...result.effects);
 
-  const t = now();
-  const delta = loop.lastFrameMs === null ? 0 : t - loop.lastFrameMs;
-  loop.lastFrameMs = t;
-  loop.accumulatorMs += delta;
+  if (result.pauseRequested) {
+    loop.running = false;
+    loop.accumulatorMs = 0;
+    publish(true);
+    loop.rafId = null;
+    return true;
+  }
+  return false;
+}
+
+/**
+ * The capped path: an accumulator drained into whole days at a fixed rate.
+ *
+ * Returns true if the loop halted.
+ */
+function runCappedFrame(deltaMs: number): boolean {
+  loop.accumulatorMs += deltaMs;
 
   const { days, remainderMs, discardedMs } = drainAccumulator(
     loop.accumulatorMs,
@@ -191,22 +230,54 @@ function frame(): void {
   }
 
   for (let i = 0; i < days; i++) {
-    const result = advanceDay(loop.game, loop.content);
-    loop.game = result.state;
-    loop.pendingEffects.push(...result.effects);
+    if (stepOneDay()) return true;
+  }
+  return false;
+}
 
-    if (result.pauseRequested) {
-      // Halt ON the day the decision fired, and publish immediately so the
-      // modal appears without waiting for the throttle. A decision must never
-      // be missed because the game was running at 5x. (DESIGN.md §6.3)
-      loop.running = false;
-      loop.accumulatorMs = 0;
-      publish(true);
-      loop.rafId = null;
-      return;
-    }
+/**
+ * The uncapped path: simulate until the frame's wall-clock budget is spent.
+ *
+ * There is no rate here and no accumulator, because there is no target rate to
+ * keep — the point of the top speed is that in-game time runs as fast as the
+ * machine will carry it, the way HOI4's does. What bounds the frame is real
+ * time: spend at most `UNCAPPED_FRAME_BUDGET_MS` simulating, then yield so the
+ * browser can paint and handle input.
+ *
+ * Returns true if the loop halted.
+ */
+function runUncappedFrame(): boolean {
+  const deadline = now() + UNCAPPED_FRAME_BUDGET_MS;
+
+  for (let days = 0; days < UNCAPPED_MAX_DAYS_PER_FRAME; days++) {
+    if (stepOneDay()) return true;
+    if (now() >= deadline) break;
   }
 
+  // Nothing is accumulated at this speed, so nothing can be owed when the
+  // player drops back down to a capped one.
+  loop.accumulatorMs = 0;
+  return false;
+}
+
+function frame(): void {
+  if (!loop.running || !loop.game || !loop.content) {
+    loop.rafId = null;
+    return;
+  }
+
+  const t = now();
+  const delta = loop.lastFrameMs === null ? 0 : t - loop.lastFrameMs;
+  loop.lastFrameMs = t;
+
+  const halted = isUncapped(loop.speed)
+    ? runUncappedFrame()
+    : runCappedFrame(delta);
+
+  if (halted) return;
+
+  // Publication is throttled by WALL CLOCK, not by days simulated, which is
+  // why the ceiling of four per second holds unchanged at the uncapped speed.
   publish();
   loop.rafId = requestAnimationFrame(frame);
 }

@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { advanceDay } from './advanceDay';
-import { PHASE_1_END_DAY, isoToDay } from './calendar';
+import { PHASE_1_END_DAY, isoToDay, yearOf } from './calendar';
 import { createTestGame } from './createGame';
 import { RANGES } from './calibration';
 import { computeCustomsRevenue, computeTradeVolume } from './economy/production';
@@ -87,6 +87,47 @@ describe('serialization after a long run, per DESIGN.md Rule 3', () => {
   it('keeps the state a reasonable size for a save', () => {
     const bytes = JSON.stringify(end).length;
     expect(bytes).toBeLessThan(2_000_000);
+  });
+});
+
+/**
+ * PAST THE END OF THE CONTENT
+ *
+ * Nothing stops the clock at 1800-12-31 (BLOCKERS.md B-005). That was a
+ * theoretical concern while the top speed was five days a second; the uncapped
+ * speed added in Phase 2 reaches the end of the content in a few seconds, so a
+ * player will now routinely run past it.
+ *
+ * B-005 records the design gap. These tests establish the thing that actually
+ * matters in the meantime: running past the horizon is uneventful rather than
+ * destructive. If any of these ever fails, B-005 stops being a design gap and
+ * becomes a bug.
+ */
+describe('running beyond the end of the content', () => {
+  const PAST_THE_END = PHASE_1_END_DAY + 3_650; // ten further years, to 1810
+
+  const beyond = run(createTestGame(), PAST_THE_END);
+
+  it('keeps advancing the calendar correctly', () => {
+    expect(beyond.day).toBe(PAST_THE_END);
+    expect(yearOf(beyond.day)).toBe(1810);
+  });
+
+  it('stays deterministic', () => {
+    expect(run(createTestGame(), PAST_THE_END)).toEqual(beyond);
+  });
+
+  it('produces no NaN or non-finite number anywhere in the state', () => {
+    for (const [path, value] of walk(beyond)) {
+      expect(value, `${path} is undefined`).not.toBeUndefined();
+      if (typeof value === 'number') {
+        expect(Number.isFinite(value), `${path} is ${value}`).toBe(true);
+      }
+    }
+  });
+
+  it('still round-trips through JSON, so a save taken there is loadable', () => {
+    expect(JSON.parse(JSON.stringify(beyond))).toEqual(beyond);
   });
 });
 

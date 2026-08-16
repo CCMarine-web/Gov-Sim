@@ -16,6 +16,12 @@ import {
   stepForTesting,
   toggle,
 } from './gameLoop';
+import {
+  SPEEDS,
+  SPEED_TABLE,
+  isUncapped,
+  realMinutesFor,
+} from './speeds';
 
 const NEW_GAME = {
   governmentType: 'republic' as const,
@@ -80,20 +86,73 @@ describe('the accumulator', () => {
   });
 });
 
-describe('speed mapping', () => {
-  it('runs one in-game day per real second at 1x', () => {
-    expect(msPerDayAt(1)).toBe(1_000);
+/**
+ * THE SPEED TABLE
+ *
+ * These assertions pin `src/runtime/speeds.ts` to the table published in
+ * docs/DECISIONS.md D-016. They are the reason the five speeds cannot drift
+ * apart from their documentation, and the reason a rebalance has to be a
+ * deliberate act rather than something that happens by accident.
+ */
+describe('the speed table', () => {
+  it('offers exactly five speeds, in order', () => {
+    expect(SPEEDS).toEqual([1, 2, 3, 4, 5]);
   });
 
-  it('scales inversely with speed', () => {
-    expect(msPerDayAt(2)).toBe(500);
-    expect(msPerDayAt(5)).toBe(200);
+  it('puts 3x at five days a second — what Phase 1 shipped as 5x', () => {
+    expect(msPerDayAt(3)).toBe(200);
+    expect(SPEED_TABLE[3].daysPerSecond).toBe(5);
   });
 
-  it('means a full Phase 1 run takes about 71 minutes at 1x', () => {
-    const minutes = (4_263 * msPerDayAt(1)) / 1000 / 60;
-    expect(minutes).toBeGreaterThan(70);
-    expect(minutes).toBeLessThan(72);
+  it('scales 1x and 2x proportionally below 3x', () => {
+    expect(msPerDayAt(1)).toBe(600);
+    expect(msPerDayAt(2)).toBe(300);
+
+    // 1 : 2 : 3 exactly, in days per second. A control labelled 2x really does
+    // run twice as fast as 1x.
+    const rate = (s: 1 | 2 | 3) => 1000 / msPerDayAt(s);
+    expect(rate(2)).toBeCloseTo(rate(1) * 2, 10);
+    expect(rate(3)).toBeCloseTo(rate(1) * 3, 10);
+  });
+
+  it('makes 4x meaningfully faster than 3x, not marginally', () => {
+    expect(msPerDayAt(4)).toBe(100);
+    expect(1000 / msPerDayAt(4)).toBe(2 * (1000 / msPerDayAt(3)));
+  });
+
+  it('leaves 5x uncapped, with no rate at all', () => {
+    expect(isUncapped(5)).toBe(true);
+    expect(SPEED_TABLE[5].msPerDay).toBeNull();
+    expect(SPEED_TABLE[5].daysPerSecond).toBeNull();
+
+    // Asking a rate question about a rate-less speed is a bug in the caller,
+    // and must not return a quiet 0 or Infinity to be divided by later.
+    expect(() => msPerDayAt(5)).toThrow(/uncapped/);
+  });
+
+  it('is uncapped at 5x and only at 5x', () => {
+    for (const speed of SPEEDS) {
+      expect(isUncapped(speed)).toBe(speed === 5);
+    }
+  });
+
+  it('means a full Phase 1 run takes about 43 minutes at 1x', () => {
+    const minutes = realMinutesFor(1, 4_263)!;
+    expect(minutes).toBeGreaterThan(42);
+    expect(minutes).toBeLessThan(44);
+
+    // ...and about a quarter of an hour at 3x, the new mid-setting.
+    expect(realMinutesFor(3, 4_263)!).toBeCloseTo(14.21, 1);
+
+    // Uncapped has no answer, because it depends on the machine.
+    expect(realMinutesFor(5, 4_263)).toBeNull();
+  });
+
+  it('gives every speed a label and a description for the UI to render', () => {
+    for (const speed of SPEEDS) {
+      expect(SPEED_TABLE[speed].label).toBe(`${speed}x`);
+      expect(SPEED_TABLE[speed].description.length).toBeGreaterThan(0);
+    }
   });
 });
 

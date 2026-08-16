@@ -345,3 +345,88 @@ width so its value can change length without moving its neighbours.
 jsdom has no layout engine, so a scrollbar cannot be observed in a test. The
 popover clipping, however, is unconditional and follows from the CSS alone.
 Recorded in `docs/MANUAL-QA.md` as a check to make with human eyes.
+
+---
+
+## D-015 — The speed table before the rebalance, recorded
+
+Brief §0.2 asked for the existing values to be written down before anything
+changed. There was no table to read: the rates were a formula,
+`msPerDayAt(speed) = 1000 / speed`, over three hard-coded speed values.
+
+**What Phase 1 shipped:**
+
+| Control | ms per in-game day | In-game days per real second |
+|---|---|---|
+| 1x | 1000 | 1 |
+| 2x | 500 | 2 |
+| 5x | 200 | 5 |
+
+Consequences worth recording, because they are the baseline the rebalance is
+measured against:
+
+- A full Phase 1 run (4,263 days) took **71 minutes at 1x**, 14.2 minutes at 5x.
+- The keyboard mapping was `1` → 1x, `2` → 2x, **`3` → 5x**. There was no key
+  for a "3x", because there was no 3x.
+- The three values existed in five places that had to agree: the formula in
+  `gameLoop.ts`, the `Speed` union in `gameStore.ts`, the `SPEEDS` array in
+  `CommandBar.tsx`, the switch in `GameShell.tsx`, and the prose in
+  `KeyboardHelp.tsx`. Nothing enforced that they did agree — which is the
+  "magic numbers scattered around" the brief asked to eliminate.
+
+---
+
+## D-016 — Five speeds, expressed as one table, with 5x uncapped
+
+**The requirement.** Brief §0.2: the old 5x becomes the new 3x, 1x and 2x scale
+down proportionally, 4x is meaningfully faster than 3x, and 5x is uncapped in
+the HOI4 sense — as fast as the machine can process.
+
+**Decided.** `src/runtime/speeds.ts` holds the single table:
+
+| Control | ms per in-game day | In-game days per real second | Full Phase 1 run |
+|---|---|---|---|
+| 1x | 600 | 1.67 | 43 min |
+| 2x | 300 | 3.33 | 21 min |
+| 3x | 200 | **5** | 14 min |
+| 4x | 100 | 10 | 7 min |
+| 5x | *uncapped* | as fast as the engine can process | seconds |
+
+**Why these numbers.** 3x at 200ms/day is *exactly* the old 5x, as asked. The
+proportionality then falls out cleanly: 600, 300, 200 give day rates in a
+precise 1 : 2 : 3 ratio, so a control labelled 2x really does run twice 1x. 4x
+doubles the 3x rate rather than nudging it — "meaningfully faster" should be a
+step you can feel, not a 20% trim.
+
+The fractional day rates at 1x and 2x are a consequence of anchoring 3x to a
+round *interval* rather than a round *rate*, and anchoring the interval is
+correct: the interval is what the loop actually uses, and 600/300/200/100 are
+exact in floating point where 5/3 and 10/3 are not.
+
+**How uncapped works.** At 5x the accumulator is bypassed entirely. The frame
+simulates days continuously until it has spent its wall-clock budget
+(`UNCAPPED_FRAME_BUDGET_MS`, 8ms — half a 60Hz frame), then yields to the
+browser. There is no fixed day cap; a faster machine simply gets more days per
+frame, which is the requested behaviour.
+
+Two guards remain, and both matter:
+
+- **The publication throttle is untouched.** It is a wall-clock throttle, not a
+  per-day one, so it holds at any simulation rate by construction. The brief
+  predicted this is where things would break; it is asserted directly now, and
+  D-017 records what the assertion measured.
+- **`UNCAPPED_MAX_DAYS_PER_FRAME` (400) is a backstop, not a cap.** A frame
+  bounded only by wall-clock time never terminates under a stopped clock, which
+  is exactly the situation in a test with a controllable clock — and would also
+  be the situation if `performance.now()` were ever coarsened. 400 days per
+  frame is ~24,000 days per second at 60Hz, several times faster than any real
+  machine reaches, so it never binds in play.
+
+**Pause-on-decision still halts on the day.** The uncapped loop checks
+`pauseRequested` on every day exactly as the accumulator loop does. Running
+fast must not mean running past a decision.
+
+**Alternative rejected for the 5x label.** Making 5x a large finite rate (say
+50 days/second) instead of genuinely uncapped. It would have been simpler to
+reason about, but the brief was specific and the reasoning is sound: a finite
+top speed makes the late game slower on a fast machine for no benefit.

@@ -88,3 +88,38 @@ in production.
 Auth was built behind a clean interface with the local-storage fallback fully
 working, so the game does not regress. Setting the two variables activates the
 cloud path with no code change.
+
+---
+
+## B-005 — The clock runs past the end of the content, and uncapped speed makes it obvious
+
+**Status:** open, known, not blocking. Raised by the Phase 2 speed rebalance.
+
+Nothing stops the simulation at 1800-12-31. It never mattered much before: at
+the old top speed reaching the end of the content took fourteen minutes of
+play. At the new uncapped speed it takes a few seconds, after which the player
+is in 1801, then 1805, in a country where no further events exist and the
+economy simply extrapolates.
+
+**Not fixed here deliberately.** Two defensible answers exist and choosing
+between them is a content decision, not a clock one:
+
+1. **Stop at the content horizon** — the loop refuses to advance past the last
+   day the content pack covers, and says so. Honest, and cheap.
+2. **Extend the content**, which is what Phase 2 is for: the brief takes the
+   game to 1860. Once that lands, the horizon moves and the problem shrinks.
+
+Since queue items 5 to 12 add a great deal of content, the horizon is going to
+move anyway, and building a stop now would mean building it against a boundary
+that is about to change. **Recommendation:** implement (1) as a small guard once
+the Phase 2 content settles, sourced from the content pack rather than a
+hard-coded date, so it never needs revisiting again.
+
+**What was verified in the meantime**, rather than assumed. Four tests in
+`src/sim/advanceDay.test.ts` ("running beyond the end of the content") run ten
+further years, to 1810, and assert that the calendar stays correct, the run
+stays deterministic, no value anywhere in the state becomes NaN or non-finite,
+and the state still round-trips through JSON so a save taken there loads.
+
+It is a design gap, not a defect — and if any of those four ever fails, that is
+the moment it becomes one.

@@ -42,19 +42,44 @@ top, nav on the left, main panel centre, chronicle on the right. The date reads
 ## 2. The clock — acceptance criterion 2
 
 **2.1 — Space toggles pause**
-Press Space. The date should begin advancing about one day per second.
+Press Space. The date should begin advancing at roughly one and two-thirds days
+per second — about three days every two seconds.
 *Problem if:* nothing happens, or the date jumps erratically.
 
 **2.2 — Speed controls**
-Press `2`, then `3`. Speed should go to 2x then 5x — roughly two and five days
-per second. The active speed gets a brass underline.
-*Problem if:* the underline moves but the rate does not change.
+There are **five** speeds, keys `1` through `5`, defined in one table in
+`src/runtime/speeds.ts` (`DECISIONS.md` D-016). Step through them and check the
+rate roughly matches:
+
+| Key | Expected |
+|---|---|
+| `1` | ~1.7 days/sec |
+| `2` | ~3.3 days/sec — visibly twice 1x |
+| `3` | 5 days/sec — this is what Phase 1 called 5x |
+| `4` | 10 days/sec — clearly twice 3x, not a nudge |
+| `5` | Uncapped. Should be dramatically faster than 4x and vary with the machine |
+
+The active speed gets a brass underline. Hovering any speed button should show
+its description.
+*Problem if:* the underline moves but the rate does not change; or 5x is not
+noticeably faster than 4x, which would mean the uncapped path is not being
+taken.
+
+**2.2b — Uncapped speed stays responsive**
+Sit at 5x for thirty seconds. The interface must stay clickable and the left
+nav must still respond immediately.
+*Problem if:* the tab locks up. The frame is supposed to yield after 8ms of
+simulating; if it does not, the wall-clock budget is not being honoured.
 
 **2.3 — CPU does not peg**
-Leave it at 5x for two minutes with a task manager open. The tab should stay
+Leave it at 4x for two minutes with a task manager open. The tab should stay
 well under one core.
 *Problem if:* a core saturates, or the UI becomes unresponsive to clicks. That
 would mean the render throttle is not holding.
+
+At 5x the machine *will* work hard — that is the point of an uncapped speed —
+but the interface must remain responsive and the numbers must still update no
+more than four times a second.
 
 **2.4 — Numbers do not jitter**
 Watch the treasury figure in the command bar as it ticks. Digits should change
@@ -138,9 +163,11 @@ acceptance criterion 3 end to end.
 ## 5. Events — acceptance criterion 5
 
 **5.1 — The clock stops on the day**
-Run from the start at 5x. On 20 June 1790 the game should stop and a modal
-appear for the assumption of state debts.
-*Problem if:* the date runs past it — a decision must never be missed at speed.
+Run from the start at 5x, the uncapped speed. On 20 June 1790 the game should
+stop and a modal appear for the assumption of state debts.
+*Problem if:* the date runs past it — a decision must never be missed at speed,
+and the uncapped path is where that is most likely to go wrong, because a single
+frame simulates hundreds of days.
 
 **5.2 — The modal cannot be dismissed**
 Press Escape. Click outside it. Neither should close it.

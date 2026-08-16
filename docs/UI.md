@@ -222,7 +222,7 @@ Persistent three-zone layout once a game is running. **The shell never scrolls �
 ┌────────────────────────────────────────────────────────────────────────────┐
 │ COMMAND BAR                                                    fixed, 64px │
 │ ┌──────┐                                                                   │
-│ │ SEAL │  Gen. Washington        ⏸  1x  2x  5x     TREASURY   DEBT   STAB. │
+│ │ SEAL │  Gen. Washington    ⏸ 1x 2x 3x 4x 5x     TREASURY   DEBT   STAB. │
 │ │      │  President · Federalist                   $1.24M    $71.1M   55   │
 │ └──────┘  14 March 1791                            ▲ ╱‾╲╱‾   ▬ ‾‾╲   ▼ ╲__ │
 ├──────────┬──────────────────────────────────────────────┬──────────────────┤
@@ -247,7 +247,7 @@ Left → right: national seal · ruler name and title (portrait slot reserved) �
 
 Each headline stat shows **value + directional arrow + 90-day sparkline**. Arrow and sparkline are both present so direction is never conveyed by color alone.
 
-Clock controls: `⏸ / ▶` then `1x 2x 5x`. Active speed has a brass underline *and* `aria-pressed`. When the game is auto-paused by an event, the pause control shows a distinct **"PAUSED — DECISION REQUIRED"** state in oxblood so the player understands *why* they are paused.
+Clock controls: `⏸ / ▶` then `1x 2x 3x 4x 5x`. The five buttons, their labels and their hover descriptions are rendered from `src/runtime/speeds.ts` — the table is the only place a speed is defined (`docs/DECISIONS.md` D-016). Active speed has a brass underline *and* `aria-pressed`. 5x is uncapped and says so on hover: it runs as fast as the machine can simulate. When the game is auto-paused by an event, the pause control shows a distinct **"PAUSED — DECISION REQUIRED"** state in oxblood so the player understands *why* they are paused.
 
 Headline stats for Phase 1: Treasury balance, National debt, Stability, Legitimacy, Population, GDP.
 
@@ -707,7 +707,7 @@ The most important cross-cutting element. **It works on every number in the game
 | Key | Action |
 |---|---|
 | `Space` | Toggle pause |
-| `1` `2` `3` | Set speed 1x / 2x / 5x |
+| `1`…`5` | Set speed. Defined in one table, `src/runtime/speeds.ts`: 1x 1.67 days/sec · 2x 3.33 · 3x 5 · 4x 10 · 5x uncapped |
 | `Esc` | Close overlays — **except the event modal** |
 | `Tab` | Sane order: command bar → nav → main → feed |
 | `?` | Keyboard reference |

@@ -15,15 +15,19 @@
  * speed. Components subscribe with narrow selectors, so the date ticking does
  * not re-render the Treasury panel.
  *
- * This module imports nothing from the runtime, so there is no import cycle:
- * the loop knows about the store, the store knows nothing about the loop.
+ * This module imports no runtime VALUE, so there is no import cycle: the loop
+ * knows about the store, the store knows nothing about the loop. The one
+ * exception is the `Speed` type, which is a type-only import and is erased at
+ * compile time — it creates no module edge at all. Duplicating the union here
+ * instead would be a second definition of the speed set that nothing forces to
+ * agree with the table, which is exactly what D-015 was about.
  */
 
 import { create } from 'zustand';
 import type { GameState, TickEffect } from '@/sim/types';
+import type { Speed } from '@/runtime/speeds';
 
-/** 1x, 2x, 5x. Keyboard 1/2/3 map to these. (UI.md §8) */
-export type Speed = 1 | 2 | 5;
+export type { Speed };
 
 export interface ClockStatus {
   running: boolean;

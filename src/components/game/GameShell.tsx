@@ -13,6 +13,7 @@
 import { useCallback, useEffect, useState } from 'react';
 import { PHASE_1_CONTENT } from '@/content';
 import { setSpeed, toggle } from '@/runtime/gameLoop';
+import { SPEEDS } from '@/runtime/speeds';
 import { useGameStore } from '@/store/gameStore';
 import { startAutosave, stopAutosave } from '@/lib/saves/autosave';
 import { CommandBar } from './CommandBar';
@@ -75,19 +76,19 @@ export function GameShell() {
       return;
     }
 
+    // Keys 1-5 map straight onto the five speeds. Derived from the table
+    // rather than switched on by hand, so adding or removing a speed cannot
+    // leave a key pointing at nothing. (D-016)
+    const asSpeed = SPEEDS.find((s) => String(s) === e.key);
+    if (asSpeed !== undefined) {
+      setSpeed(asSpeed);
+      return;
+    }
+
     switch (e.key) {
       case ' ':
         e.preventDefault();
         toggle();
-        break;
-      case '1':
-        setSpeed(1);
-        break;
-      case '2':
-        setSpeed(2);
-        break;
-      case '3':
-        setSpeed(5);
         break;
       case '?':
         setHelpOpen(true);

@@ -90,7 +90,7 @@ A vertical slice covering **1789-04-30 through 1800-12-31 only**. Its job is to 
 Phase 1 is done when:
 
 1. I can create an account, start a new game, choose monarchy or republic, and name my ruler.
-2. The clock ticks day by day, pauses with spacebar, and runs at 1x/2x/5x without the UI stuttering or the browser tab pegging a CPU core.
+2. The clock ticks day by day, pauses with spacebar, and runs at each of the five speeds without the UI stuttering or the browser tab pegging a CPU core.
 3. Setting tax rates and spending in the Treasury panel produces effects that propagate through the economy over subsequent weeks and months in ways I can trace.
 4. Every stat in the game can be hovered to reveal its full modifier breakdown, and the numbers add up.
 5. At least 6 real 1790s events fire on historically appropriate dates with genuine branching choices, each carrying factual historical context.
@@ -270,7 +270,7 @@ Three things run at different rates and must not be coupled:
 
 | Thing | Rate |
 |---|---|
-| Simulation | 1–5 in-game days per second, set by the speed control |
+| Simulation | 1.67 to 10 in-game days per second, set by the speed control, or unbounded at the top speed |
 | UI publication | Max 4 times per second, always |
 | Browser paint | Whatever the display does, typically 60Hz |
 
@@ -307,9 +307,23 @@ Naively putting `GameState` in Zustand and calling `advanceDay` on an interval c
 
 ### 6.3 Specific requirements
 
-**Accumulator, not naive interval.** `requestAnimationFrame` fires at display rate. Each frame accumulates `elapsedMs * speed` and drains whole days out of it. This keeps in-game time proportional to real time even when frames are dropped.
+**Speeds live in one table.** `src/runtime/speeds.ts` is the single definition of the five settings, in real milliseconds per in-game day. The loop, the command bar buttons, the keyboard shortcuts and the help sheet all read from it; nothing about a speed is written down twice. It lives in `/src/runtime/` rather than `/src/sim/` because the engine has no concept of real time at all (Rules 1 and 2).
 
-**Frame budget cap.** `MAX_DAYS_PER_FRAME = 10`. If the tab is backgrounded for thirty seconds, we do **not** simulate 150 days on the first frame back — that would freeze the tab and, worse, silently fast-forward past a decision the player should have seen. Excess accumulated time is discarded and the discard is logged. In-game time is allowed to fall behind real time; the simulation is never allowed to skip a day.
+| Control | ms per in-game day | In-game days per real second |
+|---|---|---|
+| 1x | 600 | 1.67 |
+| 2x | 300 | 3.33 |
+| 3x | 200 | 5 |
+| 4x | 100 | 10 |
+| 5x | *uncapped* | as fast as the machine can simulate |
+
+**Accumulator, not naive interval.** At the four capped speeds, `requestAnimationFrame` fires at display rate, each frame accumulates elapsed time and drains whole days out of it. This keeps in-game time proportional to real time even when frames are dropped.
+
+**The top speed is uncapped.** At 5x the accumulator is bypassed. The frame simulates days continuously until it has spent a wall-clock budget (`UNCAPPED_FRAME_BUDGET_MS`, 8ms — half a 60Hz frame) and then yields to the browser. There is no target rate, because the point of the setting is that a faster machine simply gets more days. A finite backstop of 400 days per frame exists so that a *stopped* clock cannot hang the tab; at 60Hz that is ~24,000 days a second, so it never binds in play.
+
+The publication throttle is unaffected by any of this, and that is by construction rather than by luck: it is a **wall-clock** throttle, not a per-day one, so four publications per second is the ceiling at every speed including the uncapped one. `src/runtime/uncapped.test.ts` asserts it.
+
+**Frame budget cap.** At the capped speeds, `MAX_DAYS_PER_FRAME = 10`. If the tab is backgrounded for thirty seconds, we do **not** simulate 150 days on the first frame back — that would freeze the tab and, worse, silently fast-forward past a decision the player should have seen. Excess accumulated time is discarded and the discard is logged. In-game time is allowed to fall behind real time; the simulation is never allowed to skip a day.
 
 **Background tabs.** `requestAnimationFrame` is throttled or halted when the tab is hidden. On `visibilitychange` to hidden the loop auto-pauses; on return it stays paused until the player resumes. This is honest and avoids the "came back to find the treasury empty" failure.
 
@@ -837,7 +851,7 @@ Questions raised before implementation and their resolutions, so future sessions
 |---|---|---|
 | 1 | What differs between monarchy and republic in Phase 1, given no elections? | Real non-electoral differences: legitimacy decay vs. stability, regional sentiment split, cost of action, path-specific event options (§9.2) |
 | 2 | Can the player lose? | No game-over. Failure is degraded governance — insolvency, regional non-compliance, constitutional crisis (§10) |
-| 3 | Real-time pacing | 1x = 1 in-game day per second; 2x and 5x scale from it. Full Phase 1 ≈ 70 min at 1x (§6) |
+| 3 | Real-time pacing | Five speeds, defined in one table in `src/runtime/speeds.ts`. 3x is 5 days/second; 1x and 2x scale proportionally below it; 4x doubles 3x; 5x is uncapped. Full Phase 1 ≈ 43 min at 1x. Rebalanced in Phase 2 — `docs/DECISIONS.md` D-015, D-016 (§6) |
 | 4 | Does the ruler die? | Ages and displays age; no death or succession in Phase 1. Schema carries Phase 2 fields (§9.3) |
 | 5 | Daily tick vs. monthly economy | Daily: calendar, events, cash flow, modifier expiry. Monthly: economic aggregates. Display interpolates (§6.5) |
 | 6 | Modifier ledger growth | Ledger kept exactly as specified, plus hygiene: expire, remove on repeal, aggregate per source-target, deterministic ids (§5 Rule 5) |

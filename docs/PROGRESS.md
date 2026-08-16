@@ -7,7 +7,7 @@ If you are resuming with no context: read `DESIGN.md` first, then this file,
 then `docs/DECISIONS.md` and `docs/BLOCKERS.md`. Then continue the **Phase 2
 queue** below, which is `gov-sim-phase2-brief.md` §9.
 
-**Last updated:** Phase 2 run of 2026-08-16, after queue item 1.
+**Last updated:** Phase 2 run of 2026-08-16, after queue item 2.
 
 ---
 
@@ -17,7 +17,7 @@ queue** below, which is `gov-sim-phase2-brief.md` §9.
 |---|---|
 | Production URL | <https://gov-sim.vercel.app> |
 | Deploy | auto-deploys from `main` on push |
-| Tests | 308 passing |
+| Tests | 325 passing |
 | Gates | tests, lint, typecheck, production build — all green |
 | Database | Supabase, `save_games` table migrated, verified reachable from production |
 | Phase | **2 — in progress.** Phase 1 shipped. |
@@ -29,7 +29,7 @@ queue** below, which is `gov-sim-phase2-brief.md` §9.
 | Item | Status |
 |---|---|
 | 1 — Numbers flicker fix + regression test | **complete** — see below and DECISIONS.md D-010…D-014 |
-| 2 — Speed rebalance with config table | not started |
+| 2 — Speed rebalance with config table | **complete** — see below and D-015, D-016 |
 | 3 — Dynamic tax and spending instances | not started |
 | 4 — Political capital system | not started |
 | 5 — Legislation categories and bill schema (≥25 bills) | not started |
@@ -86,6 +86,53 @@ fake-clock, fake-rAF and render-counting infrastructure.
 Two checks still need human eyes, because jsdom has no layout engine: the
 command bar not jumping, and popovers not being clipped. Both are
 `docs/MANUAL-QA.md` §10.
+
+### Item 2 — speed rebalance: complete
+
+**The table now lives in one place**, `src/runtime/speeds.ts`. Before, three
+rates were a formula in the loop plus four independent hard-coded lists that
+nothing forced to agree. The old values are recorded in `DECISIONS.md` D-015
+before they were touched, as the brief asked.
+
+| Control | ms per in-game day | days per real second | full Phase 1 run |
+|---|---|---|---|
+| 1x | 600 | 1.67 | 43 min |
+| 2x | 300 | 3.33 | 21 min |
+| 3x | 200 | **5** — what Phase 1 called 5x | 14 min |
+| 4x | 100 | 10 | 7 min |
+| 5x | *uncapped* | as fast as the machine can go | seconds |
+
+`600 : 300 : 200` puts 1x, 2x and 3x in an exact 1 : 2 : 3 ratio. 4x doubles 3x.
+Reasoning in D-016.
+
+**Uncapped works by wall-clock budget.** At 5x the accumulator is bypassed and
+the frame simulates continuously until it has spent `UNCAPPED_FRAME_BUDGET_MS`
+(8ms, half a 60Hz frame), then yields. `UNCAPPED_MAX_DAYS_PER_FRAME` (400) is a
+backstop against a *stopped* clock, not a speed cap — at 60Hz it would be 24,000
+days a second, so it never binds in play.
+
+**The publication ceiling holds, and is asserted rather than assumed.** The
+brief predicted this is where things would break. It does not break, because
+publication is throttled by wall clock rather than by days, so four per second
+is the ceiling at any simulation rate. `src/runtime/uncapped.test.ts` drives the
+real loop with a controllable clock and a real rAF queue — no DOM, no React —
+and asserts: uncapped beats the fastest capped speed by an order of magnitude;
+publication stays at or under 4/second across 300 frames and 1,000+ simulated
+days; the frame yields once its budget is spent; the backstop binds when the
+clock is frozen; dropping back to a capped speed restores a fixed rate; and
+**the loop still halts on the exact day a decision fires**, which is the thing
+most likely to break when one frame can simulate hundreds of days.
+
+**Everything reads from the table**: the loop, the command bar buttons and their
+hover descriptions, the `1`–`5` keyboard shortcuts (derived from `SPEEDS`, not
+switched on by hand), and the keyboard help sheet. `Speed` is defined in
+`speeds.ts` and re-exported by the store as a type-only import, so there is no
+runtime import cycle and no second definition of the speed set.
+
+**One consequence, logged not fixed:** uncapped speed reaches 1800-12-31 in
+seconds, and nothing stops the clock there. That is `BLOCKERS.md` B-005, with a
+recommendation. Four tests confirm running to 1810 stays deterministic,
+NaN-free and save-able, so it is a design gap rather than a defect.
 
 ---
 
