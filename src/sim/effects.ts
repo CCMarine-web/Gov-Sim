@@ -13,6 +13,16 @@
  */
 
 import { removeModifiersFromSource, upsertModifier } from './modifiers';
+import { TAX_BASES, TAX_BASE_IDS, isBaseAvailable } from './taxBases';
+import {
+  defundProgram,
+  findProgram,
+  findTax,
+  repealTax,
+  setTaxRate,
+  upsertProgram,
+  upsertTax,
+} from './taxes';
 import type {
   EffectSpec,
   GameState,
@@ -188,16 +198,163 @@ export function applyEffect(
       };
     }
 
+    // ------------------------------------------------------------------------
+    // TAXES AND SPENDING AS INSTANCES (brief §4.3)
+    //
+    // `setTaxRate` moves a tax that already exists. `enactTax` brings one into
+    // being, which is the effect that lets a law create a Treasury line. They
+    // are separate on purpose: a rate change and a new statute are different
+    // political acts and should read differently in the chronicle.
+    // ------------------------------------------------------------------------
+
     case 'setTaxRate': {
+      const tax = findTax(state.policies, effect.taxId);
+      if (!tax) {
+        // Silently ignoring this would leave a content author wondering why
+        // their event did nothing. Content validation catches unknown ids
+        // structurally; this is the runtime backstop.
+        throw new Error(
+          `setTaxRate: no tax with id "${effect.taxId}". ` +
+            `Existing: ${state.policies.taxes.map((t) => t.id).join(', ')}`,
+        );
+      }
+      if (tax.repealedDay !== null) {
+        // Setting a rate on a repealed tax would look like it worked and raise
+        // nothing, which is the worst kind of content bug: silent.
+        throw new Error(
+          `setTaxRate: "${effect.taxId}" was repealed on day ${tax.repealedDay}. ` +
+            'Use enactTax to bring it back, which records a new enactment date.',
+        );
+      }
+
       return {
         state: {
           ...state,
-          policies: {
-            ...state.policies,
-            taxRates: { ...state.policies.taxRates, [effect.tax]: effect.value },
-          },
+          policies: setTaxRate(state.policies, effect.taxId, effect.value),
         },
-        tickEffects,
+        tickEffects: [
+          ...tickEffects,
+          {
+            kind: 'taxChanged',
+            day: context.day,
+            description:
+              `${tax.name} set to ${(effect.value * 100).toFixed(1)}% ` +
+              `(was ${(tax.rate * 100).toFixed(1)}%)`,
+            refs: [effect.taxId],
+          },
+        ],
+      };
+    }
+
+    case 'enactTax': {
+      const definition = TAX_BASES[effect.base];
+      const existing = findTax(state.policies, effect.taxId);
+
+      return {
+        state: {
+          ...state,
+          policies: upsertTax(state.policies, {
+            id: effect.taxId,
+            name: effect.name,
+            // The law that created it, so every dollar it raises is
+            // attributable by name. (brief §4.3)
+            createdByBillId: context.sourceId,
+            base: effect.base,
+            rate: effect.rate,
+            exemptions: [...effect.exemptions],
+            collectionEfficiency:
+              effect.collectionEfficiency ?? definition.referenceEfficiency,
+            enactedDay: context.day,
+            // Re-enacting a repealed tax revives it, which is what "the excise
+            // is reimposed" should mean.
+            repealedDay: null,
+          }),
+        },
+        tickEffects: [
+          ...tickEffects,
+          {
+            kind: 'taxEnacted',
+            day: context.day,
+            description: existing
+              ? `${effect.name} reimposed at ${(effect.rate * 100).toFixed(1)}%`
+              : `${effect.name} laid on ${definition.label.toLowerCase()} at ${(effect.rate * 100).toFixed(1)}%`,
+            refs: [effect.taxId],
+          },
+        ],
+      };
+    }
+
+    case 'repealTax': {
+      const tax = findTax(state.policies, effect.taxId);
+      if (!tax) {
+        throw new Error(`repealTax: no tax with id "${effect.taxId}"`);
+      }
+
+      return {
+        state: {
+          ...state,
+          policies: repealTax(state.policies, effect.taxId, context.day),
+        },
+        tickEffects: [
+          ...tickEffects,
+          {
+            kind: 'taxRepealed',
+            day: context.day,
+            description: `${tax.name} repealed`,
+            refs: [effect.taxId],
+          },
+        ],
+      };
+    }
+
+    case 'fundProgram': {
+      return {
+        state: {
+          ...state,
+          policies: upsertProgram(state.policies, {
+            id: effect.programId,
+            name: effect.name,
+            createdByBillId: context.sourceId,
+            category: effect.category,
+            annualAmount: effect.annualAmount,
+            enactedDay: context.day,
+            repealedDay: null,
+          }),
+        },
+        tickEffects: [
+          ...tickEffects,
+          {
+            kind: 'programFunded',
+            day: context.day,
+            description:
+              `${effect.name} funded at ` +
+              `$${Math.round(effect.annualAmount).toLocaleString('en-US')} a year`,
+            refs: [effect.programId],
+          },
+        ],
+      };
+    }
+
+    case 'defundProgram': {
+      const program = findProgram(state.policies, effect.programId);
+      if (!program) {
+        throw new Error(`defundProgram: no programme with id "${effect.programId}"`);
+      }
+
+      return {
+        state: {
+          ...state,
+          policies: defundProgram(state.policies, effect.programId, context.day),
+        },
+        tickEffects: [
+          ...tickEffects,
+          {
+            kind: 'programDefunded',
+            day: context.day,
+            description: `${program.name} defunded`,
+            refs: [effect.programId],
+          },
+        ],
       };
     }
 
@@ -249,6 +406,10 @@ const KNOWN_EFFECT_KINDS = new Set([
   'unlockLaw',
   'repealLaw',
   'setTaxRate',
+  'enactTax',
+  'repealTax',
+  'fundProgram',
+  'defundProgram',
   'log',
 ]);
 
@@ -305,6 +466,62 @@ export function validateEffect(effect: EffectSpec, path = 'root'): string[] {
             `(received ${effect.value}) — 10% is 0.1, not 10`,
         );
       }
+      if (!effect.taxId) {
+        problems.push(`${path}: setTaxRate has no taxId`);
+      }
+      break;
+
+    case 'enactTax':
+      if (!effect.taxId) {
+        problems.push(`${path}: enactTax has no taxId`);
+      }
+      if (!effect.name) {
+        problems.push(`${path}: enactTax has no name — Treasury would render a blank row`);
+      }
+      if (!(effect.base in TAX_BASES)) {
+        problems.push(
+          `${path}: enactTax names unknown base "${effect.base}". ` +
+            `Known: ${TAX_BASE_IDS.join(', ')}`,
+        );
+      } else if (!isBaseAvailable(effect.base)) {
+        // Content must not be able to route around a constitutional bar. If a
+        // base is prohibited, no law may levy on it — that is the whole point of
+        // marking it prohibited rather than merely discouraged.
+        problems.push(
+          `${path}: enactTax levies on "${effect.base}", which is prohibited: ` +
+            `${TAX_BASES[effect.base].prohibitedBecause}`,
+        );
+      }
+      if (!Number.isFinite(effect.rate) || effect.rate < 0 || effect.rate > 1) {
+        problems.push(
+          `${path}: enactTax rate must be between 0 and 1 (received ${effect.rate})`,
+        );
+      }
+      if (
+        effect.collectionEfficiency !== undefined &&
+        (effect.collectionEfficiency <= 0 || effect.collectionEfficiency > 1)
+      ) {
+        problems.push(
+          `${path}: enactTax collectionEfficiency must be in (0, 1] ` +
+            `(received ${effect.collectionEfficiency})`,
+        );
+      }
+      break;
+
+    case 'repealTax':
+      if (!effect.taxId) problems.push(`${path}: repealTax has no taxId`);
+      break;
+
+    case 'fundProgram':
+      if (!effect.programId) problems.push(`${path}: fundProgram has no programId`);
+      if (!effect.name) problems.push(`${path}: fundProgram has no name`);
+      if (!Number.isFinite(effect.annualAmount) || effect.annualAmount < 0) {
+        problems.push(`${path}: fundProgram annualAmount must be non-negative`);
+      }
+      break;
+
+    case 'defundProgram':
+      if (!effect.programId) problems.push(`${path}: defundProgram has no programId`);
       break;
   }
 

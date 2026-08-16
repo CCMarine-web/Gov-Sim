@@ -18,6 +18,7 @@
  */
 
 import { SCHEMA_VERSION, type GameState } from '../types';
+import { v1ToV2 } from './v1ToV2';
 
 /** A single forward step. Receives and returns loosely-typed state by design:
  *  the shape it migrates FROM no longer has a TypeScript type in this build. */
@@ -26,10 +27,13 @@ export type Migration = (state: Record<string, unknown>) => Record<string, unkno
 /**
  * Registry of forward migrations, keyed by the version they migrate FROM.
  *
- * Empty because version 1 is the first released schema. When `SCHEMA_VERSION`
- * becomes 2, add `1: (s) => ({ ...s, schemaVersion: 2, /* new fields *\/ })`.
+ * Each entry must bump `schemaVersion` — the loop below refuses a step that
+ * does not, rather than spinning forever.
  */
-export const MIGRATIONS: Record<number, Migration> = {};
+export const MIGRATIONS: Record<number, Migration> = {
+  /** Three tax rates and three spending lines become instances. (brief §4.3) */
+  1: v1ToV2,
+};
 
 export type LoadOutcome =
   | { ok: true; state: GameState; migratedFrom: number | null }

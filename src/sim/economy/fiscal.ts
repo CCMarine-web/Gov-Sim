@@ -56,6 +56,10 @@ export function complianceTarget(params: {
  *
  * The distilling base is concentrated overwhelmingly on the frontier, which is
  * why the excise is a regional weapon rather than a national one.
+ *
+ * Retained as the named formula behind the `spirits` base. `computeTaxRevenue`
+ * is the general path; this is what it reduces to for the spirits excise, and
+ * keeping it makes the calibration test that pins the two together meaningful.
  */
 export function computeExciseRevenue(
   regionId: string,
@@ -84,6 +88,79 @@ export function computeLandRevenue(
   return base * Math.max(0, landTaxRate) * (compliance / 100);
 }
 
+// ============================================================================
+// REVENUE PER TAX INSTANCE (Phase 2 brief §4.3)
+// ============================================================================
+
+/** What a region contributes to the assessment of one tax. */
+export interface RegionFiscalContext {
+  id: string;
+  compliance: number;
+  /** Agricultural plus manufacturing output, for `outputShare` bases. */
+  output: number;
+}
+
+/**
+ * CAUSAL CLAIM
+ * A tax yields its rate times what it can reach, less what cannot be collected
+ * and less what is simply not paid. The three are separate losses with separate
+ * causes, and the Treasury screen shows them separately, because a government
+ * whose problem is administrative capacity needs a different remedy from one
+ * whose problem is that a region has stopped obeying it.
+ *
+ * `collectionEfficiency` is a property of the tax — how reachable its base is.
+ * `compliance` is a property of the region — whether it consents to pay. A tax
+ * on imports at a handful of customs houses scores high on the first whatever
+ * the second is doing; a tax on backcountry stills scores badly on both.
+ *
+ * Trade-assessed taxes have no regional compliance term: the duty is taken at
+ * the wharf before the goods move inland, which is precisely why the impost was
+ * the one tax the early republic could actually collect.
+ */
+export function computeTaxRevenue(params: {
+  rate: number;
+  collectionEfficiency: number;
+  assessment: 'trade' | 'regional' | 'outputShare';
+  /** For `trade`: the volume subject to the duty. */
+  tradeVolume: number;
+  /** For `regional`: assessed value per region id. */
+  regionalBase: Record<string, number> | null;
+  /** For `outputShare`: the share of regional output that is assessable. */
+  outputShare: number | null;
+  regions: RegionFiscalContext[];
+}): { assessedBase: number; gross: number; lostToCollection: number; lostToNonCompliance: number; net: number } {
+  const rate = Math.max(0, params.rate);
+  const efficiency = Math.min(1, Math.max(0, params.collectionEfficiency));
+
+  let assessedBase = 0;
+  /** Assessed base weighted by the compliance that applies to it. */
+  let complianceWeighted = 0;
+
+  if (params.assessment === 'trade') {
+    assessedBase = Math.max(0, params.tradeVolume);
+    // Collected at the port, so no regional compliance term. See above.
+    complianceWeighted = assessedBase;
+  } else {
+    for (const region of params.regions) {
+      const base =
+        params.assessment === 'regional'
+          ? (params.regionalBase?.[region.id] ?? 0)
+          : Math.max(0, region.output) * (params.outputShare ?? 0);
+
+      assessedBase += base;
+      complianceWeighted += base * (Math.min(100, Math.max(0, region.compliance)) / 100);
+    }
+  }
+
+  const gross = assessedBase * rate;
+  const afterCompliance = complianceWeighted * rate;
+  const lostToNonCompliance = gross - afterCompliance;
+  const net = afterCompliance * efficiency;
+  const lostToCollection = afterCompliance - net;
+
+  return { assessedBase, gross, lostToCollection, lostToNonCompliance, net };
+}
+
 /**
  * How heavily the current tax settings fall on a given region.
  *
@@ -91,20 +168,35 @@ export function computeLandRevenue(
  * one national policy produce four different political reactions. The same
  * tariff that shelters a New England manufacturer impoverishes a Southern
  * planter. (ECONOMY.md §7.12)
+ *
+ * Now summed over whatever taxes exist rather than over three fixed fields. The
+ * arithmetic is identical for the three founding taxes — `rate × exposure`,
+ * summed — so the calibration is untouched; what changes is that a fourth tax
+ * can now contribute to it.
  */
 export function taxBurden(params: {
-  tariffRate: number;
-  exciseRate: number;
-  landTaxRate: number;
+  /** One entry per tax in force: its rate and the exposure channel it uses. */
+  levies: Array<{ rate: number; channel: 'tariff' | 'excise' | 'land' }>;
   tariffExposure: number;
   exciseExposure: number;
   landExposure: number;
 }): number {
-  return (
-    params.tariffRate * params.tariffExposure +
-    params.exciseRate * params.exciseExposure +
-    params.landTaxRate * params.landExposure
-  );
+  const exposureFor = (channel: 'tariff' | 'excise' | 'land'): number => {
+    switch (channel) {
+      case 'tariff':
+        return params.tariffExposure;
+      case 'excise':
+        return params.exciseExposure;
+      case 'land':
+        return params.landExposure;
+    }
+  };
+
+  let burden = 0;
+  for (const levy of params.levies) {
+    burden += levy.rate * exposureFor(levy.channel);
+  }
+  return burden;
 }
 
 /** Debt service is non-discretionary and is computed before anything else. */

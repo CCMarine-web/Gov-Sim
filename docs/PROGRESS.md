@@ -7,7 +7,7 @@ If you are resuming with no context: read `DESIGN.md` first, then this file,
 then `docs/DECISIONS.md` and `docs/BLOCKERS.md`. Then continue the **Phase 2
 queue** below, which is `gov-sim-phase2-brief.md` §9.
 
-**Last updated:** Phase 2 run of 2026-08-16, after queue item 2.
+**Last updated:** Phase 2 run of 2026-08-16, after queue item 3.
 
 ---
 
@@ -17,7 +17,8 @@ queue** below, which is `gov-sim-phase2-brief.md` §9.
 |---|---|
 | Production URL | <https://gov-sim.vercel.app> |
 | Deploy | auto-deploys from `main` on push |
-| Tests | 325 passing |
+| Tests | 370 passing |
+| Save schema | version **2** — v1 saves migrate forward, fixture committed |
 | Gates | tests, lint, typecheck, production build — all green |
 | Database | Supabase, `save_games` table migrated, verified reachable from production |
 | Phase | **2 — in progress.** Phase 1 shipped. |
@@ -30,7 +31,7 @@ queue** below, which is `gov-sim-phase2-brief.md` §9.
 |---|---|
 | 1 — Numbers flicker fix + regression test | **complete** — see below and DECISIONS.md D-010…D-014 |
 | 2 — Speed rebalance with config table | **complete** — see below and D-015, D-016 |
-| 3 — Dynamic tax and spending instances | not started |
+| 3 — Dynamic tax and spending instances | **complete** — see below and D-018, D-019 |
 | 4 — Political capital system | not started |
 | 5 — Legislation categories and bill schema (≥25 bills) | not started |
 | 6 — Monarchy decree path | not started |
@@ -133,6 +134,49 @@ runtime import cycle and no second definition of the speed set.
 seconds, and nothing stops the clock there. That is `BLOCKERS.md` B-005, with a
 recommendation. Four tests confirm running to 1810 stays deterministic,
 NaN-free and save-able, so it is a design gap rather than a defect.
+
+### Item 3 — taxes and spending as instances: complete
+
+The structural change the rest of the brief rests on. `PolicyState.taxRates`
+(three fields) and `PolicyState.spending` (three fields) are gone. In their place:
+
+- **`src/sim/taxBases.ts`** — the registry of twelve taxable bases: the nine the
+  federal government actually used in this period, two counterfactuals, and
+  `exports`, which the Constitution forbids outright. Each carries how it is
+  assessed, which receipt bucket it rolls into, which regional exposure channel
+  its burden travels, how collectable it is, its historicity, a sourced factual
+  note, and — where it is locked — the real reason, stated verbatim.
+- **`src/sim/taxes.ts`** — pure queries and updates over the instance arrays.
+  `taxesInForce`, `aggregateRate`, `tradeTaxRate`, `burdenLevies`, `spendingFor`,
+  `rollupReceipts`, and the upsert/repeal operations.
+- **`computeTaxRevenue`** in `economy/fiscal.ts` — one general formula replacing
+  three bespoke ones, reporting **two losses separately**: not remitted (a
+  region's consent) and uncollected (the administration's reach).
+- **`TreasuryState.receiptLines` / `outlayLines`** — per-instance attribution.
+  The four headline buckets are a rollup of these, never a parallel calculation.
+- **Schema version 2**, with `migrations/v1ToV2.ts` and a committed fixture,
+  `fixtures/v1-republic-day900.json`, generated once by
+  `scripts/make-v1-fixture.mts` and never regenerated.
+
+**The constraint that shaped it: it moved no calibrated number.** Every solved
+constant is anchored to the day-0 equilibrium composing to the verified 1790 GDP
+of $193M, so a structural change that shifted revenue would have invalidated the
+calibration and the History comparison with it. `src/sim/taxes.test.ts` asserts
+the general path equals `computeCustomsRevenue`, `computeExciseRevenue` and
+`computeLandRevenue` exactly — the three old formulas were kept for that purpose
+rather than deleted.
+
+**Content now uses the new grammar.** The 1791 whiskey event `enactTax`s the
+excise with its real name and its statutory exemption, so Treasury shows a line
+called the Whiskey Excise of 1791. The 1794 rebellion's concession `repealTax`s
+it rather than setting it to zero, so the line goes.
+
+**Tests:** 25 in `taxes.test.ts` (formula equivalence, attribution reconciling,
+create/change/repeal, registry coherence), 8 in `treasuryInstances.test.tsx` (the
+screen follows the array with no component edit), and the migration file grew to
+21 including seven against the v1 fixture.
+
+Human-eye checks are `docs/MANUAL-QA.md` §11.
 
 ---
 

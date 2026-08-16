@@ -3,7 +3,17 @@ import { CENSUS_1790_TOTALS } from '@/content/regions/regions1790';
 import { START } from './calibration';
 import { createGame, createTestGame, titleFor } from './createGame';
 import { computeCustomsRevenue } from './economy/production';
-import { SCHEMA_VERSION, type GameState } from './types';
+import {
+  aggregateRate,
+  programsInForce,
+  taxesInForce,
+  tradeTaxRate,
+} from './taxes';
+import {
+  FOUNDING_TAX_IDS,
+  SCHEMA_VERSION,
+  type GameState,
+} from './types';
 
 /** Recursively collect every value in the state, for structural assertions. */
 function walk(value: unknown, path = '$', out: Array<[string, unknown]> = []) {
@@ -79,7 +89,7 @@ describe('day-0 economy composes to the verified 1790 figures', () => {
   it('customs revenue at the starting tariff is near the real ~$4.4M', () => {
     const customs = computeCustomsRevenue(
       state.nation.tradeVolume,
-      state.policies.taxRates.tariffAvg,
+      tradeTaxRate(state.policies, state.day),
     );
     expect(customs / 1_000_000).toBeGreaterThan(3.8);
     expect(customs / 1_000_000).toBeLessThan(5.0);
@@ -89,9 +99,35 @@ describe('day-0 economy composes to the verified 1790 figures', () => {
     expect(state.treasury.balance).toBe(0);
   });
 
-  it('no excise or land tax exists at the founding', () => {
-    expect(state.policies.taxRates.excise).toBe(0);
-    expect(state.policies.taxRates.landTax).toBe(0);
+  it('levies nothing on spirits or land at the founding', () => {
+    // Both instances exist so Treasury has a line for them and an event can
+    // raise the rate, but neither is levied: there was no federal excise until
+    // March 1791 and no federal direct tax until 1798.
+    expect(aggregateRate(state.policies, state.day, 'spirits')).toBe(0);
+    expect(aggregateRate(state.policies, state.day, 'land')).toBe(0);
+  });
+
+  it('starts with exactly the three founding taxes and three programmes', () => {
+    const taxes = taxesInForce(state.policies, state.day);
+    expect(taxes.map((t) => t.id).sort()).toEqual(
+      [FOUNDING_TAX_IDS.impost, FOUNDING_TAX_IDS.land, FOUNDING_TAX_IDS.spirits].sort(),
+    );
+    expect(programsInForce(state.policies, state.day)).toHaveLength(3);
+  });
+
+  it('attributes no founding tax to a bill, because none was passed', () => {
+    for (const tax of state.policies.taxes) {
+      expect(tax.createdByBillId, tax.id).toBeNull();
+    }
+  });
+
+  it('collects the three founding taxes at full efficiency, by design', () => {
+    // Their assessed bases were solved against observed revenue, so collection
+    // losses are already inside those figures. A second factor would
+    // double-count them. (ECONOMY.md §7.8, DECISIONS.md D-018)
+    for (const tax of state.policies.taxes) {
+      expect(tax.collectionEfficiency, tax.id).toBe(1);
+    }
   });
 
   it('regional output sums to the national totals', () => {
@@ -255,6 +291,8 @@ describe('initial bookkeeping', () => {
   });
 
   it('uses the documented starting tariff', () => {
-    expect(state.policies.taxRates.tariffAvg).toBe(START.tariffRate);
+    expect(aggregateRate(state.policies, state.day, 'imports')).toBe(
+      START.tariffRate,
+    );
   });
 });

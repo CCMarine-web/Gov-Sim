@@ -27,7 +27,7 @@
  */
 
 import { advanceDay } from './advanceDay';
-import { enactPolicy, type ProposedPolicy } from './policy';
+import { currentPolicy, enactPolicy, type ProposedPolicy } from './policy';
 import type {
   ContentPack,
   GameState,
@@ -36,7 +36,7 @@ import type {
 } from './types';
 
 export type { ProposedPolicy };
-export { policyDiffers } from './policy';
+export { currentPolicy, policyDiffers } from './policy';
 
 /** Content pack used for projections: the engine, with history switched off. */
 const NO_EVENTS: ContentPack = { version: 'projection', events: [], laws: [] };
@@ -58,6 +58,15 @@ export interface PolicyProjection {
   /** Regional sentiment at the end of the horizon, by region id. */
   regionSentiment: Record<string, number>;
   regionCompliance: Record<string, number>;
+  /**
+   * Net annual revenue at the end of the horizon, by tax id.
+   *
+   * Per instance rather than per bucket, because the Treasury screen shows a
+   * slider per tax and each one needs its own projected yield. With several
+   * excises in force, "projected excise revenue" would not tell a player what
+   * the slider they are dragging is worth.
+   */
+  revenueByTax: Record<string, number>;
   daysSimulated: number;
 }
 
@@ -88,6 +97,11 @@ export function readProjection(state: GameState): PolicyProjection {
     ),
     regionCompliance: Object.fromEntries(
       state.regions.map((r) => [r.id, r.compliance]),
+    ),
+    // Straight off the attribution lines, so the per-tax figure on a slider and
+    // the per-tax row in the attribution table are the same number.
+    revenueByTax: Object.fromEntries(
+      state.treasury.receiptLines.map((line) => [line.taxId, line.net]),
     ),
     daysSimulated: 0,
   };
@@ -146,11 +160,7 @@ export function comparePolicies(
   days: number = PROJECTION_DAYS,
 ): { current: PolicyProjection; proposed: PolicyProjection } {
   return {
-    current: projectPolicy(
-      state,
-      { taxRates: state.policies.taxRates, spending: state.policies.spending },
-      days,
-    ),
+    current: projectPolicy(state, currentPolicy(state), days),
     proposed: projectPolicy(state, proposed, days),
   };
 }
@@ -189,9 +199,6 @@ export function comparePolicies(
  * live.
  */
 export function projectionBasisKey(state: GameState): string {
-  const t = state.policies.taxRates;
-  const s = state.policies.spending;
-
   // Modifiers by id AND value: a source can re-emit an aggregated modifier
   // under the same deterministic id with a different magnitude (Rule 5), and
   // counting alone would miss it.
@@ -199,14 +206,25 @@ export function projectionBasisKey(state: GameState): string {
     .map((m) => `${m.id}=${m.value}`)
     .join(',');
 
+  /*
+    Every tax and programme, by id, rate and repeal state. Not just the three
+    that used to exist: a bill can now create a tax, and a projection that did
+    not notice a brand new revenue line would be worse than one that recomputed
+    too often. Repeal is part of the key because repealing a tax changes the
+    answer as surely as changing its rate does.
+  */
+  const levies = state.policies.taxes
+    .map((t) => `${t.id}=${t.rate}@${t.collectionEfficiency}/${t.repealedDay ?? '-'}`)
+    .join(',');
+
+  const programs = state.policies.programs
+    .map((p) => `${p.id}=${p.annualAmount}/${p.repealedDay ?? '-'}`)
+    .join(',');
+
   return [
     state.lastEconomyRecomputeDay,
-    t.tariffAvg,
-    t.excise,
-    t.landTax,
-    s.military,
-    s.civil,
-    s.infrastructure,
+    levies,
+    programs,
     state.policies.enactedLawIds.join('+'),
     ledger,
   ].join('|');

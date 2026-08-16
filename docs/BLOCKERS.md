@@ -39,6 +39,13 @@ outlays rows, which currently render the honest "no verified data" state.
 would violate the hardest rule in the project. The gap state is the correct
 output and is now built and shipping.
 
+**Its value went up in Phase 2.** Queue item 3 added eight assessed-value
+calibration constants for the non-founding tax bases (`ECONOMY.md` §3.4), and
+five of the eight are reasoned rather than solved because no yield figure could
+be found for them. Series Y 352–357 gives federal receipts *by source*, which
+would let those five be solved against observed yields the way
+`START_TRADE_CAPACITY` was. Clearing this blocker is now worth more than it was.
+
 ---
 
 ## B-002 — Price index for 1789–1800 — ✅ CLEARED

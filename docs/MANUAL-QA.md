@@ -319,3 +319,47 @@ container. Check the leftmost (Treasury) too.
 With the Treasury screen open and the clock running at 5x, the tab should not
 peg a core. Before the fix this screen ran two 365-day forward simulations four
 times a second — about 2,900 simulated days per second of wall time.
+
+---
+
+## 11. Taxes as instances — Phase 2 brief §4.3
+
+Most of this is asserted in `src/components/game/treasuryInstances.test.tsx`.
+These are the parts worth seeing with your own eyes, because the point of the
+change is what the screen does.
+
+**11.1 — Treasury opens with three taxes and says so**
+The Taxation panel should be headed by "3 taxes in force" and show sliders for
+the Impost of 1789, the excise on distilled spirits and the direct tax on land.
+The last two sit at zero: there was no federal excise until 1791 and no federal
+direct tax until 1798.
+
+**11.2 — A tax gains a name and a date when it is actually enacted**
+Play to March 1791 and take the whiskey excise. The excise slider's label should
+change from "Excise on distilled spirits" to "Whiskey Excise of 1791", and its
+statutory exemption for small private stills should appear beneath it.
+*Problem if:* the label does not change — that would mean the event moved a rate
+rather than enacting a statute.
+
+**11.3 — Repealing a tax removes its line**
+Reach the Whiskey Rebellion in 1794 and choose to repeal the excise. The slider
+should **disappear** and the header drop to "2 taxes in force".
+*Problem if:* the slider stays at zero. A repealed statute is not a tax at nought.
+
+**11.4 — Every dollar names its source**
+Scroll to "Where the revenue comes from". There should be one row per tax, each
+naming the tax and its base, with columns for what was assessed, what was not
+remitted, what was uncollected, and what was received. The Received column plus
+the fees row must **add up to the Total receipts row.**
+*Problem if:* it does not reconcile. A test asserts this, so tell me.
+
+**11.5 — The two kinds of loss are distinguishable**
+Raise the excise hard and let it run a year. "Not remitted" should grow for the
+excise as frontier compliance collapses, while "Uncollected" stays put — the
+first is consent, the second is administrative reach, and they should not move
+together.
+
+**11.6 — Historical context travels with the tax**
+Expand "Historical context" under any tax. It should give the statute, its date
+and its citation. Under the impost that is the Tariff Act of 4 July 1789,
+1 Stat. 24.

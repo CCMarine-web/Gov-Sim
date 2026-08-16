@@ -29,27 +29,46 @@ import { policyLegitimacyCost } from '@/sim/policy';
 import {
   PROJECTION_DAYS,
   comparePolicies,
+  currentPolicy,
   policyDiffers,
   projectionBasisKey,
   type PolicyProjection,
   type ProposedPolicy,
 } from '@/sim/projection';
-import type { GameState } from '@/sim/types';
+import { TAX_BASES } from '@/sim/taxBases';
+import { programsInForce, taxesInForce } from '@/sim/taxes';
+import type { GameState, SpendingCategory, TaxInstance } from '@/sim/types';
 import { enactBudget } from '@/runtime/gameLoop';
 import { complianceWord, formatCurrency, formatRate } from '@/lib/format';
 
 /** Forward-simulating a year on every pixel of drag would be wasteful. */
 const DEBOUNCE_MS = 180;
 
-function policyOf(state: GameState): ProposedPolicy {
-  return {
-    taxRates: { ...state.policies.taxRates },
-    spending: { ...state.policies.spending },
-  };
-}
+/**
+ * Slider ceilings, by the receipt bucket a tax rolls into.
+ *
+ * Per bucket rather than per tax, so a bill that creates a new excise gets a
+ * sensible ceiling without anyone editing this component. The ceilings are
+ * presentation — how far the control travels — not simulation limits: the engine
+ * will compute any rate up to 100%, and the tariff curve turning over at 25% is
+ * a fact of the model rather than a bound imposed here. (UI.md §5.4)
+ */
+const RATE_CEILING: Record<'customs' | 'excise' | 'land' | 'other', number> = {
+  customs: 0.4,
+  excise: 0.3,
+  land: 0.1,
+  other: 0.2,
+};
+
+/** Spending slider ceilings, by category. Same reasoning as RATE_CEILING. */
+const PROGRAM_CEILING: Record<SpendingCategory, number> = {
+  military: 3_000_000,
+  civil: 2_000_000,
+  infrastructure: 2_000_000,
+};
 
 export function TreasuryPanel({ state }: { state: GameState }) {
-  const [draft, setDraft] = useState<ProposedPolicy>(() => policyOf(state));
+  const [draft, setDraft] = useState<ProposedPolicy>(() => currentPolicy(state));
 
   /**
    * The projection is stored WITH the inputs it was computed from.
@@ -127,12 +146,12 @@ export function TreasuryPanel({ state }: { state: GameState }) {
     [state, draft],
   );
 
-  function setTax(key: keyof ProposedPolicy['taxRates'], value: number) {
-    setDraft((d) => ({ ...d, taxRates: { ...d.taxRates, [key]: value } }));
+  function setRate(taxId: string, value: number) {
+    setDraft((d) => ({ ...d, rates: { ...d.rates, [taxId]: value } }));
   }
 
-  function setSpend(key: keyof ProposedPolicy['spending'], value: number) {
-    setDraft((d) => ({ ...d, spending: { ...d.spending, [key]: value } }));
+  function setAmount(programId: string, value: number) {
+    setDraft((d) => ({ ...d, amounts: { ...d.amounts, [programId]: value } }));
   }
 
   function enact() {
@@ -140,55 +159,58 @@ export function TreasuryPanel({ state }: { state: GameState }) {
     enactBudget(draft);
   }
 
+  /*
+    TREASURY RENDERS WHATEVER EXISTS.
+
+    These two lists come from state, not from this file. Three hard-coded tax
+    rows and three hard-coded spending rows are what brief §4.3 replaced: when a
+    bill creates a tax, its line appears here with no component edit, and when a
+    tax is repealed the line goes. The slider ceilings and the notes come from
+    the tax's own BASE, so a new base brings its own presentation with it.
+  */
+  const taxes = taxesInForce(state.policies, state.day);
+  const programs = programsInForce(state.policies, state.day);
+
+  /** Net revenue this tax is projected to raise, from the attribution lines. */
+  const projectedFor = (taxId: string): number | undefined =>
+    projection?.proposed.revenueByTax[taxId];
+
   return (
     <div className="space-y-3">
       <div className="grid gap-3 lg:grid-cols-2">
         {/* --- Taxation ----------------------------------------------- */}
         <section className="rounded-card border border-ink-400 bg-ink-700 p-3">
-          <h3 className="text-label uppercase tracking-wider text-content-muted">
-            Taxation
-          </h3>
+          <div className="flex items-baseline justify-between">
+            <h3 className="text-label uppercase tracking-wider text-content-muted">
+              Taxation
+            </h3>
+            <span className="text-small text-content-muted">
+              <span className="tabular">{taxes.length}</span>{' '}
+              {taxes.length === 1 ? 'tax' : 'taxes'} in force
+            </span>
+          </div>
 
           <div className="mt-3 space-y-4">
-            <RateSlider
-              label="Tariff (average ad valorem)"
-              value={draft.taxRates.tariffAvg}
-              committed={state.policies.taxRates.tariffAvg}
-              max={0.4}
-              onChange={(v) => setTax('tariffAvg', v)}
-              markAt={TARIFF_REVENUE_PEAK}
-              markLabel="revenue peak"
-              revenue={projection?.proposed.receipts.customs}
-              note={
-                draft.taxRates.tariffAvg > TARIFF_REVENUE_PEAK
-                  ? 'Above the peak: suppressed trade now costs more than the rate gains.'
-                  : undefined
-              }
-            />
+            {taxes.length === 0 && (
+              <p className="text-small text-content-muted">
+                No taxes are levied. The Treasury has no revenue of its own.
+              </p>
+            )}
 
-            <RateSlider
-              label="Excise (distilled spirits)"
-              value={draft.taxRates.excise}
-              committed={state.policies.taxRates.excise}
-              max={0.3}
-              onChange={(v) => setTax('excise', v)}
-              revenue={projection?.proposed.receipts.excise}
-              note={frontierNote(state, projection?.proposed)}
-            />
-
-            <RateSlider
-              label="Land tax"
-              value={draft.taxRates.landTax}
-              committed={state.policies.taxRates.landTax}
-              max={0.1}
-              onChange={(v) => setTax('landTax', v)}
-              revenue={projection?.proposed.receipts.land}
-              note={
-                draft.taxRates.landTax > 0
-                  ? 'A direct tax is resented in every region at once, not just one.'
-                  : undefined
-              }
-            />
+            {taxes.map((tax) => (
+              <TaxSlider
+                key={tax.id}
+                tax={tax}
+                value={draft.rates[tax.id] ?? tax.rate}
+                onChange={(v) => setRate(tax.id, v)}
+                revenue={projectedFor(tax.id)}
+                extraNote={
+                  tax.base === 'spirits'
+                    ? frontierNote(state, projection?.proposed)
+                    : undefined
+                }
+              />
+            ))}
           </div>
         </section>
 
@@ -211,31 +233,22 @@ export function TreasuryPanel({ state }: { state: GameState }) {
               </p>
             </div>
 
-            <MoneySlider
-              label="Military"
-              value={draft.spending.military}
-              committed={state.policies.spending.military}
-              max={3_000_000}
-              onChange={(v) => setSpend('military', v)}
-            />
-            <MoneySlider
-              label="Civil administration"
-              value={draft.spending.civil}
-              committed={state.policies.spending.civil}
-              max={2_000_000}
-              onChange={(v) => setSpend('civil', v)}
-            />
-            <MoneySlider
-              label="Infrastructure"
-              value={draft.spending.infrastructure}
-              committed={state.policies.spending.infrastructure}
-              max={2_000_000}
-              onChange={(v) => setSpend('infrastructure', v)}
-              note="Compounds slowly and with diminishing returns."
-            />
+            {programs.map((program) => (
+              <MoneySlider
+                key={program.id}
+                label={program.name}
+                value={draft.amounts[program.id] ?? program.annualAmount}
+                committed={program.annualAmount}
+                max={PROGRAM_CEILING[program.category]}
+                onChange={(v) => setAmount(program.id, v)}
+              />
+            ))}
           </div>
         </section>
       </div>
+
+      {/* --- Where the money comes from -------------------------------- */}
+      <RevenueAttribution state={state} />
 
       {/* --- Projection ----------------------------------------------- */}
       <section className="rounded-card border border-ink-400 bg-ink-700 p-3">
@@ -330,7 +343,7 @@ export function TreasuryPanel({ state }: { state: GameState }) {
           </button>
           <button
             type="button"
-            onClick={() => setDraft(policyOf(state))}
+            onClick={() => setDraft(currentPolicy(state))}
             disabled={!dirty}
             className={`rounded-card border px-3 py-2 text-body ${
               dirty
@@ -347,6 +360,223 @@ export function TreasuryPanel({ state }: { state: GameState }) {
           )}
         </div>
       </section>
+    </div>
+  );
+}
+
+/**
+ * REVENUE ATTRIBUTION
+ *
+ * Brief §4.3: every dollar is attributable to the law that raised it. This is
+ * the screen that makes that true — one row per tax in force, showing what it
+ * assessed, what could not be collected, what was not remitted, and what
+ * actually arrived, summing visibly to the headline receipts figure.
+ *
+ * The same honesty contract as the modifier popover, applied to money: if the
+ * arithmetic on screen did not reconcile to the total, this panel would be
+ * lying. (docs/DECISIONS.md D-019)
+ */
+function RevenueAttribution({ state }: { state: GameState }) {
+  const lines = state.treasury.receiptLines;
+  const receipts = state.treasury.annualisedReceipts;
+  const other = receipts.other;
+  const total = receipts.customs + receipts.excise + receipts.land + other;
+
+  return (
+    <section className="rounded-card border border-ink-400 bg-ink-700 p-3">
+      <div className="flex items-baseline justify-between">
+        <h3 className="text-label uppercase tracking-wider text-content-muted">
+          Where the revenue comes from
+        </h3>
+        <span className="text-small text-content-muted">annual run rate</span>
+      </div>
+
+      {lines.length === 0 ? (
+        <p className="mt-2 text-small text-content-muted">
+          No revenue has been assessed yet. The first assessment falls on the
+          first of the month.
+        </p>
+      ) : (
+        <div className="mt-2 overflow-x-auto">
+          <table className="w-full min-w-[42rem] border-collapse text-small">
+            <thead>
+              <tr className="border-b border-ink-400 text-left">
+                <th className="py-1 pr-3 font-normal text-content-secondary">Tax</th>
+                <th className="py-1 pr-3 text-right font-normal text-content-secondary">
+                  Rate
+                </th>
+                <th className="py-1 pr-3 text-right font-normal text-content-secondary">
+                  Assessed
+                </th>
+                <th className="py-1 pr-3 text-right font-normal text-content-secondary">
+                  Not remitted
+                </th>
+                <th className="py-1 pr-3 text-right font-normal text-content-secondary">
+                  Uncollected
+                </th>
+                <th className="py-1 text-right font-normal text-content-primary">
+                  Received
+                </th>
+              </tr>
+            </thead>
+            <tbody>
+              {lines.map((line) => (
+                <tr key={line.taxId} className="border-b border-ink-400/40">
+                  <td className="py-1 pr-3 text-content-primary">
+                    {line.name}
+                    <span className="ml-1.5 text-content-muted">
+                      · {TAX_BASES[line.base].label.toLowerCase()}
+                    </span>
+                    {/* Which law produced this money. The whole point. */}
+                    {line.createdByBillId && (
+                      <span className="ml-1.5 text-content-muted">
+                        · by {line.createdByBillId}
+                      </span>
+                    )}
+                  </td>
+                  <td className="tabular py-1 pr-3 text-right text-content-secondary">
+                    {formatRate(line.rate)}
+                  </td>
+                  <td className="tabular py-1 pr-3 text-right text-content-secondary">
+                    {formatCurrency(line.gross)}
+                  </td>
+                  <td className="tabular py-1 pr-3 text-right text-oxblood-300">
+                    {line.lostToNonCompliance > 0
+                      ? `−${formatCurrency(line.lostToNonCompliance)}`
+                      : '—'}
+                  </td>
+                  <td className="tabular py-1 pr-3 text-right text-oxblood-300">
+                    {line.lostToCollection > 0
+                      ? `−${formatCurrency(line.lostToCollection)}`
+                      : '—'}
+                  </td>
+                  <td className="tabular py-1 text-right text-content-primary">
+                    {formatCurrency(line.net)}
+                  </td>
+                </tr>
+              ))}
+
+              {/* Receipts that belong to no tax: the post office, patents, land
+                  sales. Shown rather than folded into a total, so the column
+                  still adds up on screen. */}
+              <tr className="border-b border-ink-400/40">
+                <td className="py-1 pr-3 text-content-secondary">
+                  Fees, posts and land sales
+                  <span className="ml-1.5 text-content-muted">· not a tax</span>
+                </td>
+                <td className="py-1 pr-3" />
+                <td className="py-1 pr-3" />
+                <td className="py-1 pr-3" />
+                <td className="py-1 pr-3" />
+                <td className="tabular py-1 text-right text-content-secondary">
+                  {formatCurrency(other)}
+                </td>
+              </tr>
+
+              <tr>
+                <td className="py-1 pr-3 text-content-primary">Total receipts</td>
+                <td className="py-1 pr-3" />
+                <td className="py-1 pr-3" />
+                <td className="py-1 pr-3" />
+                <td className="py-1 pr-3" />
+                <td className="tabular py-1 text-right text-content-primary">
+                  {formatCurrency(total)}
+                </td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      )}
+
+      <p className="mt-2 max-w-prose text-small text-content-muted">
+        <strong className="font-normal text-content-secondary">Not remitted</strong> is
+        revenue a region assessed but did not pay — a question of consent.{' '}
+        <strong className="font-normal text-content-secondary">Uncollected</strong> is
+        revenue the administration could not reach — a question of capacity. They
+        have different causes and different remedies, so they are shown apart.
+      </p>
+    </section>
+  );
+}
+
+/**
+ * One tax, with its rate, its projected yield, and its own history.
+ *
+ * Everything presentational comes from the tax and its base rather than from a
+ * hard-coded row: the ceiling, the revenue-peak mark, the historicity label and
+ * the note. That is what lets a bill add a tax without anyone editing this file.
+ */
+function TaxSlider({
+  tax,
+  value,
+  onChange,
+  revenue,
+  extraNote,
+}: {
+  tax: TaxInstance;
+  value: number;
+  onChange: (v: number) => void;
+  revenue?: number;
+  extraNote?: string;
+}) {
+  const definition = TAX_BASES[tax.base];
+  const trade = definition.assessment === 'trade';
+
+  return (
+    <div>
+      <RateSlider
+        label={tax.name}
+        value={value}
+        committed={tax.rate}
+        max={RATE_CEILING[definition.bucket]}
+        onChange={onChange}
+        revenue={revenue}
+        /* The revenue peak only means anything for a tax that suppresses the
+           thing it taxes. A land tax has no peak: land does not go away. */
+        markAt={trade && definition.suppressesItsOwnBase ? TARIFF_REVENUE_PEAK : undefined}
+        markLabel="revenue peak"
+        note={
+          value > TARIFF_REVENUE_PEAK && trade && definition.suppressesItsOwnBase
+            ? 'Above the peak: suppressed trade now costs more than the rate gains.'
+            : extraNote
+        }
+      />
+
+      <div className="mt-1 flex flex-wrap items-baseline gap-x-3 text-small text-content-muted">
+        <span>{definition.description}</span>
+        {tax.collectionEfficiency < 1 && (
+          <span>
+            Collectable:{' '}
+            <span className="tabular">{formatRate(tax.collectionEfficiency, 0)}</span>
+          </span>
+        )}
+      </div>
+
+      {tax.exemptions.length > 0 && (
+        <ul className="mt-0.5">
+          {tax.exemptions.map((exemption) => (
+            <li key={exemption} className="text-small text-content-muted">
+              Exempt: {exemption}
+            </li>
+          ))}
+        </ul>
+      )}
+
+      <details className="mt-1">
+        <summary className="cursor-pointer text-small text-brass-300">
+          Historical context
+        </summary>
+        <p className="mt-1 max-w-prose font-serif text-body-serif text-content-secondary">
+          {definition.historicalNote}
+        </p>
+        <ul className="mt-1">
+          {definition.sources.map((source) => (
+            <li key={source} className="text-small text-content-muted">
+              {source}
+            </li>
+          ))}
+        </ul>
+      </details>
     </div>
   );
 }

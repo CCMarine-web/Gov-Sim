@@ -430,3 +430,117 @@ fast must not mean running past a decision.
 50 days/second) instead of genuinely uncapped. It would have been simpler to
 reason about, but the brief was specific and the reasoning is sound: a finite
 top speed makes the late game slower on a fast machine for no benefit.
+
+---
+
+## D-017 — Uncapped speed runs past the end of the content, and that is logged not fixed
+
+**Context.** At the old top speed, reaching 1800-12-31 took fourteen minutes of
+play. Uncapped, it takes seconds — and nothing stops the clock there.
+
+**Decided.** Log it (`BLOCKERS.md` B-005) with a recommendation, and verify that
+running past the horizon is harmless, rather than building a stop now.
+
+**Why.** Two defensible fixes exist and choosing between them is a content
+decision, not a clock one: stop at the content horizon, or extend the content.
+Queue items 5 through 12 add a great deal of content and the brief takes the game
+to 1860, so the horizon is about to move. Building a stop against a boundary that
+is about to change would mean building it twice.
+
+**What was verified rather than assumed.** Four tests run ten further years, to
+1810, and assert the calendar stays correct, the run stays deterministic, no
+value becomes NaN or non-finite, and the state still round-trips through JSON so
+a save taken there loads. It is a design gap, not a defect — and if any of those
+four ever fails, that is the moment it becomes one.
+
+---
+
+## D-018 — Taxes and spending become instances, and the change moves no number
+
+**Context.** Brief §4.3, and its own assessment: "Getting this data model right
+is the single most important structural change in this brief — do it before
+building any UI on top of it." Phase 1 had `taxRates: { tariffAvg, excise,
+landTax }` and `spending: { military, civil, infrastructure }`. A bill cannot
+create a tax when the only taxes the engine can compute are three fields with
+three bespoke formulas.
+
+**Decided.** `PolicyState.taxes: TaxInstance[]` and
+`PolicyState.programs: SpendingProgram[]`, with a tax-base registry in
+`src/sim/taxBases.ts` saying what each base is worth and how it behaves.
+`SCHEMA_VERSION` goes to 2 with a registered migration and a committed fixture.
+
+**The constraint that shaped everything: it had to move no calibrated number.**
+Every solved constant in `ECONOMY.md` §9.1 — `AG_PRODUCTIVITY`,
+`MAN_PRODUCTIVITY`, `TRADE_SERVICES_MULTIPLIER`, `START_TRADE_CAPACITY` — is
+anchored to the day-0 equilibrium composing to the verified 1790 GDP of $193M.
+A structural change that shifted revenue by even a per cent would have
+invalidated the whole calibration and the History comparison with it.
+
+So the general per-instance formula is arithmetically identical to the three it
+replaced for the three founding taxes, and `src/sim/taxes.test.ts` asserts that
+directly against `computeCustomsRevenue`, `computeExciseRevenue` and
+`computeLandRevenue` rather than trusting it. The three old formulas were kept
+rather than deleted, precisely so that assertion is possible.
+
+**Decisions inside the decision:**
+
+- **Old fields removed, not kept alongside.** Keeping `taxRates` as a derived
+  mirror would be one fact in two places, and the stale copy would be the one a
+  future reader trusted.
+- **A repealed tax is not deleted.** `repealedDay` is set and the instance stays,
+  so a run keeps the record of what was levied and when. Every query asks about
+  taxes *in force on a day* rather than about the array's contents.
+- **Several taxes on one base sum.** Two duties on imports are, to the merchant
+  and to the trade-suppression curve alike, one duty at the sum of their rates.
+- **Founding taxes collect at efficiency 1.0.** Their assessed bases were solved
+  against observed revenue, so collection losses are already inside those
+  figures; a second factor would double-count. Later bases carry an efficiency
+  relative to that baseline, which is stated in `ECONOMY.md` §7.8b rather than
+  left as an unexplained 1.
+- **`enactTax` is a separate effect from `setTaxRate`.** Creating a statute and
+  changing a rate are different political acts and should read differently in
+  the chronicle. The 1791 whiskey event now *enacts* the excise, with its real
+  name and its statutory exemption; the 1794 rebellion's concession *repeals* it
+  rather than setting it to zero, so the Treasury line goes.
+
+**Alternative rejected.** Keeping the three fields and adding an
+`extraTaxes: TaxInstance[]` array beside them. Less work, and it would have
+produced two code paths for the same concept — which is the exact failure mode
+D-002 already caught once on this project.
+
+---
+
+## D-019 — Revenue attribution is a ledger of lines, not entries in the modifier ledger
+
+**Context.** Brief §4.3: "the modifier ledger attributes each dollar to its
+originating law by name."
+
+**Decided.** Revenue is **not** routed through `Modifier[]`. It gets
+`TreasuryState.receiptLines: RevenueLine[]` and `outlayLines: OutlayLine[]`
+instead — one line per tax in force, naming the tax, the bill that created it,
+the assessed base, what was lost, and what arrived.
+
+**Why not the modifier ledger.** A `Modifier` is an additive or percentage
+adjustment to a stat, resolved as `base → flat → percentage → clamp`
+(DESIGN.md Rule 5). Revenue is a sum over instances with no base and no
+percentage stage. Forcing it through would mean lying about what a modifier is,
+and it would fill `activeModifiers` with a dozen entries per month that the
+ledger-hygiene rules would then have to special-case.
+
+What the brief is actually asking for is the *guarantee*, not the data
+structure: every displayed number accountable to a named source, summing
+visibly to its total. That guarantee is honoured exactly, in the structure that
+fits — and a test asserts the lines reconcile both to the headline receipts and,
+line by line, gross minus losses to net.
+
+**The one addition worth arguing for.** The losses are reported as two figures,
+not one:
+
+- **not remitted** — a region assessed but did not pay. A question of *consent*.
+- **uncollected** — the administration could not reach it. A question of
+  *capacity*.
+
+They have different causes and different remedies, and a government whose
+problem is administrative capacity needs a different answer from one whose
+problem is that a region has stopped obeying it. Collapsing them into a single
+"losses" column would show a number the player could not act on.

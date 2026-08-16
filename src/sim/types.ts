@@ -21,6 +21,7 @@
  */
 
 import type { RngState } from './rng';
+import type { TaxBase } from './taxBases';
 
 /**
  * Current save schema version.
@@ -30,7 +31,7 @@ import type { RngState } from './rng';
  * migrated forward or refused cleanly — never crashed, never silently loaded
  * into a broken state. (DESIGN.md Rule 8)
  */
-export const SCHEMA_VERSION = 1;
+export const SCHEMA_VERSION = 2;
 
 // ============================================================================
 // GOVERNMENT AND REGIONS
@@ -257,36 +258,170 @@ export interface TreasuryState {
   /** Accrued so far this calendar year. */
   receiptsYTD: ReceiptBreakdown;
   outlaysYTD: OutlayBreakdown;
-  /** Annualised run rates from the most recent monthly recompute. */
+  /**
+   * Annualised run rates from the most recent monthly recompute.
+   *
+   * A ROLLUP of `receiptLines` and `outlayLines`, not a parallel calculation.
+   * The four buckets are a display and accounting convention that predates tax
+   * instances, and deriving them from the lines is what stops the headline
+   * figures and the detailed view from disagreeing.
+   */
   annualisedReceipts: ReceiptBreakdown;
   annualisedOutlays: OutlayBreakdown;
+  /**
+   * Per-instance attribution for the current run rates. One line per tax in
+   * force, one per funded programme, plus debt service.
+   *
+   * This is what makes "which law is producing this money" answerable, and it is
+   * why Treasury can render whatever taxes happen to exist rather than three
+   * hard-coded rows. (brief §4.3, docs/DECISIONS.md D-019)
+   */
+  receiptLines: RevenueLine[];
+  outlayLines: OutlayLine[];
   /** Totals for the previous completed calendar year. */
   lastYearReceipts: number;
   lastYearOutlays: number;
 }
 
-export interface TaxRates {
-  /** Average ad valorem tariff, 0–1. */
-  tariffAvg: number;
-  /** Excise on distilled spirits, 0–1. */
-  excise: number;
-  /** Direct tax on land, 0–1. */
-  landTax: number;
+// ----------------------------------------------------------------------------
+// TAXES AND SPENDING AS INSTANCES (Phase 2 brief §4.3)
+//
+// Phase 1 had three tax rates and three spending lines, as fixed fields. That
+// made it impossible for a law to create a tax: passing a bill could only move
+// a number that already existed.
+//
+// Now a tax is an INSTANCE in state. Treasury renders whatever is in the array,
+// revenue is computed per instance from its own base and efficiency, and every
+// dollar is attributable to the law that created it. This is the structural
+// change the rest of Phase 2 rests on. (docs/DECISIONS.md D-018)
+// ----------------------------------------------------------------------------
+
+/**
+ * One tax, as it exists in the world.
+ *
+ * `id` is stable for the life of the tax and is what effects, bills and the
+ * interface refer to. A repealed tax is NOT deleted: `repealedDay` is set, so
+ * the record of what was levied and when survives, which is what lets the
+ * chronicle and the History view stay honest about a run's fiscal past.
+ */
+export interface TaxInstance {
+  id: string;
+  /** As a player and the chronicle refer to it: "Whiskey Excise of 1791". */
+  name: string;
+  /** The bill or event that created it. null for the taxes present at founding. */
+  createdByBillId: string | null;
+  base: TaxBase;
+  /** Ad valorem rate, 0–1. */
+  rate: number;
+  /**
+   * What is exempt from it, in plain English, for display.
+   *
+   * Declarative text rather than a mechanical carve-out: exemptions in this
+   * period were written into the statute in prose ("spirits distilled from
+   * domestic materials in a private still"), and modelling each as a formula
+   * would be a large amount of machinery for very little play value. They are
+   * shown so the player knows what the law they passed actually says.
+   */
+  exemptions: string[];
+  /**
+   * 0–1. How much of the assessed tax the administration can collect, before
+   * regional compliance is applied. Enforcement is a real problem in 1790:
+   * a duty taken at a few dozen customs houses is not the same job as one
+   * assessed on every still in the backcountry. (ECONOMY.md §7.8)
+   */
+  collectionEfficiency: number;
+  enactedDay: number;
+  /** null = still in force. */
+  repealedDay: number | null;
 }
 
-export interface SpendingAllocation {
-  military: number;
-  civil: number;
-  infrastructure: number;
+export type SpendingCategory = 'military' | 'civil' | 'infrastructure';
+
+/**
+ * One spending programme, as it exists in the world.
+ *
+ * Same shape and same reasoning as `TaxInstance`: a bill that funds a naval
+ * yard should produce a line in Treasury called the naval yard, not increase an
+ * abstract "military" number.
+ */
+export interface SpendingProgram {
+  id: string;
+  name: string;
+  createdByBillId: string | null;
+  category: SpendingCategory;
+  /** Annual outlay in dollars. */
+  annualAmount: number;
+  enactedDay: number;
+  repealedDay: number | null;
+}
+
+/**
+ * What one tax actually produced, and why.
+ *
+ * THE ATTRIBUTION REQUIREMENT. Brief §4.3: "the modifier ledger attributes each
+ * dollar to its originating law by name." Revenue is not routed through
+ * `Modifier[]` — a modifier is an additive or percentage adjustment to a stat,
+ * and revenue is a sum over instances, so forcing it through would mean lying
+ * about what a modifier is. What it gets instead is the same GUARANTEE in the
+ * right structure: a per-instance line that names its tax and the law that
+ * created it, shows what was lost to collection and to non-compliance, and sums
+ * visibly to the headline total. (docs/DECISIONS.md D-019)
+ */
+export interface RevenueLine {
+  taxId: string;
+  name: string;
+  createdByBillId: string | null;
+  base: TaxBase;
+  bucket: 'customs' | 'excise' | 'land' | 'other';
+  rate: number;
+  /** Assessed value the rate was applied to. */
+  assessedBase: number;
+  /** rate × assessedBase, before any loss. */
+  gross: number;
+  /** Lost because the tax cannot be fully collected. Non-negative. */
+  lostToCollection: number;
+  /** Lost because regions did not remit. Non-negative. */
+  lostToNonCompliance: number;
+  /** What actually reaches the Treasury. gross − the two losses. */
+  net: number;
+}
+
+/** The same attribution for the other side of the ledger. */
+export interface OutlayLine {
+  programId: string;
+  name: string;
+  createdByBillId: string | null;
+  category: SpendingCategory | 'debtService';
+  annualAmount: number;
 }
 
 export interface PolicyState {
-  taxRates: TaxRates;
-  spending: SpendingAllocation;
+  /** Every tax ever created this run, including repealed ones. */
+  taxes: TaxInstance[];
+  /** Every spending programme ever created this run, including repealed ones. */
+  programs: SpendingProgram[];
   enactedLawIds: string[];
   /** Cumulative infrastructure spend; drives diminishing returns. */
   cumulativeInfrastructure: number;
 }
+
+/**
+ * The ids of the three taxes and three programmes that exist at the founding.
+ *
+ * Stable and well-known, because content, migrations and tests all need to name
+ * them. A new tax created by a bill gets an id derived from the bill.
+ */
+export const FOUNDING_TAX_IDS = {
+  impost: 'tax_impost',
+  spirits: 'tax_spirits',
+  land: 'tax_land',
+} as const;
+
+export const FOUNDING_PROGRAM_IDS = {
+  military: 'prog_military',
+  civil: 'prog_civil',
+  infrastructure: 'prog_infrastructure',
+} as const;
 
 // ============================================================================
 // EVENTS AND LOGGING
@@ -416,7 +551,12 @@ export type TickEffectKind =
   | 'thresholdCrossed'
   | 'economyRecomputed'
   | 'yearRolled'
-  | 'borrowed';
+  | 'borrowed'
+  | 'taxEnacted'
+  | 'taxChanged'
+  | 'taxRepealed'
+  | 'programFunded'
+  | 'programDefunded';
 
 export interface TickEffect {
   kind: TickEffectKind;
@@ -487,7 +627,36 @@ export type EffectSpec =
   | { kind: 'scheduleEvent'; eventId: string; inDays: number }
   | { kind: 'unlockLaw'; lawId: string }
   | { kind: 'repealLaw'; lawId: string }
-  | { kind: 'setTaxRate'; tax: keyof TaxRates; value: number }
+  /** Change the rate of a tax that already exists, by id. */
+  | { kind: 'setTaxRate'; taxId: string; value: number }
+  /**
+   * Bring a new tax into existence. This is the effect that makes brief §4.3
+   * real: content declares a tax and the engine creates the instance, which
+   * then appears in Treasury as its own line with its own revenue.
+   *
+   * Applying it twice for the same id is idempotent — the second application
+   * updates the existing instance rather than creating a duplicate — so a
+   * re-run event cannot silently double a country's taxes.
+   */
+  | {
+      kind: 'enactTax';
+      taxId: string;
+      name: string;
+      base: TaxBase;
+      rate: number;
+      exemptions: string[];
+      /** Omitted means the base's reference efficiency. */
+      collectionEfficiency?: number;
+    }
+  | { kind: 'repealTax'; taxId: string }
+  | {
+      kind: 'fundProgram';
+      programId: string;
+      name: string;
+      category: SpendingCategory;
+      annualAmount: number;
+    }
+  | { kind: 'defundProgram'; programId: string }
   | { kind: 'log'; tier: LogTier; category: LogCategory; title: string; body: string };
 
 // ============================================================================

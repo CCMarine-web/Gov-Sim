@@ -20,7 +20,7 @@
  * engine change, which is the test of DESIGN.md Rule 4.
  */
 
-import type { GameEvent } from '@/sim/types';
+import { FOUNDING_TAX_IDS, type GameEvent } from '@/sim/types';
 
 export const EVENTS_1790S: GameEvent[] = [
   // ==========================================================================
@@ -186,7 +186,23 @@ export const EVENTS_1790S: GameEvent[] = [
           'Unrest in the western counties becomes likely',
         ],
         effects: [
-          { kind: 'setTaxRate', tax: 'excise', value: 0.25 },
+          /*
+            `enactTax` rather than `setTaxRate`: this is the statute of 3 March
+            1791 coming into existence, so the instance takes its real name, its
+            real exemptions, and this event as the law that created it. Treasury
+            then shows a line called the whiskey excise, and every dollar it
+            raises is attributable to this decision. (brief §4.3)
+          */
+          {
+            kind: 'enactTax',
+            taxId: FOUNDING_TAX_IDS.spirits,
+            name: 'Whiskey Excise of 1791',
+            base: 'spirits',
+            rate: 0.25,
+            exemptions: [
+              'Spirits distilled from domestic materials in small private stills paid a lower flat rate',
+            ],
+          },
           { kind: 'regionSentiment', regionId: 'frontier', delta: -18 },
           { kind: 'setFlag', key: 'excise_enacted', value: true },
           { kind: 'scheduleEvent', eventId: 'whiskey_rebellion_1794', inDays: 1230 },
@@ -202,7 +218,16 @@ export const EVENTS_1790S: GameEvent[] = [
           'Frontier resentment is real but contained',
         ],
         effects: [
-          { kind: 'setTaxRate', tax: 'excise', value: 0.12 },
+          {
+            kind: 'enactTax',
+            taxId: FOUNDING_TAX_IDS.spirits,
+            name: 'Whiskey Excise of 1791 (reduced)',
+            base: 'spirits',
+            rate: 0.12,
+            exemptions: [
+              'Spirits distilled from domestic materials in small private stills paid a lower flat rate',
+            ],
+          },
           { kind: 'regionSentiment', regionId: 'frontier', delta: -8 },
           { kind: 'setFlag', key: 'excise_enacted', value: true },
         ],
@@ -708,7 +733,13 @@ export const EVENTS_1790S: GameEvent[] = [
           'Federal authority is materially weakened',
         ],
         effects: [
-          { kind: 'setTaxRate', tax: 'excise', value: 0 },
+          /*
+            Repealed, not set to zero. The statute is gone, so its Treasury line
+            goes with it — which is the honest rendering of conceding the
+            grievance, and materially different from keeping the tax on the books
+            at nothing.
+          */
+          { kind: 'repealTax', taxId: FOUNDING_TAX_IDS.spirits },
           { kind: 'regionSentiment', regionId: 'frontier', delta: 20 },
           {
             kind: 'modifier',

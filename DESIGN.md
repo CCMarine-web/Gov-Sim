@@ -586,6 +586,17 @@ Acceptance criterion 7 — save, close the browser, resume on another machine �
 
 See Rule 8 (§5). Migrations are pure `vN → vN+1` functions in `/src/sim/migrations/`, tested against stored fixture saves. A fixture save is committed for every schema version ever released, and the migration test runs each one forward to current. This is cheap now and is the only way to avoid breaking saves later.
 
+**Released so far:**
+
+| Version | Change | Migration | Fixture |
+|---|---|---|---|
+| 1 | The Phase 1 schema | — | `fixtures/v1-republic-day900.json` |
+| 2 | Three tax rates and three spending lines become `TaxInstance[]` and `SpendingProgram[]` (§13, brief §4.3) | `v1ToV2.ts` | — (current) |
+
+A fixture is **generated once and never regenerated** — `scripts/make-v1-fixture.mts` produced the v1 one. A fixture rebuilt from current code stops recording the old format and becomes a restatement of the new one, which would make its migration test pass by construction and prove nothing.
+
+Every migration must be **behaviour-preserving unless the change is deliberately a balance change**, and must say which it is. `v1ToV2` is behaviour-preserving: the three founding instances reproduce the three old formulas arithmetically, and the test asserts a migrated save's revenue is unchanged.
+
 ---
 
 ## 12. Historical data integrity
@@ -644,7 +655,7 @@ A refined version of the initial sketch. Full field-level definitions live in `/
 ```ts
 interface GameState {
   // --- identity & versioning ---
-  schemaVersion: number;         // current: 1
+  schemaVersion: number;         // current: 2 (v1 → v2 migrates; see §11.4)
   gameId: string;
   createdAtISO: string;          // wall-clock, set once; never read by the sim
   contentVersion: string;
@@ -751,12 +762,49 @@ interface TreasuryState {
   receiptsYTD: { customs: number; excise: number; land: number; other: number };
   outlaysYTD: { debtService: number; military: number; civil: number; other: number };
   lastYear: { receipts: number; outlays: number };
+
+  // Phase 2. Per-instance attribution for the current run rates: which tax, at
+  // what rate, on what assessed base, less what was not remitted and what could
+  // not be collected. The four headline buckets above are a ROLLUP of these,
+  // never a parallel calculation, so the detail and the total cannot disagree.
+  //
+  // Revenue is deliberately NOT routed through `Modifier[]`: a modifier is an
+  // adjustment to a stat, and revenue is a sum over instances. What it gets
+  // instead is the same guarantee in the right structure — see
+  // `docs/DECISIONS.md` D-019.
+  receiptLines: RevenueLine[];
+  outlayLines: OutlayLine[];
 }
 
 interface PolicyState {
-  taxRates: { tariffAvg: number; excise: number; landTax: number };
-  spending: { military: number; civil: number; infrastructure: number };
+  // Phase 2: taxes and spending are INSTANCES, not fixed fields. A bill can
+  // create one, and Treasury renders whatever is in the array. See below.
+  taxes: TaxInstance[];
+  programs: SpendingProgram[];
   enactedLawIds: string[];
+  cumulativeInfrastructure: number;
+}
+
+interface TaxInstance {
+  id: string;
+  name: string;                  // "Whiskey Excise of 1791"
+  createdByBillId: string | null; // null for the taxes present at founding
+  base: TaxBase;                 // registry in src/sim/taxBases.ts
+  rate: number;                  // ad valorem, 0–1
+  exemptions: string[];          // display prose, as the statute wrote them
+  collectionEfficiency: number;  // 0–1; enforcement is a real problem in 1790
+  enactedDay: number;
+  repealedDay: number | null;    // repealed, not deleted — the record survives
+}
+
+interface SpendingProgram {
+  id: string;
+  name: string;
+  createdByBillId: string | null;
+  category: 'military' | 'civil' | 'infrastructure';
+  annualAmount: number;
+  enactedDay: number;
+  repealedDay: number | null;
 }
 
 interface EventState {

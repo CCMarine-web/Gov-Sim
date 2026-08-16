@@ -165,9 +165,29 @@ Sources checked and their outcomes:
 
 Not yet researched. Phase 1 has no military system (`DESIGN.md` §3.2), so this metric renders in the unavailable state. To be resolved when the military system arrives in Phase 3.
 
-### 3.3 Price level / deflator
+### 3.3 Price level / deflator — resolved
 
-Not yet sourced. Needed only if we want real (inflation-adjusted) comparisons. Phase 1 compares nominal figures throughout, and **labels them as nominal**, which is honest and sufficient. MeasuringWorth carries the series when we want it.
+Sourced during the Phase 1 autonomous run. See `docs/BLOCKERS.md` B-002 and `docs/DECISIONS.md` D-007: the MeasuringWorth annual consumer price index for 1789–1801 is stored with its citation, and the History view deflates nominal GDP to constant 1790 dollars.
+
+### 3.4 Assessed values for the non-founding tax bases — weakly anchored
+
+*Added in Phase 2, queue item 3.*
+
+The eight base values added in §7.8b have **weaker provenance than the rest of the calibration register**, and this entry exists so that is on the record rather than buried in a comment.
+
+| Constant | Anchor | Strength |
+|---|---|---|
+| `CARRIAGE_VALUE_BASE` | Solved so a 2% rate approaches the ~$150k/yr the 1794 carriage duty actually yielded | Reasonable — anchored to an observed yield |
+| `ENSLAVED_ASSESSMENT_BASE` | Regional split follows the sourced 1790 census distribution; the conversion to an assessed value is a design choice | Split is sourced, level is not |
+| `DWELLING_VALUE_BASE` | Reasoned from the 1798 direct tax's apportioned $2,000,000 target and the settled-wealth distribution | Weak on level, defensible on shape |
+| `STAMPABLE_BASE`, `AUCTION_VALUE_BASE`, `REFINED_GOODS_BASE` | Reasoned from where the taxed activity was concentrated. No yield figure was found for any of the three | **Weakest of the set** |
+| `ASSESSABLE_INCOME_SHARE`, `RETAIL_SALES_SHARE` | Nothing to anchor to — no one measured national income or retail sales in 1790 | Openly a design parameter |
+
+**Why this is acceptable rather than a violation.** These are calibration constants, not benchmark data (`DESIGN.md` §12.2): they are never shown to the player as historical fact, and the historical claims that *are* shown — the statutes, the dates, the court decisions, the reasons a base is locked — are separately sourced in `src/sim/taxBases.ts`. The rule forbids fabricating a historical number and presenting it as history. It does not forbid a documented game parameter.
+
+**What would strengthen them.** Annual federal receipts by source for 1789–1800, which is the same missing source as §3.1 — *Historical Statistics of the United States* series Y 352–357. Clearing B-001 would let five of these eight be solved against observed yields rather than reasoned. Recorded there.
+
+**What is not affected.** The null run: no instance exists against any of these bases at the founding, so none of them contributes a dollar until a bill creates one.
 
 ---
 
@@ -470,14 +490,83 @@ landRevenue = Σ_regions( region.landValueBase × landTaxRate × region.complian
 
 Sentiment penalty applies to **every** region, not one. This makes the 1798 direct tax a genuine last resort — which is what it historically was.
 
+### 7.8b Taxes as instances — the general revenue formula
+
+*Added in Phase 2, queue item 3. Supersedes the three bespoke formulas in §7.5, §7.7 and §7.8 as the way the engine actually computes revenue — those three remain as the named special cases they reduce to, and a test pins them together.*
+
+Phase 1 had three tax rates as fixed fields. A bill cannot create a tax if the only taxes the engine can compute are three fields with three formulas, so a tax is now an **instance** in `GameState.policies.taxes` naming a **base** from the registry in `src/sim/taxBases.ts`.
+
+The general formula, for one tax:
+
+```
+assessedBase   = TRADE      → nation.tradeVolume
+                 REGIONAL   → Σ_regions( base.regionalBase[region] )
+                 OUTPUTSHARE→ Σ_regions( region.output × base.outputShare )
+
+gross          = assessedBase × rate
+afterCompliance= (compliance-weighted assessedBase) × rate
+net            = afterCompliance × tax.collectionEfficiency
+```
+
+with two losses reported separately, because they have different causes and different remedies:
+
+| Loss | Cause | Whose property |
+|---|---|---|
+| `gross − afterCompliance` | a region assessed but did not pay | **the region's** — consent |
+| `afterCompliance − net` | the administration could not reach it | **the tax's** — capacity |
+
+**Trade-assessed taxes carry no compliance term.** The duty is taken at the wharf before the goods move inland, which is precisely why the impost was the one tax the early republic could reliably collect. This is not a simplification — it is the reason the impost supplied the overwhelming majority of federal revenue.
+
+**Several taxes on one base sum.** Two duties on imports are, to the merchant paying them and to the trade-suppression curve alike, one duty at the sum of their rates. `tradeTaxRate()` is what the suppression curve and the manufacturing protection bonus both read.
+
+**Collection efficiency of the three founding taxes is 1.0, deliberately.** Their assessed bases in `src/sim/calibration.ts` were *solved against observed revenue*, so collection losses are already inside those figures; applying a second factor would double-count them. Every other base carries a `referenceEfficiency` relative to that baseline — a duty taken at a few dozen customs houses is not the same job as one assessed on every still in the backcountry.
+
+**This change moved no calibrated number.** With the three founding taxes the general formula is arithmetically identical to the three it replaced, and `src/sim/taxes.test.ts` asserts that against each of `computeCustomsRevenue`, `computeExciseRevenue` and `computeLandRevenue` directly. That mattered: every solved constant in §9.1 is anchored to the day-0 equilibrium, so a structural change that shifted revenue would have invalidated the whole calibration and the History comparison with it.
+
+#### The taxable bases
+
+| Base | Assessment | Bucket | Burden channel | Reference efficiency | Historicity |
+|---|---|---|---|---|---|
+| `imports` | trade | customs | tariff | 1.00 | enacted |
+| `spirits` | regional | excise | excise | 1.00 | enacted |
+| `carriages` | regional | excise | excise | 0.85 | enacted |
+| `refined_goods` | regional | excise | excise | 0.80 | enacted |
+| `auctions` | regional | excise | tariff | 0.90 | enacted |
+| `stamps` | regional | other | tariff | 0.88 | enacted |
+| `land` | regional | land | land | 1.00 | enacted |
+| `dwellings` | regional | land | land | 0.92 | enacted |
+| `enslaved_persons` | regional | land | land | 0.95 | enacted |
+| `income` | outputShare | other | land | 0.45 | **anachronistic — locked** |
+| `sales` | outputShare | other | excise | 0.40 | counterfactual |
+| `exports` | trade | customs | tariff | — | **prohibited — locked** |
+
+Two locks, both with real reasons the interface states verbatim rather than paraphrasing:
+
+- **`exports`** — Article I §9 cl. 5: *"No Tax or Duty shall be laid on Articles exported from any State."* A ratification condition for the staple-exporting states, never amended, still good law.
+- **`income`** — a tax on income is a direct tax and Article I requires direct taxes to be apportioned by population, which income is not. Decisive in *Pollock* (1895); removed only by the Sixteenth Amendment in 1913.
+
+`sales` is *not* locked, and the distinction is the point: a general sales tax is constitutionally available as an excise and was simply never administrable in the 1790s. One is a bar; the other is a choice the player may make and be judged on.
+
+#### Newly added base values [CALIBRATION]
+
+`CARRIAGE_VALUE_BASE`, `DWELLING_VALUE_BASE`, `ENSLAVED_ASSESSMENT_BASE`, `STAMPABLE_BASE`, `AUCTION_VALUE_BASE`, `REFINED_GOODS_BASE`, `ASSESSABLE_INCOME_SHARE`, `RETAIL_SALES_SHARE`.
+
+Each is documented at its definition with what it is anchored to. **None of them affects the null run**: a base produces revenue only when a tax instance exists against it, and at the founding only the impost, the spirits excise and the land tax exist — the latter two at a rate of zero. They are inert until a bill creates an instance.
+
+Their provenance is weaker than the solved constants in §9.1, and that is recorded honestly in §3.4 rather than glossed over.
+
 ### 7.9 Receipts, outlays, and the treasury
 
 ```
-annualReceipts = customsRevenue + exciseRevenue + landRevenue + OTHER_RECEIPTS
-
+annualReceipts = Σ_taxes( net revenue per §7.8b ) + OTHER_RECEIPTS      ← ROLLED UP into
+                                                                          the four buckets
 debtService    = debt × weightedRate                       ← non-discretionary, computed first
-annualOutlays  = debtService + militarySpending + civilSpending + infrastructureSpending
+annualOutlays  = debtService + Σ_programs( annualAmount by category )
 ```
+
+The four headline buckets — `customs`, `excise`, `land`, `other` — are a **rollup** of the per-instance lines, never a parallel calculation. Each base declares the bucket it rolls into, and `rollupReceipts()` is the only thing that produces the headline figures. That is what guarantees the Treasury screen's detailed attribution and its headline total cannot disagree; a test asserts they reconcile.
+
+Spending is likewise `SpendingProgram[]` rather than three fields, summed by category.
 
 **Daily accrual** (this part runs every day, not monthly):
 ```

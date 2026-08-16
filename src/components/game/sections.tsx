@@ -16,6 +16,7 @@ import { RANGES, TAU_MONTHS } from '@/sim/calibration';
 import { describeUnmet, evaluateAll } from '@/sim/conditions';
 import { explainStat, type StatBreakdown } from '@/sim/modifiers';
 import { currentCrises, stateOfTheUnion } from '@/sim/narrative';
+import { taxesInForce } from '@/sim/taxes';
 import { useMemo, useState } from 'react';
 import type { GameState, LogCategory, LogTier, Region } from '@/sim/types';
 import {
@@ -204,10 +205,17 @@ export function Desk({ state }: { state: GameState }) {
         )}
       </Panel>
 
+      {/* One row per tax in force, from state — not three fixed rows. A tax
+          created by a bill appears here with no edit to this file. (brief §4.3) */}
       <Panel title="Taxation">
-        <Row label="Tariff (avg.)" value={formatRate(policies.taxRates.tariffAvg)} />
-        <Row label="Excise" value={formatRate(policies.taxRates.excise)} />
-        <Row label="Land tax" value={formatRate(policies.taxRates.landTax)} />
+        {taxesInForce(policies, day).map((tax) => (
+          <Row key={tax.id} label={tax.name} value={formatRate(tax.rate)} />
+        ))}
+        {taxesInForce(policies, day).length === 0 && (
+          <p className="text-small text-content-muted">
+            No taxes are levied.
+          </p>
+        )}
         <p className="mt-2 text-small text-content-muted">
           Customs revenue peaks at a 25% tariff; beyond that, suppressed trade
           costs more than the rate gains.

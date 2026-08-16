@@ -40,20 +40,28 @@ import {
   borrow,
   complianceTarget,
   computeDebtService,
-  computeExciseRevenue,
-  computeLandRevenue,
+  computeTaxRevenue,
   creditTarget,
   dailyAccrual,
   taxBurden,
+  type RegionFiscalContext,
 } from './economy/fiscal';
 import {
-  computeCustomsRevenue,
   computeGdp,
   computeLaborForce,
   computeRegionOutput,
   computeTradeVolume,
   infrastructureBonus,
 } from './economy/production';
+import { TAX_BASES } from './taxBases';
+import {
+  burdenLevies,
+  programsInForce,
+  rollupReceipts,
+  spendingFor,
+  taxesInForce,
+  tradeTaxRate,
+} from './taxes';
 import {
   annualGrowthRate,
   lagToward,
@@ -70,7 +78,9 @@ import type {
   ContentPack,
   GameEvent,
   GameState,
+  OutlayLine,
   Region,
+  RevenueLine,
   TickEffect,
   TickResult,
 } from './types';
@@ -96,10 +106,20 @@ export function recomputeEconomy(state: GameState): {
   effects: TickEffect[];
 } {
   const effects: TickEffect[] = [];
-  const { taxRates, spending } = state.policies;
   const day = state.day;
 
   const infraBonus = infrastructureBonus(state.policies.cumulativeInfrastructure);
+
+  /*
+    THE TAX RATES ARE NOW DERIVED, NOT STORED.
+    Whatever taxes exist in `policies.taxes` and are in force today determine the
+    rate that suppresses trade and the burden each region feels. With the three
+    founding taxes this is arithmetically identical to reading the three fields
+    it replaced — the structural change deliberately moved no calibrated number.
+    (brief §4.3, docs/DECISIONS.md D-018)
+  */
+  const tradeRate = tradeTaxRate(state.policies, day);
+  const levies = burdenLevies(state.policies, day);
 
   // --- Regions -------------------------------------------------------------
   const regions: Region[] = state.regions.map((region) => {
@@ -110,13 +130,11 @@ export function recomputeEconomy(state: GameState): {
       laborForce,
       stability: state.nation.stability,
       cumulativeInfrastructure: state.policies.cumulativeInfrastructure,
-      tariffRate: taxRates.tariffAvg,
+      tariffRate: tradeRate,
     });
 
     const burden = taxBurden({
-      tariffRate: taxRates.tariffAvg,
-      exciseRate: taxRates.excise,
-      landTaxRate: taxRates.landTax,
+      levies,
       tariffExposure: region.tariffExposure,
       exciseExposure: region.exciseExposure,
       landExposure: region.landExposure,
@@ -205,7 +223,7 @@ export function recomputeEconomy(state: GameState): {
     TAU_MONTHS.tradeCapacity,
   );
 
-  const tradeVolume = computeTradeVolume(tradeCapacity, taxRates.tariffAvg);
+  const tradeVolume = computeTradeVolume(tradeCapacity, tradeRate);
 
   for (const region of regions) {
     const share =
@@ -216,17 +234,47 @@ export function recomputeEconomy(state: GameState): {
   }
 
   // --- Receipts ------------------------------------------------------------
-  const customs = computeCustomsRevenue(tradeVolume, taxRates.tariffAvg);
-  const excise = regions.reduce(
-    (s, r) => s + computeExciseRevenue(r.id, taxRates.excise, r.compliance),
-    0,
-  );
-  const land = regions.reduce(
-    (s, r) => s + computeLandRevenue(r.id, taxRates.landTax, r.compliance),
-    0,
-  );
+  /*
+    ONE LINE PER TAX IN FORCE.
 
-  const annualisedReceipts = { customs, excise, land, other: OTHER_RECEIPTS };
+    Revenue is no longer three bespoke formulas. Each tax is assessed against its
+    own base, at its own rate, with its own collection efficiency, and the line it
+    produces names the law that created it. That is what makes every dollar on the
+    Treasury screen attributable. (brief §4.3, docs/DECISIONS.md D-019)
+
+    The four headline buckets are then a ROLLUP of these lines, never a parallel
+    calculation, so the detail and the headline cannot drift apart.
+  */
+  const fiscalRegions: RegionFiscalContext[] = regions.map((r) => ({
+    id: r.id,
+    compliance: r.compliance,
+    output: r.agriculturalOutput + r.manufacturingOutput,
+  }));
+
+  const receiptLines: RevenueLine[] = taxesInForce(state.policies, day).map((tax) => {
+    const definition = TAX_BASES[tax.base];
+    const revenue = computeTaxRevenue({
+      rate: tax.rate,
+      collectionEfficiency: tax.collectionEfficiency,
+      assessment: definition.assessment,
+      tradeVolume,
+      regionalBase: definition.regionalBase,
+      outputShare: definition.outputShare,
+      regions: fiscalRegions,
+    });
+
+    return {
+      taxId: tax.id,
+      name: tax.name,
+      createdByBillId: tax.createdByBillId,
+      base: tax.base,
+      bucket: definition.bucket,
+      rate: tax.rate,
+      ...revenue,
+    };
+  });
+
+  const annualisedReceipts = rollupReceipts(receiptLines, OTHER_RECEIPTS);
 
   // --- Outlays -------------------------------------------------------------
   // Debt service is non-discretionary and is computed first.
@@ -235,15 +283,37 @@ export function recomputeEconomy(state: GameState): {
     state.treasury.debtWeightedRate,
   );
 
+  const funded = programsInForce(state.policies, day);
+
+  const outlayLines: OutlayLine[] = [
+    {
+      programId: 'debt_service',
+      name: 'Debt service',
+      createdByBillId: null,
+      category: 'debtService',
+      annualAmount: debtService,
+    },
+    ...funded.map((program) => ({
+      programId: program.id,
+      name: program.name,
+      createdByBillId: program.createdByBillId,
+      category: program.category,
+      annualAmount: Math.max(0, program.annualAmount),
+    })),
+  ];
+
   const annualisedOutlays = {
     debtService,
-    military: spending.military,
-    civil: spending.civil,
-    infrastructure: spending.infrastructure,
+    military: spendingFor(state.policies, day, 'military'),
+    civil: spendingFor(state.policies, day, 'civil'),
+    infrastructure: spendingFor(state.policies, day, 'infrastructure'),
   };
 
   const totalOutlays =
-    debtService + spending.military + spending.civil + spending.infrastructure;
+    annualisedOutlays.debtService +
+    annualisedOutlays.military +
+    annualisedOutlays.civil +
+    annualisedOutlays.infrastructure;
 
   // --- GDP -----------------------------------------------------------------
   const gdp = computeGdp({
@@ -391,6 +461,8 @@ export function recomputeEconomy(state: GameState): {
         creditRating,
         annualisedReceipts,
         annualisedOutlays,
+        receiptLines,
+        outlayLines,
       },
       lastEconomyRecomputeDay: day,
       series: {
@@ -401,7 +473,10 @@ export function recomputeEconomy(state: GameState): {
         treasuryBalance: [...state.series.treasuryBalance, state.treasury.balance],
         receipts: [
           ...state.series.receipts,
-          customs + excise + land + OTHER_RECEIPTS,
+          annualisedReceipts.customs +
+            annualisedReceipts.excise +
+            annualisedReceipts.land +
+            annualisedReceipts.other,
         ],
         outlays: [...state.series.outlays, totalOutlays],
         stability: [...state.series.stability, stability],

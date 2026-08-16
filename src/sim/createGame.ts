@@ -27,10 +27,14 @@ import {
 } from './economy/production';
 import { createRng } from './rng';
 import {
+  FOUNDING_PROGRAM_IDS,
+  FOUNDING_TAX_IDS,
   SCHEMA_VERSION,
   type GameState,
   type GovernmentType,
   type Region,
+  type SpendingProgram,
+  type TaxInstance,
 } from './types';
 
 export interface NewGameOptions {
@@ -52,6 +56,106 @@ export interface NewGameOptions {
 export function titleFor(governmentType: GovernmentType): string {
   return governmentType === 'monarchy' ? 'King' : 'President';
 }
+
+/**
+ * The three taxes that exist at the founding.
+ *
+ * Only the impost carries a rate. There was no federal excise until March 1791
+ * and no federal direct tax until 1798, so those two exist at a rate of zero —
+ * present so that Treasury has a line for them and an event can raise the rate,
+ * rather than having to invent the tax at the same moment it sets its rate.
+ *
+ * `collectionEfficiency` is 1.0 for all three, and deliberately so: their
+ * assessed bases in calibration.ts were solved against OBSERVED revenue, so
+ * collection losses are already inside those figures. Applying a second factor
+ * would double-count them. Taxes created by later bills carry their base's
+ * reference efficiency, which is relative to this baseline. (ECONOMY.md §7.8)
+ */
+function foundingTaxes(): TaxInstance[] {
+  return [
+    {
+      id: FOUNDING_TAX_IDS.impost,
+      name: 'Impost of 1789',
+      createdByBillId: null,
+      base: 'imports',
+      rate: START.tariffRate,
+      exemptions: [
+        'Goods carried in American-built and American-owned vessels paid a reduced duty',
+      ],
+      collectionEfficiency: 1.0,
+      enactedDay: 0,
+      repealedDay: null,
+    },
+    {
+      id: FOUNDING_TAX_IDS.spirits,
+      name: 'Excise on distilled spirits',
+      createdByBillId: null,
+      base: 'spirits',
+      rate: START.exciseRate,
+      exemptions: [],
+      collectionEfficiency: 1.0,
+      enactedDay: 0,
+      repealedDay: null,
+    },
+    {
+      id: FOUNDING_TAX_IDS.land,
+      name: 'Direct tax on land',
+      createdByBillId: null,
+      base: 'land',
+      rate: START.landTaxRate,
+      exemptions: [],
+      collectionEfficiency: 1.0,
+      enactedDay: 0,
+      repealedDay: null,
+    },
+  ];
+}
+
+function foundingPrograms(): SpendingProgram[] {
+  return [
+    {
+      id: FOUNDING_PROGRAM_IDS.military,
+      name: 'Army and militia',
+      createdByBillId: null,
+      category: 'military',
+      annualAmount: START.spending.military,
+      enactedDay: 0,
+      repealedDay: null,
+    },
+    {
+      id: FOUNDING_PROGRAM_IDS.civil,
+      name: 'Civil establishment',
+      createdByBillId: null,
+      category: 'civil',
+      annualAmount: START.spending.civil,
+      enactedDay: 0,
+      repealedDay: null,
+    },
+    {
+      id: FOUNDING_PROGRAM_IDS.infrastructure,
+      name: 'Roads, posts and lighthouses',
+      createdByBillId: null,
+      category: 'infrastructure',
+      annualAmount: START.spending.infrastructure,
+      enactedDay: 0,
+      repealedDay: null,
+    },
+  ];
+}
+
+/**
+ * Day-0 tax burden, as levies rather than three rate fields.
+ *
+ * Arithmetically identical to the three-field form it replaced, because the
+ * excise and land rates are zero and the impost travels the tariff channel. That
+ * identity is asserted by a test — the structural change must not move the
+ * founding equilibrium.
+ */
+const FOUNDING_LEVIES: Array<{ rate: number; channel: 'tariff' | 'excise' | 'land' }> = [
+  { rate: START.tariffRate, channel: 'tariff' },
+  { rate: START.exciseRate, channel: 'excise' },
+  { rate: START.landTaxRate, channel: 'land' },
+];
 
 export function createGame(options: NewGameOptions): GameState {
   const {
@@ -124,9 +228,7 @@ export function createGame(options: NewGameOptions): GameState {
         compliance: 85,
       },
       baselineTaxBurden: taxBurden({
-        tariffRate: tariffRate,
-        exciseRate: START.exciseRate,
-        landTaxRate: START.landTaxRate,
+        levies: FOUNDING_LEVIES,
         tariffExposure: seedRegion.tariffExposure,
         exciseExposure: seedRegion.exciseExposure,
         landExposure: seedRegion.landExposure,
@@ -234,17 +336,21 @@ export function createGame(options: NewGameOptions): GameState {
         civil: START.spending.civil,
         infrastructure: START.spending.infrastructure,
       },
+      /*
+        Empty until the first monthly recompute on day 1, which is the same
+        treatment `annualisedReceipts` already gets. Day 0 is 30 April 1789 and
+        the Treasury Department did not exist until 2 September — starting with
+        no collected revenue is both defensible and dramatically correct.
+      */
+      receiptLines: [],
+      outlayLines: [],
       lastYearReceipts: 0,
       lastYearOutlays: 0,
     },
 
     policies: {
-      taxRates: {
-        tariffAvg: tariffRate,
-        excise: START.exciseRate,
-        landTax: START.landTaxRate,
-      },
-      spending: { ...START.spending },
+      taxes: foundingTaxes(),
+      programs: foundingPrograms(),
       enactedLawIds: [],
       cumulativeInfrastructure: 0,
     },

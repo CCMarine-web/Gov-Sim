@@ -213,6 +213,138 @@ export const LAND_VALUE_BASE: Record<string, number> = {
 export const OTHER_RECEIPTS = 120_000;
 
 // ============================================================================
+// TAXABLE BASES FOR THE REMAINING REVENUE BASES (ECONOMY.md §7.8)
+//
+// These are the taxable values behind the tax bases the federal government
+// either did use in this period or plausibly could have. Each is a CALIBRATION
+// CONSTANT, not a historical measurement, and none is ever shown to the player
+// as history.
+//
+// NONE OF THESE AFFECTS THE NULL RUN. A base only produces revenue when a tax
+// instance exists against it, and at the founding only the impost, the spirits
+// excise and the land tax exist — the latter two at a rate of zero. So these
+// figures are inert until a bill creates an instance, which is deliberate: the
+// structural change in queue item 3 must not move a single calibrated number.
+// (docs/DECISIONS.md D-018)
+// ============================================================================
+
+/**
+ * Assessed value of pleasure carriages, per region.
+ *
+ * Anchored to the Carriage Duty Act of 1794, which the Supreme Court upheld in
+ * *Hylton v. United States* (1796) and which yielded on the order of $150,000 a
+ * year nationally. These figures put a 2% ad valorem rate near that yield,
+ * which is the reference the base is solved against. Concentrated in the
+ * commercial cities — a pleasure carriage was a marker of urban wealth, and the
+ * frontier had almost none.
+ */
+export const CARRIAGE_VALUE_BASE: Record<string, number> = {
+  new_england: 1_900_000,
+  mid_atlantic: 2_800_000,
+  south: 2_600_000,
+  frontier: 200_000,
+};
+
+/**
+ * Assessed value of dwelling houses, per region.
+ *
+ * Part of the Direct Tax of 1798, which assessed dwellings, land and enslaved
+ * people together to raise an apportioned $2,000,000. Housing value tracks
+ * settled urban wealth, so it is weighted toward the north-east far more
+ * strongly than farmland is.
+ */
+export const DWELLING_VALUE_BASE: Record<string, number> = {
+  new_england: 19_000_000,
+  mid_atlantic: 24_000_000,
+  south: 17_000_000,
+  frontier: 2_000_000,
+};
+
+/**
+ * Assessed value on which the 1798 direct tax's per-head levy on enslaved
+ * people fell, per region.
+ *
+ * The 1798 act laid a flat 50 cents per enslaved person aged 12 to 50. This is
+ * expressed here as an assessed value so that every tax base in the model
+ * shares one arithmetic — rate times base — rather than some being ad valorem
+ * and others per-head. The regional split follows the 1790 census distribution
+ * of enslaved people, which is sourced benchmark data
+ * (src/content/regions/regions1790.ts); the conversion to an assessed value is
+ * a calibration choice.
+ *
+ * This tax is available in the model because it existed. Its presence is a
+ * statement of fact about what the federal government did, not an endorsement,
+ * and the interface presents it with that context. (DESIGN.md §8.3)
+ */
+export const ENSLAVED_ASSESSMENT_BASE: Record<string, number> = {
+  new_england: 40_000,
+  mid_atlantic: 1_100_000,
+  south: 20_500_000,
+  frontier: 900_000,
+};
+
+/**
+ * Value of transactions reachable by stamp duties, per region.
+ *
+ * Anchored to the Stamp Act of 1797, a federal duty on legal instruments,
+ * bonds, insurance policies and ships' papers. Legal and financial paper is
+ * created where commerce is, so this is heavily weighted to the mercantile
+ * regions.
+ */
+export const STAMPABLE_BASE: Record<string, number> = {
+  new_england: 3_400_000,
+  mid_atlantic: 4_600_000,
+  south: 2_100_000,
+  frontier: 250_000,
+};
+
+/**
+ * Value of goods sold at auction, per region.
+ * The 1794 excise taxed sales at auction. Auctions were a port-city
+ * institution — a principal channel for disposing of imported cargo.
+ */
+export const AUCTION_VALUE_BASE: Record<string, number> = {
+  new_england: 2_200_000,
+  mid_atlantic: 3_100_000,
+  south: 1_400_000,
+  frontier: 80_000,
+};
+
+/**
+ * Value of refined sugar and manufactured snuff, per region.
+ * Both were taxed by the 1794 excise. Refining and snuff manufacture were
+ * concentrated in the northern cities.
+ */
+export const REFINED_GOODS_BASE: Record<string, number> = {
+  new_england: 900_000,
+  mid_atlantic: 1_600_000,
+  south: 500_000,
+  frontier: 40_000,
+};
+
+/**
+ * Assessable income, per region — COUNTERFACTUAL.
+ *
+ * No federal income tax existed in this period, and levying one would have run
+ * straight into the apportionment requirement for direct taxes (Article I §2
+ * and §9) — the objection that eventually required the Sixteenth Amendment in
+ * 1913. The base exists so the model can answer "what if", clearly labelled as
+ * ahistorical, and so the interface can explain exactly what would have had to
+ * change first.
+ *
+ * Derived as a fraction of regional output rather than sourced, because there
+ * is nothing to source: no one measured national income in 1790.
+ */
+export const ASSESSABLE_INCOME_SHARE = 0.18;
+
+/**
+ * Retail sales reachable by a general sales tax, per region — COUNTERFACTUAL.
+ * Same status as income: administratively out of reach in the 1790s, present so
+ * the counterfactual can be asked and answered.
+ */
+export const RETAIL_SALES_SHARE = 0.11;
+
+// ============================================================================
 // DEBT AND CREDIT (ECONOMY.md §7.9, §7.10)
 // ============================================================================
 

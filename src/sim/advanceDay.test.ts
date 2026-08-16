@@ -5,7 +5,8 @@ import { createTestGame } from './createGame';
 import { RANGES } from './calibration';
 import { computeCustomsRevenue, computeTradeVolume } from './economy/production';
 import { explainStat } from './modifiers';
-import type { ContentPack, GameState } from './types';
+import { setTaxRate } from './taxes';
+import { FOUNDING_TAX_IDS, type ContentPack, type GameState } from './types';
 
 const EMPTY_CONTENT: ContentPack = { version: 'test', events: [], laws: [] };
 
@@ -200,7 +201,7 @@ describe('the excise compliance loop (ECONOMY.md §7.7)', () => {
     const base = run(createTestGame(), 365);
 
     const taxed = createTestGame();
-    taxed.policies.taxRates.excise = 0.25;
+    taxed.policies = setTaxRate(taxed.policies, FOUNDING_TAX_IDS.spirits, 0.25);
     const after = run(taxed, 365);
 
     const frontierDrop =
@@ -219,7 +220,7 @@ describe('the excise compliance loop (ECONOMY.md §7.7)', () => {
     const base = run(createTestGame(), 730);
 
     const taxed = createTestGame();
-    taxed.policies.taxRates.excise = 0.25;
+    taxed.policies = setTaxRate(taxed.policies, FOUNDING_TAX_IDS.spirits, 0.25);
     const after = run(taxed, 730);
 
     const baseCompliance = base.regions.find((r) => r.id === 'frontier')!.compliance;
@@ -433,7 +434,7 @@ describe('permanent modifiers do not compound (regression)', () => {
 describe('effects propagate over months, not instantly (ECONOMY.md §7.1)', () => {
   it('no policy change produces its full effect within a single month', () => {
     const taxed = createTestGame();
-    taxed.policies.taxRates.excise = 0.3;
+    taxed.policies = setTaxRate(taxed.policies, FOUNDING_TAX_IDS.spirits, 0.3);
 
     const afterOneMonth = run(taxed, 31);
     const afterTwoYears = run(taxed, 730);

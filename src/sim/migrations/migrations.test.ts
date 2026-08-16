@@ -1,6 +1,9 @@
 import { describe, expect, it } from 'vitest';
+import { advanceDay } from '../advanceDay';
 import { createTestGame } from '../createGame';
+import { aggregateRate, spendingFor } from '../taxes';
 import { SCHEMA_VERSION } from '../types';
+import v1Fixture from './fixtures/v1-republic-day900.json';
 import { MIGRATIONS, migrateToCurrent, parseSave } from './index';
 
 describe('loading a save of the current version', () => {
@@ -96,15 +99,14 @@ describe('refusing rather than crashing', () => {
 });
 
 describe('the migration walk', () => {
-  /**
-   * There are no registered migrations yet, because version 1 is the first
-   * released schema. These tests exercise the machinery against temporary
-   * registrations so it is known to work before it is first needed for real —
-   * which is the only time it can be tested without a real old save.
-   */
-
   it('walks several versions forward in order', () => {
     const calls: number[] = [];
+
+    // Save and restore rather than delete: MIGRATIONS[1] is now a REAL
+    // registered migration (v1 -> v2), and deleting it in a `finally` would
+    // silently disarm the upgrade path for every test that ran afterwards.
+    const realOne = MIGRATIONS[1];
+
     MIGRATIONS[1] = (s) => {
       calls.push(1);
       return { ...s, schemaVersion: 2, addedInV2: true };
@@ -129,9 +131,177 @@ describe('the migration walk', () => {
       expect(working.addedInV3).toBe(true);
       expect(working.schemaVersion).toBe(3);
     } finally {
-      delete MIGRATIONS[1];
+      MIGRATIONS[1] = realOne;
       delete MIGRATIONS[2];
     }
+  });
+
+  it('registers a real path from every released version to the current one', () => {
+    // The registry has to be complete, or a player's save from an earlier build
+    // is simply refused. This walks the chain rather than trusting it.
+    for (let version = 1; version < SCHEMA_VERSION; version++) {
+      expect(MIGRATIONS[version], `no migration registered from v${version}`).toBeTypeOf(
+        'function',
+      );
+    }
+  });
+});
+
+/**
+ * THE v1 FIXTURE
+ *
+ * `fixtures/v1-republic-day900.json` is a real save in the version 1 format,
+ * generated once by `scripts/make-v1-fixture.mts` and committed. It is never
+ * regenerated: a fixture rebuilt from current code would restate the new format
+ * rather than record the old one, and the test would pass by construction.
+ *
+ * It is taken at day 900 — 16 October 1791 — deliberately, so the whiskey excise
+ * of March 1791 has already been enacted and the fixture carries a non-zero
+ * excise rate. A fixture with three zero rates would have proved almost nothing.
+ */
+describe('the v1 fixture upgrades to v2 without losing anything', () => {
+  const raw = JSON.parse(JSON.stringify(v1Fixture)) as Record<string, unknown>;
+
+  it('loads, and reports the version it came from', () => {
+    const outcome = migrateToCurrent(JSON.parse(JSON.stringify(raw)));
+    expect(outcome.ok).toBe(true);
+    if (!outcome.ok) return;
+    expect(outcome.migratedFrom).toBe(1);
+    expect(outcome.state.schemaVersion).toBe(SCHEMA_VERSION);
+  });
+
+  it('carries the three tax rates across as three instances, unchanged', () => {
+    const outcome = migrateToCurrent(JSON.parse(JSON.stringify(raw)));
+    expect(outcome.ok).toBe(true);
+    if (!outcome.ok) return;
+
+    const state = outcome.state;
+    const old = (raw.policies as Record<string, Record<string, number>>).taxRates;
+
+    expect(aggregateRate(state.policies, state.day, 'imports')).toBe(old.tariffAvg);
+    expect(aggregateRate(state.policies, state.day, 'spirits')).toBe(old.excise);
+    expect(aggregateRate(state.policies, state.day, 'land')).toBe(old.landTax);
+
+    // The fixture is worth having precisely because this is not zero.
+    expect(old.excise).toBeGreaterThan(0);
+  });
+
+  it('carries the three spending lines across as three programmes, unchanged', () => {
+    const outcome = migrateToCurrent(JSON.parse(JSON.stringify(raw)));
+    expect(outcome.ok).toBe(true);
+    if (!outcome.ok) return;
+
+    const state = outcome.state;
+    const old = (raw.policies as Record<string, Record<string, number>>).spending;
+
+    expect(spendingFor(state.policies, state.day, 'military')).toBe(old.military);
+    expect(spendingFor(state.policies, state.day, 'civil')).toBe(old.civil);
+    expect(spendingFor(state.policies, state.day, 'infrastructure')).toBe(
+      old.infrastructure,
+    );
+  });
+
+  it('drops the old fields rather than keeping a copy that can drift', () => {
+    const outcome = migrateToCurrent(JSON.parse(JSON.stringify(raw)));
+    expect(outcome.ok).toBe(true);
+    if (!outcome.ok) return;
+
+    const policies = outcome.state.policies as unknown as Record<string, unknown>;
+    expect(policies.taxRates).toBeUndefined();
+    expect(policies.spending).toBeUndefined();
+  });
+
+  it('preserves everything the migration is not about', () => {
+    const outcome = migrateToCurrent(JSON.parse(JSON.stringify(raw)));
+    expect(outcome.ok).toBe(true);
+    if (!outcome.ok) return;
+
+    const state = outcome.state;
+    expect(state.day).toBe(raw.day);
+    expect(state.treasury.debtPrincipal).toBe(
+      (raw.treasury as Record<string, number>).debtPrincipal,
+    );
+    expect(state.nation.gdp).toBe((raw.nation as Record<string, number>).gdp);
+    expect(state.log.length).toBe((raw.log as unknown[]).length);
+    expect(state.activeModifiers.length).toBe((raw.activeModifiers as unknown[]).length);
+    expect(state.policies.cumulativeInfrastructure).toBe(
+      (raw.policies as Record<string, number>).cumulativeInfrastructure,
+    );
+  });
+
+  /**
+   * THE BEHAVIOUR-PRESERVATION CLAIM.
+   *
+   * A migrated v1 save must produce the same economy it would have produced
+   * under v1. The three founding instances reproduce the three old formulas
+   * arithmetically, so a year of simulation from the migrated state should land
+   * on the same receipts the old rates would have generated.
+   *
+   * Asserted against the fixture's OWN recorded run rates rather than against a
+   * recomputed expectation, so this catches a drift in either direction.
+   */
+  it('runs on from the migrated state with the same revenue as before', () => {
+    const outcome = migrateToCurrent(JSON.parse(JSON.stringify(raw)));
+    expect(outcome.ok).toBe(true);
+    if (!outcome.ok) return;
+
+    let state = outcome.state;
+    for (let i = 0; i < 40; i++) {
+      state = advanceDay(state, { version: 't', events: [], laws: [] }).state;
+    }
+
+    const before = (raw.treasury as Record<string, Record<string, number>>)
+      .annualisedReceipts;
+    const after = state.treasury.annualisedReceipts;
+
+    // Within 2%: a month of ordinary drift in compliance and trade capacity
+    // moves these a little, and that drift is the model working. A structural
+    // regression would move them by far more than that.
+    for (const key of ['customs', 'excise', 'land', 'other'] as const) {
+      const delta = Math.abs(after[key] - before[key]);
+      const scale = Math.max(1, Math.abs(before[key]));
+      expect(delta / scale, `${key} moved ${((delta / scale) * 100).toFixed(2)}%`)
+        .toBeLessThan(0.02);
+    }
+  });
+
+  it('rebuilds the attribution lines on the next monthly recompute', () => {
+    const outcome = migrateToCurrent(JSON.parse(JSON.stringify(raw)));
+    expect(outcome.ok).toBe(true);
+    if (!outcome.ok) return;
+
+    // Empty immediately after migration, because fabricating them would claim
+    // to attribute revenue that was never attributed when it was collected.
+    expect(outcome.state.treasury.receiptLines).toEqual([]);
+
+    let state = outcome.state;
+    for (let i = 0; i < 40; i++) {
+      state = advanceDay(state, { version: 't', events: [], laws: [] }).state;
+    }
+
+    expect(state.treasury.receiptLines).toHaveLength(3);
+    for (const line of state.treasury.receiptLines) {
+      expect(line.name.length).toBeGreaterThan(0);
+    }
+  });
+
+  it('produces a state with no undefined, NaN or non-finite value', () => {
+    const outcome = migrateToCurrent(JSON.parse(JSON.stringify(raw)));
+    expect(outcome.ok).toBe(true);
+    if (!outcome.ok) return;
+
+    const walk = (value: unknown, path: string): void => {
+      expect(value, `${path} is undefined`).not.toBeUndefined();
+      if (typeof value === 'number') {
+        expect(Number.isFinite(value), `${path} is ${value}`).toBe(true);
+      } else if (Array.isArray(value)) {
+        value.forEach((v, i) => walk(v, `${path}[${i}]`));
+      } else if (value !== null && typeof value === 'object') {
+        for (const [k, v] of Object.entries(value)) walk(v, `${path}.${k}`);
+      }
+    };
+
+    walk(outcome.state, '$');
   });
 
   it('refuses a migration that forgets to advance the version, instead of looping forever', () => {

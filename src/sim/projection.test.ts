@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { advanceDay } from './advanceDay';
 import { createTestGame } from './createGame';
-import { enactPolicy, policyLegitimacyCost, taxIncrease } from './policy';
+import { currentPolicy, enactPolicy, policyLegitimacyCost, taxIncrease } from './policy';
 import {
   comparePolicies,
   policyDiffers,
@@ -9,27 +9,34 @@ import {
   readProjection,
   type ProposedPolicy,
 } from './projection';
-import type { ContentPack, GameState } from './types';
+import { aggregateRate } from './taxes';
+import {
+  FOUNDING_PROGRAM_IDS,
+  FOUNDING_TAX_IDS,
+  type ContentPack,
+  type GameState,
+} from './types';
 
 const EMPTY: ContentPack = { version: 'test', events: [], laws: [] };
 
-function policyOf(state: GameState): ProposedPolicy {
-  return {
-    taxRates: { ...state.policies.taxRates },
-    spending: { ...state.policies.spending },
-  };
+const policyOf = currentPolicy;
+
+/** The proposal, with one tax's rate changed. */
+function withRate(
+  state: GameState,
+  taxId: string,
+  rate: number,
+): ProposedPolicy {
+  const p = currentPolicy(state);
+  return { ...p, rates: { ...p.rates, [taxId]: rate } };
 }
 
 function withTariff(state: GameState, rate: number): ProposedPolicy {
-  const p = policyOf(state);
-  p.taxRates.tariffAvg = rate;
-  return p;
+  return withRate(state, FOUNDING_TAX_IDS.impost, rate);
 }
 
 function withExcise(state: GameState, rate: number): ProposedPolicy {
-  const p = policyOf(state);
-  p.taxRates.excise = rate;
-  return p;
+  return withRate(state, FOUNDING_TAX_IDS.spirits, rate);
 }
 
 describe('the projection uses the real engine', () => {
@@ -172,8 +179,15 @@ describe('comparing policies', () => {
     expect(policyDiffers(state, policyOf(state))).toBe(false);
     expect(policyDiffers(state, withTariff(state, 0.11))).toBe(true);
 
-    const spend = policyOf(state);
-    spend.spending.military += 1;
+    const base = currentPolicy(state);
+    const spend: ProposedPolicy = {
+      ...base,
+      amounts: {
+        ...base.amounts,
+        [FOUNDING_PROGRAM_IDS.military]:
+          base.amounts[FOUNDING_PROGRAM_IDS.military] + 1,
+      },
+    };
     expect(policyDiffers(state, spend)).toBe(true);
   });
 });
@@ -182,7 +196,7 @@ describe('enacting policy', () => {
   it('applies the proposed rates', () => {
     const state = createTestGame();
     const result = enactPolicy(state, withTariff(state, 0.22)).state;
-    expect(result.policies.taxRates.tariffAvg).toBe(0.22);
+    expect(aggregateRate(result.policies, result.day, 'imports')).toBe(0.22);
   });
 
   it('writes a chronicle entry describing the change in words', () => {
@@ -190,7 +204,9 @@ describe('enacting policy', () => {
     const result = enactPolicy(state, withTariff(state, 0.22)).state;
     const entry = result.log[result.log.length - 1];
     expect(entry.category).toBe('treasury');
-    expect(entry.body).toContain('Tariff raised');
+    // The tax is named, not its category. With a dynamic set of taxes "the
+    // tariff was raised" is no longer unambiguous — there may be several.
+    expect(entry.body).toContain('Impost of 1789 raised');
     expect(entry.body).toContain('22.0%');
   });
 
@@ -253,9 +269,15 @@ describe('enacting policy', () => {
 
     it('sums increases across several taxes and ignores the cuts', () => {
       const state = createTestGame();
-      const mixed = policyOf(state);
-      mixed.taxRates.tariffAvg = 0.02; // a cut, ignored
-      mixed.taxRates.excise = 0.1; // a rise, counted
+      const base = currentPolicy(state);
+      const mixed: ProposedPolicy = {
+        ...base,
+        rates: {
+          ...base.rates,
+          [FOUNDING_TAX_IDS.impost]: 0.02, // a cut, ignored
+          [FOUNDING_TAX_IDS.spirits]: 0.1, // a rise, counted
+        },
+      };
       expect(taxIncrease(state, mixed)).toBeCloseTo(0.1, 6);
     });
 
