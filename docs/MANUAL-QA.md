@@ -682,3 +682,75 @@ A growing bloc should say "growing" with an arrow, and a shrinking one
 Load a save made before this update. It should open with the founding shares
 and then start changing from its own date onward — not lurch on the first month,
 and not arrive with a decade of change it never made.
+
+---
+
+## 17. The map
+
+*Phase 2, queue item 9. `DESIGN.md` §8.4, `DECISIONS.md` D-036 to D-038.*
+
+**17.1 — The map is the first thing you see**
+Start a game. The main view should be a map of the United States, with the old
+Desk panels — vitals, treasury, crises, active laws — beneath it.
+*Problem if:* the Desk is still the landing view, or the Desk's panels have been
+thrown away with it.
+
+**17.2 — It is 1789, not the present day**
+Look at the political map on day one. Eleven states should be in the union.
+North Carolina and Rhode Island should be a different colour and, when clicked,
+say they are outside it. Everything west of the Appalachians should be
+territory, Spanish, or disputed — not American states.
+*Problem if:* the map looks like a modern one with fifty states.
+
+**17.3 — It changes as the country does**
+Play to 1791 and watch Vermont join; to June 1792 for Kentucky; to June 1796
+for Tennessee. Each should change colour on its real date.
+
+**17.4 — The four modes are one click away**
+Political, Support, Economic, Party. Each should recolour the map immediately
+and change the legend.
+*Problem if:* a mode changes the legend but not the map, or vice versa.
+
+**17.5 — Every colour has a word next to it**
+Check each legend. Every band should be labelled in words — "Hostile",
+"Prosperous", "Organised territory". Hovering a state should give the same word
+in its tooltip.
+*Problem if:* any band is a swatch with no label. (UI.md §10)
+
+**17.6 — Areas with no figure are visibly empty, and counted**
+Switch to Support in the 1790s. The western territories should be a flat,
+obviously-empty fill — not a middling shade — and the legend should say how
+many areas have no figure. Click one: it should explain that it has no
+sentiment toward a government it is not part of.
+*Problem if:* a territory is shaded as though it had a middling opinion. That is
+a fabricated number wearing a colour.
+
+**17.7 — The map says what it is actually measuring**
+Under the legend, the Support map should say the figures are regional and that
+every state in a region is therefore the same colour. Check: Virginia and
+Georgia should match, always.
+*Problem if:* it implies a per-state figure this model does not have.
+
+**17.8 — Party is the one map where states differ within a region**
+Switch to Party. States in the same region can and should differ. The legend
+should name the parties that existed on the date — Pro- and Anti-Administration
+before 1793, Federalist and Democratic-Republican after — and say plainly that
+the seat counts are historical while the split is a model.
+*Problem if:* the party split is presented as a record of how a state voted.
+
+**17.9 — The modern-outline caveat is on the map itself**
+Read the line under the map. It should say the outlines are modern boundaries,
+and name West Virginia and the District of Maine as the two obvious cases.
+*Problem if:* the caveat lives only in DESIGN.md. The brief asked for it to be
+stated in-game rather than discovered.
+
+**17.10 — Clicking anything explains it**
+Click a state, a territory, a foreign holding. Each should open a panel with the
+name it had on that date — "Territory South of the River Ohio", not "Tennessee";
+"Spanish Louisiana", not "Louisiana" — and a line of context.
+*Problem if:* a click does nothing, or the panel shows the modern name.
+
+**17.11 — The long view**
+If you can get a run to 1860, the map should be recognisably the country of that
+year: Texas and California in, Kansas still a territory. That is the map the
+sectional crisis was fought over, and it should be legible.

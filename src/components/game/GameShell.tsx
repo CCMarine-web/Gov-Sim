@@ -23,6 +23,7 @@ import { EventModal } from './EventModal';
 import { LeftNav, type SectionId } from './LeftNav';
 import { SaveMenu } from './SaveMenu';
 import { Chronicle, Desk, Regions } from './sections';
+import { MapPanel } from './MapPanel';
 import { LegislationPanel } from './LegislationPanel';
 import { CongressPanel } from './CongressPanel';
 import { GovernmentPanel } from './GovernmentPanel';
@@ -30,7 +31,7 @@ import { HistoryPanel } from './HistoryPanel';
 import { TreasuryPanel } from './TreasuryPanel';
 
 const SECTION_TITLE: Record<SectionId, string> = {
-  desk: 'The Desk',
+  map: 'The United States',
   treasury: 'Treasury',
   legislation: 'Legislation',
   congress: 'Congress',
@@ -42,7 +43,7 @@ const SECTION_TITLE: Record<SectionId, string> = {
 
 export function GameShell() {
   const snapshot = useGameStore((s) => s.snapshot);
-  const [section, setSection] = useState<SectionId>('desk');
+  const [section, setSection] = useState<SectionId>('map');
   const [savesOpen, setSavesOpen] = useState(false);
   const [feedOpen, setFeedOpen] = useState(false);
   const [helpOpen, setHelpOpen] = useState(false);
@@ -127,7 +128,7 @@ export function GameShell() {
         <LeftNav
           active={section}
           onSelect={setSection}
-          badges={{ desk: pendingId ? 1 : 0 }}
+          badges={{ map: pendingId ? 1 : 0 }}
         />
 
         <main className="min-w-0 flex-1 overflow-y-auto p-3">
@@ -167,7 +168,18 @@ export function GameShell() {
             </div>
           </div>
 
-          {section === 'desk' && <Desk state={snapshot} />}
+          {/*
+            THE MAP IS THE MAIN VIEW (brief §6). The Desk's panels were not
+            thrown away with it — vitals, crises and the statute book still
+            matter, and the chronicle badge points here — so they sit beneath
+            the map as the summary they always were.
+          */}
+          {section === 'map' && (
+            <div className="space-y-3">
+              <MapPanel state={snapshot} />
+              <Desk state={snapshot} />
+            </div>
+          )}
           {section === 'treasury' && <TreasuryPanel state={snapshot} />}
           {section === 'legislation' && <LegislationPanel state={snapshot} />}
           {section === 'congress' && <CongressPanel state={snapshot} />}

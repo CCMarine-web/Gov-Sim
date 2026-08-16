@@ -765,6 +765,32 @@ The command bar never collapses — the clock, the date, and the pause state mus
 
 ---
 
+## 11a. The map (Phase 2, queue item 9)
+
+The main view. `DESIGN.md` §8.4 owns the design decisions; this section owns how it is drawn.
+
+**Layout.** A 975×610 SVG on the left, mode buttons across its top, legend and detail panel in a 320px column on the right. Below 1024px the column stacks under the map. The SVG is `width: 100%; height: auto`, so it scales without a resize listener.
+
+**Colour tokens** live in `globals.css` under the map block and nowhere else. Four scales plus one single:
+
+| Scale | Tokens | Used by |
+|---|---|---|
+| Diverging, 6 bands | `--color-map-div-0…5` | Support |
+| Sequential, 6 bands | `--color-map-seq-0…5` | Economic |
+| Categorical, 7 | `--color-map-state`, `-petitioning`, `-organized`, `-unorganized`, `-disputed`, `-native`, `-foreign` | Political |
+| Party, by index | `--color-map-party-0…3`, `--color-map-party-divided` | Party |
+| Absence | `--color-map-nodata` | Every mode |
+
+Six bands is the ceiling deliberately: past that a reader cannot tell two fills apart, which would put meaning back into colour alone.
+
+**Colour never carries meaning by itself** (§10). Every band appears in the legend beside its word, every shape carries an SVG `<title>` naming the cell and its band, and the detail panel repeats the word in full. A reader who cannot distinguish the fills loses speed and nothing else.
+
+**Absence has its own treatment.** `--color-map-nodata` is flat, obviously empty, sits outside every scale, and is counted in the legend. It must never be a mid-scale value: on a diverging scale that reads as "about average", which is a number the model never produced.
+
+**The caveat line under the map is not decoration.** It states that the outlines are modern boundaries and names the two obvious cases. It is required by the brief, and a test asserts it is present.
+
+---
+
 ## 12. Component inventory
 
 Built roughly in this order.
@@ -773,7 +799,7 @@ Built roughly in this order.
 
 **Shell:** `<CommandBar>` · `<ClockControls>` · `<LeftNav>` · `<ChronicleFeed>` · `<FeedEntry>`
 
-**Screens:** `<TitleScreen>` · `<FoundingScreen>` · `<Desk>` · `<Treasury>` · `<Legislation>` · `<Regions>` · `<Government>` · `<History>` · `<Chronicle>` · `<EventModal>`
+**Screens:** `<TitleScreen>` · `<FoundingScreen>` · `<MapPanel>` (the main view since queue item 9) · `<Desk>` (now the summary beneath the map) · `<Treasury>` · `<Legislation>` · `<Regions>` · `<Government>` · `<History>` · `<Chronicle>` · `<EventModal>`
 
 ---
 

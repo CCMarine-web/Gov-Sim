@@ -1139,3 +1139,98 @@ running the model.
 is what it is, and it changes from here. A migrated save then behaves like a new
 game started on its own date rather than like one quietly running a model it
 never had. Asserted by test: the first drift after loading moves nothing.
+
+---
+
+## D-036 — The map ships as generated path data, not as a map library
+
+**Date:** 2026-08-16 (Phase 2, queue item 9)
+**Status:** implemented
+
+**The brief names the source**: "Use modern state outlines as the atomic
+geometry. The `us-atlas` package on npm provides TopoJSON for US states." That
+settles where the shapes come from. It does not settle how they reach the
+browser, and the two answers are very different.
+
+**Decision: convert at build time and commit the output.** A script reads the
+TopoJSON and writes `src/content/map/geometry.ts` — plain SVG path strings in a
+fixed viewBox. `us-atlas`, `topojson-client` and `d3-geo` are **devDependencies
+used by that script and nowhere else**.
+
+**Why, in order of importance:**
+
+1. **The game ships no map library.** No TopoJSON parsing, no projection maths,
+   nothing between the simulation and a `<path d="…">`.
+2. **The geometry is reviewable.** A changed outline shows up in a pull request
+   as a changed line, like every other piece of content in this project. A
+   runtime conversion would make the shapes invisible until rendered.
+3. **Rule 1 stays clean.** Nothing in `src/sim/` or the components can
+   transitively pull in a dependency with its own opinions about time or
+   locale.
+
+**One choice inside the choice.** `states-albers-10m.json` is already projected —
+Albers USA, Alaska and Hawaii inset, 975×610. Using the unprojected file would
+mean shipping a projection, choosing one, and getting Alaska wrong. There is no
+projection step in the script at all.
+
+**The cost, stated.** The generated file is about 145KB of path data, which the
+client downloads. At 10m resolution that is the price of outlines that do not
+look like a cartoon. If it ever needs to come down, the fix is simplification in
+the script — not a runtime library.
+
+---
+
+## D-037 — Modern outlines, and saying so on the map
+
+**Date:** 2026-08-16 (Phase 2, queue item 9)
+**Status:** implemented
+
+Historically accurate boundaries for every year would swallow the phase, and the
+brief says so. So the map draws modern state outlines for 1789 as readily as for
+1860. **Virginia here excludes West Virginia, which did not exist until 1863.
+Massachusetts excludes the District of Maine, which it governed until 1820.**
+
+That is a real inaccuracy, and the brief's instruction was unambiguous:
+"Document this simplification prominently and visibly in-game. It's a real
+inaccuracy and I'd rather it be stated than discovered."
+
+**So it is written under the map**, not only in `DESIGN.md` §8.4, and a test
+asserts it is there. A caveat that lives only in a design document is a caveat
+the player never sees.
+
+**What is NOT simplified is what each outline was.** The status history in
+`src/content/map/territory.ts` is benchmark data under DESIGN.md §12.2 — every
+record cited, nothing interpolated. Rhode Island is *foreign* in April 1789 and
+the map colours it so; Ohio is the Northwest Territory; Louisiana is Spanish
+until December 1803. The shapes are a drawing convenience. The history is not.
+
+---
+
+## D-038 — A map cell with no figure gets its own colour, not a middling one
+
+**Date:** 2026-08-16 (Phase 2, queue item 9)
+**Status:** implemented
+
+**The trap this avoids.** A choropleth wants every cell filled. The tempting
+answer for the Northwest Territory on the support map is a neutral mid-scale
+grey — and that is a fabricated number, because a neutral shade on a diverging
+scale reads as "about average", which is a claim. The model has no sentiment for
+a territory, and inventing one to complete a picture is exactly what the brief
+forbids: "no quiet interpolation to make a map mode look complete."
+
+**Decision: `value: null`, its own flat fill, a count in the legend, and a
+sentence saying why.** Ohio in 1795 reads "No figure — Organised territory; it
+has no sentiment toward a government it is not part of." The legend says how
+many areas are in that state, so the size of the gap is visible rather than
+implied.
+
+A consequence worth having: as the country grows, the no-data area visibly
+shrinks. The map shows the reach of the government as well as its condition.
+
+**The same rule caught a subtler case.** Support and economic figures are
+REGIONAL — four regions, no state-level economy — so Virginia and Georgia are
+always the same colour on those maps. That is not a gap, it is a resolution
+limit, and it is declared in the basis line under the legend rather than left to
+look like a per-state result. The one mode that is genuinely per state is party,
+because delegations are; and that one carries the opposite warning, that the
+seat counts are history while the split is a model (B-006).

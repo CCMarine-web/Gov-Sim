@@ -7,7 +7,7 @@ If you are resuming with no context: read `DESIGN.md` first, then this file,
 then `docs/DECISIONS.md` and `docs/BLOCKERS.md`. Then continue the **Phase 2
 queue** below, which is `gov-sim-phase2-brief.md` §9.
 
-**Last updated:** Phase 2 run of 2026-08-16, after queue item 8.
+**Last updated:** Phase 2 run of 2026-08-16, after queue item 9.
 
 ---
 
@@ -17,7 +17,7 @@ queue** below, which is `gov-sim-phase2-brief.md` §9.
 |---|---|
 | Production URL | <https://gov-sim.vercel.app> |
 | Deploy | auto-deploys from `main` on push |
-| Tests | 618 passing |
+| Tests | 659 passing |
 | Save schema | version **7** — v1 to v6 saves migrate forward, all six fixtures committed |
 | Gates | tests, lint, typecheck, production build — all green |
 | Database | Supabase, `save_games` table migrated, verified reachable from production |
@@ -37,7 +37,7 @@ queue** below, which is `gov-sim-phase2-brief.md` §9.
 | 6 — Monarchy decree path | **complete** — see below and D-027 to D-029 |
 | 7 — Congress and the republic path | **complete** — see below and D-030 to D-032 |
 | 8 — Bloc model | **complete** — see below and D-033 to D-035 |
-| 9 — Map view replacing the Desk | not started |
+| 9 — Map view replacing the Desk | **complete** — see below and D-036 to D-038 |
 | 10 — Remaining map modes and state detail panel | not started |
 | 11 — Diplomacy tab | not started |
 | 12 — War declaration paths | not started |
@@ -480,6 +480,59 @@ carrying a decade of change it never made.
 
 **Tests:** 24 in `blocs.test.ts`, 5 in `monarchy.test.tsx` for the Regions panel,
 5 more in `migrations.test.ts`. Human-eye checks are `docs/MANUAL-QA.md` §16.
+
+---
+
+### Item 9 — the map: complete
+
+**The main view is now a map.** The Desk's panels were not thrown away with it —
+vitals, crises and the statute book still matter, and the chronicle badge points
+at that section — so they sit beneath the map as the summary they always were.
+The left nav's first item is `map`, not `desk`.
+
+**Geometry is generated, not shipped.** `scripts/make-map-geometry.mts` reads the
+`us-atlas` TopoJSON, already projected to Albers USA in a 975×610 box, and writes
+`src/content/map/geometry.ts` — plain SVG path strings. **`us-atlas`,
+`topojson-client` and `d3-geo` are devDependencies used only by that script.** The
+game ships no map library and no runtime projection maths, and the outlines are
+diffable in a pull request like every other piece of content (D-036).
+
+**The outlines are modern, and the map says so.** Virginia here excludes West
+Virginia, which did not exist until 1863; Massachusetts excludes the District of
+Maine. The brief asked for the simplification to be "documented prominently and
+visibly in-game" rather than discovered, so it is written under the map and a
+test asserts it is there (D-037).
+
+**What each outline WAS is real data.** `src/content/map/territory.ts` carries a
+cited status history per outline — state, organised territory, unorganised,
+petitioning, foreign, disputed, sovereign Native nation — running from 1789 to
+1861. Rhode Island is *outside the union* in April 1789 and the map colours it
+so. Ohio is the Northwest Territory. Louisiana is Spanish until December 1803.
+Kansas is still a territory in 1860, which is the whole story.
+
+**Four modes**, as the brief requires: political, support, economic, party. The
+bucket-and-word split keeps Rule 7 intact — `src/sim/map.ts` returns a band index
+and the word it means, and the component turns a band into a design token. No
+arithmetic in the component, no colours in the engine.
+
+**Two honesty rules enforced in code, not by convention:**
+
+- **Absence is drawn, never shaded.** A cell with no figure gets `value: null`,
+  its own flat fill, a line explaining why, and a count in the legend. A neutral
+  mid-scale grey would read as "about average", which is a claim the model never
+  made (D-038). As the country grows the no-data area visibly shrinks, so the map
+  shows the government's reach as well as its condition.
+- **The regional resolution limit is declared.** Support and economic figures are
+  regional, so Virginia and Georgia are always the same colour, and the basis line
+  says so rather than implying a per-state result. Party is the one genuinely
+  per-state mode, and carries the opposite warning: the seat counts are history,
+  the split is a model (B-006).
+
+**Tests:** 28 in `sim/map.test.ts`, 13 in `components/game/map.test.tsx`. Human-eye
+checks are `docs/MANUAL-QA.md` §17.
+
+**Still to come in item 10:** population, sectional tension, infrastructure,
+military and compliance modes, and a fuller state detail panel.
 
 ---
 

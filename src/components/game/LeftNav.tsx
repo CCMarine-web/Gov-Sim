@@ -10,8 +10,8 @@
 import {
   BookOpen,
   Coins,
-  LayoutGrid,
   Landmark,
+  LayoutGrid,
   Map,
   Scale,
   ScrollText,
@@ -20,7 +20,8 @@ import {
 import type { ComponentType } from 'react';
 
 export type SectionId =
-  | 'desk'
+  /** The main view. Was 'desk' until queue item 9 replaced it with the map. */
+  | 'map'
   | 'treasury'
   | 'legislation'
   | 'congress'
@@ -36,11 +37,11 @@ interface NavItem {
 }
 
 const ITEMS: NavItem[] = [
-  { id: 'desk', label: 'Desk', Icon: LayoutGrid },
+  { id: 'map', label: 'Map', Icon: Map },
   { id: 'treasury', label: 'Treasury', Icon: Coins },
   { id: 'legislation', label: 'Legislation', Icon: Scale },
   { id: 'congress', label: 'Congress', Icon: Users },
-  { id: 'regions', label: 'Regions', Icon: Map },
+  { id: 'regions', label: 'Regions', Icon: LayoutGrid },
   { id: 'government', label: 'Government', Icon: Landmark },
   { id: 'history', label: 'History', Icon: BookOpen },
   { id: 'chronicle', label: 'Chronicle', Icon: ScrollText },

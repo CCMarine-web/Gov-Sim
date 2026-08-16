@@ -109,6 +109,8 @@ Phase 1 deliberately has no map. Building a geographically accurate 1790 US map 
 
 This is a settled decision, and it is architecturally cheap precisely because regions are real simulation entities rather than a presentation convenience.
 
+**The map arrived in Phase 2, queue item 9, and the promise held**: it was skinned on top without touching the simulation. Its design, and the one real inaccuracy it carries, are §8.4.
+
 ---
 
 ## 4. Tech stack
@@ -536,6 +538,23 @@ For 1789–1800 this is not avoidable: enslaved people were roughly a third of t
 **Decision: it is modeled explicitly and factually.** Enslaved population is tracked per region from 1790 census figures, with real effects on agricultural output and on sectional sentiment. Related events — the 1790 Quaker antislavery petitions and the congressional gag rule that followed, the 1793 Fugitive Slave Act — present the conflict as the consequential political struggle it was, with sourced historical context.
 
 Representing it honestly in the model *is* the version that isn't sanitized. Omitting it would misrepresent both the economy and the politics of the period. The UI presents these figures as demographic and economic fact with historical context attached, never as a resource to be optimized in isolation.
+
+### 8.4 The map
+
+*Implemented in Phase 2, queue item 9 (brief §6). It replaced the Desk as the main view; the Desk's panels moved beneath it, because vitals and crises did not stop mattering.*
+
+**Geometry is generated, not shipped.** `scripts/make-map-geometry.mts` reads the `us-atlas` TopoJSON — already projected to Albers USA in a 975×610 box — and writes `src/content/map/geometry.ts`: one SVG path string per state. `us-atlas`, `topojson-client` and `d3-geo` are **devDependencies used only by that script**. The game ships no map library and no runtime projection maths, and the geometry is diffable in a pull request like every other piece of content.
+
+**The one real inaccuracy, stated rather than hidden.** The outlines are MODERN state boundaries used for every year. Virginia here excludes West Virginia, which did not exist until 1863; Massachusetts excludes the District of Maine, which it held until 1820. The brief asked for this to be "documented prominently and visibly in-game", so it is written under the map itself, not only here.
+
+**What each outline actually WAS is real data.** `src/content/map/territory.ts` records a status history per outline — `state`, `organized_territory`, `unorganized`, `petitioning`, `foreign`, `disputed`, `native_nation` — with a source citation on every record. It is benchmark data under §12.2, so nothing in it is interpolated: Rhode Island is *outside the union* in April 1789 and the map colours it accordingly, Ohio is the Northwest Territory, Louisiana is Spanish, and the record runs through to 1861 so the sectional crisis is legible on the map decades in advance.
+
+**Modes are simulation, not presentation.** `src/sim/map.ts` returns a bucket index and a WORD for each cell; the component turns a bucket into a design token. Four modes shipped in item 9 — political, support, economic, party — with the rest in item 10.
+
+**Two honesty rules the map enforces in code:**
+
+1. **Absence is drawn, never shaded.** A cell with no figure returns `value: null` and its own flat fill, and the legend counts how many there are. A neutral shade would read as a middling value the model never computed. "No quiet interpolation to make a map mode look complete" (brief §10).
+2. **The regional simplification is declared.** This model has four regions and no state-level economy, so on the support and economic maps every state in a region is the same colour, and the basis line says so. The one genuinely per-state mode is **party**, because delegations are per state — and its legend says the seat counts are history while the split is a model.
 
 ---
 
