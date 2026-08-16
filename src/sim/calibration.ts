@@ -514,6 +514,54 @@ export const BUDGET_CAPITAL_COST_FLOOR = 1.5;
 export const EMERGENCY_POWERS_MULTIPLIER = 2.5;
 
 // ============================================================================
+// BLOCS (ECONOMY.md §7.18)
+//
+// INTERIM, AND DELIBERATELY SO. Queue item 8 builds overlapping, fluid bloc
+// membership that policy can move people between. Until it does, each bloc is
+// distributed across the four regions by the weighting below, so a bill's
+// declared bloc reactions land somewhere real rather than sitting inert.
+//
+// Bills declare their reactions NOW (brief §4.2) so that the content does not
+// have to be rewritten when the model lands — item 8 replaces this table and
+// nothing in src/content/ changes.
+//
+// The weightings follow the economic geography the regions already encode: the
+// planters are the South's staple agriculture, the merchants and seamen the
+// northern carrying trade, the frontier settlers the trans-Appalachian west.
+// Each bloc's weights sum to 1.
+// ============================================================================
+
+export const BLOC_REGION_WEIGHTS: Record<string, Record<string, number>> = {
+  /** Staple agriculture on large holdings, overwhelmingly Southern. */
+  planters: { new_england: 0.02, mid_atlantic: 0.1, south: 0.82, frontier: 0.06 },
+  /** Import-export houses, concentrated in the port cities. */
+  merchants: { new_england: 0.36, mid_atlantic: 0.42, south: 0.19, frontier: 0.03 },
+  /** Trans-Appalachian settlers: land-hungry, cash-poor, distant from courts. */
+  frontier_settlers: { new_england: 0.02, mid_atlantic: 0.08, south: 0.12, frontier: 0.78 },
+  /** Skilled urban trades — the beneficiaries of tariff protection. */
+  artisans: { new_england: 0.34, mid_atlantic: 0.44, south: 0.18, frontier: 0.04 },
+  /** Holders of public paper and bank stock. Very few, very concentrated. */
+  financiers: { new_england: 0.3, mid_atlantic: 0.55, south: 0.13, frontier: 0.02 },
+  /** Established churches and their congregations, weighted to New England. */
+  clergy: { new_england: 0.38, mid_atlantic: 0.27, south: 0.24, frontier: 0.11 },
+  /** Merchant seamen and fishermen. Almost entirely a northern coastal trade. */
+  seamen: { new_england: 0.51, mid_atlantic: 0.31, south: 0.16, frontier: 0.02 },
+  /** Yeoman farmers working their own land. The largest bloc, spread widely. */
+  small_farmers: { new_england: 0.24, mid_atlantic: 0.27, south: 0.24, frontier: 0.25 },
+};
+
+/**
+ * Sentiment points per unit of (reaction strength × regional weight).
+ *
+ * A bill that a bloc feels at full strength (100) and which is wholly
+ * concentrated in one region (weight 1.0) moves that region's BASE sentiment by
+ * 6 points — a large but not decisive shift, and one the six-month sentiment lag
+ * then spreads over half a year. The whiskey excise, at −70 on frontier
+ * settlers weighted 0.78, moves frontier base sentiment by about −3.3.
+ */
+export const BLOC_REACTION_TO_SENTIMENT = 0.06;
+
+// ============================================================================
 // LAG TIME CONSTANTS (ECONOMY.md §7.1)
 // ============================================================================
 

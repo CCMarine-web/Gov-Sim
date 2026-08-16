@@ -397,6 +397,11 @@ Start a new game and open Government. On 30 April 1789 no executive department
 exists — State was created 27 July, War 7 August, the Treasury 2 September. The
 capital accrual rate should be visibly lower in the first weeks than a year in.
 
+**12.6b — Legislation is where capital goes**
+Open Legislation and try to pass the Direct Tax of 1798 at the top of its range.
+It should cost around 95 political capital — a serious act, several weeks of
+accrual, not something to do casually.
+
 **12.6 — Emergency powers, and their end**
 Reach the Whiskey Rebellion of 1794 and call out the militia. A ⚡ should appear
 beside Capital, the ceiling should jump, and accrual should roughly double. Then
@@ -404,3 +409,59 @@ keep playing: after about nine months the chronicle should record "Emergency
 powers lapse" and the ceiling should fall back.
 *Problem if:* the powers never end. Temporary powers the game forgets to end are
 not temporary, and that is the failure mode worth watching for.
+
+---
+
+## 13. Legislation — Phase 2 brief §4
+
+Asserted in `src/sim/bills.test.ts` (38 tests) and
+`src/components/game/legislation.test.tsx` (15). These are the parts to read
+rather than assert.
+
+**13.1 — Every department is listed, including the empty ones**
+Open Legislation. All seventeen departments should appear. Education,
+Agriculture, Health & Welfare and Elections have little or nothing in this
+period, and each should say what it is waiting for rather than being hidden.
+*Problem if:* a department is missing. A player should be able to see the shape
+of the government they do not yet have.
+
+**13.2 — A locked bill teaches you something**
+Find "A Duty on Exported Staples" under Taxation. It should be locked, and the
+reason should quote Article I §9 cl. 5 in full — not "unavailable". Do the same
+for "A Federal Tax on Incomes": the reason should explain apportionment and name
+the Sixteenth Amendment.
+*Problem if:* either says only that it is locked. A lock with a shrug for a
+reason teaches nothing, which is the one thing a locked bill must not do.
+
+**13.3 — Counterfactual is not the same as locked**
+"A General Tax on Retail Sales" is marked Counterfactual and is **passable**.
+"A Federal Plan of Gradual Emancipation" likewise — at a price of about 200
+political capital and total planter opposition. Neither should be locked.
+*Why:* locking them would say the Constitution forbade them, which is false.
+Pricing them says the true thing: possible, and nobody could carry it.
+
+**13.4 — Passing a tax bill creates a Treasury line**
+Reach 1794, pass the Carriage Duty, then open Treasury. A slider called
+"Carriage Duty of 1794" should be there, and after the next 1st of the month a
+row in "Where the revenue comes from" naming `carriage_duty_1794` as its origin.
+Repeal the bill and both should disappear.
+*This is the requirement the brief states most plainly.*
+
+**13.5 — Effects phase in**
+Pass the Judiciary Act and hover Stability immediately. Its contribution should
+be **zero** on the day of signature and grow over the following months, reaching
+its full +5 after 270 days. The popover arithmetic must still add up at every
+point in between.
+*Problem if:* the full effect lands at once, or the popover shows a number the
+stat does not reflect.
+
+**13.6 — Who gains and who loses, with reasons**
+Every bill card lists its bloc reactions with a strength and a clause of
+explanation. Read the Commercial Discrimination bill: artisans +70 and merchants
+−75, each with a reason a person could argue with.
+
+**13.7 — Sources on every tier**
+Expand "Historical context" on an enacted bill, a proposed one and a
+counterfactual one. All three should carry a factual note and at least one
+citation. The counterfactual needs it most: it tells the player what they are
+departing from.

@@ -7,7 +7,7 @@ If you are resuming with no context: read `DESIGN.md` first, then this file,
 then `docs/DECISIONS.md` and `docs/BLOCKERS.md`. Then continue the **Phase 2
 queue** below, which is `gov-sim-phase2-brief.md` §9.
 
-**Last updated:** Phase 2 run of 2026-08-16, after queue item 4.
+**Last updated:** Phase 2 run of 2026-08-16, after queue item 5.
 
 ---
 
@@ -17,8 +17,8 @@ queue** below, which is `gov-sim-phase2-brief.md` §9.
 |---|---|
 | Production URL | <https://gov-sim.vercel.app> |
 | Deploy | auto-deploys from `main` on push |
-| Tests | 409 passing |
-| Save schema | version **3** — v1 and v2 saves migrate forward, both fixtures committed |
+| Tests | 470 passing |
+| Save schema | version **4** — v1, v2 and v3 saves migrate forward, all three fixtures committed |
 | Gates | tests, lint, typecheck, production build — all green |
 | Database | Supabase, `save_games` table migrated, verified reachable from production |
 | Phase | **2 — in progress.** Phase 1 shipped. |
@@ -33,7 +33,7 @@ queue** below, which is `gov-sim-phase2-brief.md` §9.
 | 2 — Speed rebalance with config table | **complete** — see below and D-015, D-016 |
 | 3 — Dynamic tax and spending instances | **complete** — see below and D-018, D-019 |
 | 4 — Political capital system | **complete** — see below and D-020 to D-022 |
-| 5 — Legislation categories and bill schema (≥25 bills) | not started |
+| 5 — Legislation categories and bill schema (≥25 bills) | **complete** — 32 bills, see below and D-023 to D-026 |
 | 6 — Monarchy decree path | not started |
 | 7 — Congress and the republic path | not started |
 | 8 — Bloc model | not started |
@@ -229,6 +229,62 @@ than a comment. (D-022)
 `treasuryInstances.test.tsx` for the affordability gate, 5 more in
 `migrations.test.ts` against the v2 fixture. Human-eye checks are
 `docs/MANUAL-QA.md` §12.
+
+### Item 5 — legislation: complete
+
+`Law` is gone. `Bill` replaces it outright (D-023), with Democracy 4's policy
+structure: a department, four separate capital costs, an optional slider,
+prerequisites that explain themselves, a declared relationship to the historical
+record, and a statement of who gains and who loses.
+
+**The slate: 32 bills, across all 17 departments, on all four tiers.**
+The brief's floor was 25 bills across six departments; a test asserts the floor
+so shrinking it is a deliberate act.
+
+| Tier | Count | Examples |
+|---|---|---|
+| enacted | 23 | Judiciary Act 1789, Tonnage Act 1789, Coinage Act 1792, Carriage Duty 1794, Slave Trade Act 1794, Stamp Act 1797, Direct Tax 1798, Marine Hospital Service 1798 |
+| proposed | 4 | Commercial discrimination against Britain, Hamilton's bounties on manufactures, a national university, a board of agriculture |
+| counterfactual | 3 | A general sales tax, federal gradual emancipation, a national road programme |
+| anachronistic | 2 | A federal income tax, an export duty on staples — both locked, both quoting the constitutional bar in full |
+
+Eight bills create a tax; twelve fund a spending programme. Passing one produces
+its Treasury line, attributed to the bill by name; repealing it takes the line
+with it. That is the join between this item and item 3, and the requirement the
+brief states most plainly.
+
+**Phase-in is real.** `Modifier` gained `rampDays`, and a bill's effects ramp
+from nothing to full over `phaseInDays`. This does NOT duplicate the existing lag
+constants — `rampDays` is the statute taking hold (officers appointed, collectors
+sent), the lags are the country responding. They are sequential, and for
+legitimacy, which is cumulative rather than target-seeking, `rampDays` is the
+only ramp there is. The ledger's reconciliation invariant survives it: the
+breakdown reports the ramped contribution plus `rampProgress`. (D-024)
+
+**Bloc reactions are live, not inert.** Every bill declares who gains and who
+loses with a strength and a reason. Until item 8 builds the real bloc model, each
+bloc is distributed across the regions by a documented weighting
+(`ECONOMY.md` §7.18) and its reaction moves that region's *base* sentiment. Item
+8 replaces the table and nothing in `src/content/` changes. Repeal does not
+refund the resentment. (D-025)
+
+**Counterfactual is not the same as locked.** The line is whether anything
+actually forbade the thing. An export duty is locked because Article I §9 forbids
+it; a general sales tax is available, because nothing forbade it and it was
+simply unadministrable. Federal gradual emancipation is available at 200 capital
+and total planter opposition, because locking it would say the Constitution
+forbade it — which is false and would misteach the player about why it did not
+happen. (D-026)
+
+**New Legislation screen** (`LegislationPanel.tsx`) organised by department, with
+nothing hidden: every department listed, every bill listed, every locked bill
+quoting its reason verbatim, every card carrying its factual note and sources.
+
+**Schema version 4**, `migrations/v3ToV4.ts`, with a committed v3 fixture
+carrying twelve enacted bills and 35 modifiers.
+
+**Tests:** 38 in `bills.test.ts`, 15 in `legislation.test.tsx`, 7 more in
+`migrations.test.ts`. Human-eye checks are `docs/MANUAL-QA.md` §13.
 
 ---
 

@@ -40,11 +40,11 @@ import {
   type GameState,
 } from './types';
 
-const EMPTY: ContentPack = { version: 'test', events: [], laws: [], offices: [] };
+const EMPTY: ContentPack = { version: 'test', events: [], bills: [], offices: [] };
 const WITH_OFFICES: ContentPack = {
   version: 'offices',
   events: [],
-  laws: [],
+  bills: [],
   offices: OFFICES,
 };
 

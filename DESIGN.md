@@ -441,23 +441,57 @@ type EffectSpec =
   | { kind: 'log'; tier: LogTier; title: string; body: string };
 ```
 
-### 7.4 Laws
+### 7.4 Bills
+
+*Phase 2 replaced `Law` with `Bill` outright — see `docs/DECISIONS.md` D-023 for why both were not kept. Modelled on Democracy 4's policy structure, as the Phase 2 brief §4.2 asks.*
 
 ```ts
-interface Law {
+interface Bill {
   id: string;
-  title: string;
-  category: 'fiscal' | 'commercial' | 'military' | 'judicial' | 'civil';
-  enactmentCost: number;         // one-off treasury cost
-  requirements: Condition[];
-  effects: EffectSpec[];
-  historicalContext: string;
+  category: Department;          // one of seventeen (brief §4.1)
+  name: string;
+  description: string;
+  historicalNote: string;        // factual, required on EVERY tier
   sources: string[];
+
+  hasSlider: boolean;            // a rate or intensity, or a flat enact/repeal
+  sliderRange: [number, number] | null;
+  sliderLabel: string | null;
+  sliderUnit: 'rate' | 'dollars' | null;
+
+  // Four numbers because the four acts are different: introducing a thing is
+  // not the same as repealing it, and raising a rate is not lowering one.
+  capitalCost: { introduce: number; repeal: number; raise: number; lower: number };
+  treasuryCost: { min: number; max: number };   // across the slider range
+
+  phaseInDays: number;           // effects ramp in, never instant (§7.4a)
+  prerequisites: Condition[];
+  availableFrom: string;
+  availableUntil: string | null;
+
+  historicity: 'enacted' | 'proposed' | 'counterfactual' | 'anachronistic';
+  lockedBecause: string | null;  // required when anachronistic; rendered verbatim
+
+  effects: ModifierTemplate[];   // persist while in force; scale with the slider
+  blocReactions: BlocReaction[]; // who gains, who loses, how strongly, and why
+
+  createsTax: BillTaxTemplate | null;      // becomes a Treasury line (§4.3)
+  createsProgram: BillProgramTemplate | null;
   repealable: boolean;
 }
 ```
 
-Locked laws display *why* they are locked, generated from the failing conditions via `describe()`.
+**A bill that cannot be passed explains itself.** `billStatus()` returns a reason in every negative case — a date not yet reached, an unmet prerequisite rendered through `describe()`, or `lockedBecause` quoted in full. A locked control with no explanation is the same failure the modifier ledger exists to prevent, applied to actions rather than numbers.
+
+**Locked means impossible, not merely hard.** The line between `counterfactual` and `anachronistic` is whether anything actually forbade the thing. An export duty is locked because Article I §9 forbids it; a general sales tax is *not* locked, because nothing forbade it and it was simply unadministrable. Reasoning and the full tier assignments are in `docs/DECISIONS.md` D-026.
+
+### 7.4a Phase-in
+
+A bill's effects ramp from nothing to full over `phaseInDays`, expressed as `rampDays` on the modifiers it emits. A statute does not change a country the day it is signed: officers have to be appointed, forms printed, collectors sent.
+
+This is **not** the same as the lag constants in `docs/ECONOMY.md` §7.1 and does not duplicate them. `rampDays` is the statute taking hold; the lags are the country responding to it. They are sequential. For stats that are not lagged at all — legitimacy is cumulative rather than target-seeking — `rampDays` is the only ramp there is. D-024 has the argument.
+
+The ledger's invariant survives it: the breakdown reports the **ramped** contribution plus `rampProgress`, so what the popover shows is what the stat used.
 
 ### 7.5 Phase 1 event slate (proposed)
 
@@ -592,7 +626,8 @@ See Rule 8 (§5). Migrations are pure `vN → vN+1` functions in `/src/sim/migra
 |---|---|---|---|
 | 1 | The Phase 1 schema | — | `fixtures/v1-republic-day900.json` |
 | 2 | Three tax rates and three spending lines become `TaxInstance[]` and `SpendingProgram[]` (§13, brief §4.3) | `v1ToV2.ts` | `fixtures/v2-republic-day900.json` |
-| 3 | Political capital and administrative capacity (brief §3) | `v2ToV3.ts` | — (current) |
+| 3 | Political capital and administrative capacity (brief §3) | `v2ToV3.ts` | `fixtures/v3-republic-day900.json` |
+| 4 | Bills replace laws; modifiers gain a phase-in ramp (§7.4, brief §4) | `v3ToV4.ts` | — (current) |
 
 A fixture is **generated once and never regenerated**, by `scripts/make-fixture.mts <version>` — which *refuses* to overwrite one that already exists. A fixture rebuilt from current code stops recording the old format and becomes a restatement of the new one, which would make its migration test pass by construction and prove nothing. That rule used to be a comment; it is now behaviour.
 
@@ -600,6 +635,7 @@ Every migration must state whether it is **behaviour-preserving** or a deliberat
 
 - `v1ToV2` is behaviour-preserving. The three founding instances reproduce the three old formulas arithmetically, and the test asserts a migrated save's revenue is unchanged.
 - `v2ToV3` **adds** a mechanic that did not exist, so there is no prior behaviour to preserve. It seeds the new reserve generously rather than at zero: the mechanic is new, so its absence in the old save was not the player's choice, and charging them for it would be the wrong way round.
+- `v3ToV4` is behaviour-preserving where it can be and honest where it cannot. Carried-forward bills get `enactedDay: 0`, because no enactment day was ever recorded and there is no way to recover one — the founding is the honest answer, and the day the player happened to upgrade would be a fabrication in the game's own record of itself. Existing modifiers get `rampDays: 0`, because they were applied under a build with no phase-in and were therefore fully in force; retro-fitting a ramp would weaken effects the player has already been living with.
 
 ---
 
@@ -659,7 +695,7 @@ A refined version of the initial sketch. Full field-level definitions live in `/
 ```ts
 interface GameState {
   // --- identity & versioning ---
-  schemaVersion: number;         // current: 3 (v1 and v2 migrate; see §11.4)
+  schemaVersion: number;         // current: 4 (v1-v3 migrate; see §11.4)
   gameId: string;
   createdAtISO: string;          // wall-clock, set once; never read by the sim
   contentVersion: string;

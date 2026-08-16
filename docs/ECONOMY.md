@@ -828,6 +828,42 @@ Content-declared rather than engine-inferred, so a designer decides which crises
 - **The Whiskey Rebellion (1794)**, on calling out the militia. Not a game abstraction: the Militia Act of 1792 required a Supreme Court justice to certify that ordinary judicial proceedings were obstructed before the President could call out the militia against citizens, and Justice James Wilson so certified on 4 August 1794. That certification *is* the historical emergency-powers mechanism.
 - **The Quasi-War (1798)**, on arming or on declaring war. Under the pressure of an undeclared naval war Congress created the Navy Department, raised a provisional army, laid the direct tax, passed the stamp duties and passed the Alien and Sedition Acts — an extraordinary volume of legislation in a few months.
 
+### 7.18 Blocs — an interim weighting
+
+*Added in Phase 2, queue item 5. Superseded by queue item 8.*
+
+Brief §4.2 puts `blocReactions` on every bill: who gains, who loses, how strongly, and why. Brief §1 lists the eight blocs — planters, merchants, frontier settlers, artisans, financiers, clergy, seamen, small farmers — and item 8 builds the real model, in which membership is overlapping, graduated, and moved by policy.
+
+**Until then, each bloc is distributed across the four regions by `BLOC_REGION_WEIGHTS`, and its reaction moves that region's base sentiment.**
+
+```
+ΔbaseSentiment[region] = Σ_blocs( reaction.strength
+                               × BLOC_REGION_WEIGHTS[bloc][region]
+                               × BLOC_REACTION_TO_SENTIMENT )
+```
+
+The weightings follow the economic geography the regions already encode. Each bloc's weights sum to 1.
+
+| Bloc | New England | Mid-Atlantic | South | Frontier |
+|---|---:|---:|---:|---:|
+| Planters | 0.02 | 0.10 | **0.82** | 0.06 |
+| Merchants | 0.36 | **0.42** | 0.19 | 0.03 |
+| Frontier settlers | 0.02 | 0.08 | 0.12 | **0.78** |
+| Artisans | 0.34 | **0.44** | 0.18 | 0.04 |
+| Financiers | 0.30 | **0.55** | 0.13 | 0.02 |
+| Clergy | **0.38** | 0.27 | 0.24 | 0.11 |
+| Seamen | **0.51** | 0.31 | 0.16 | 0.02 |
+| Small farmers | 0.24 | **0.27** | 0.24 | 0.25 |
+
+`BLOC_REACTION_TO_SENTIMENT` is 0.06: a bill a bloc feels at full strength, wholly concentrated in one region, moves that region's base sentiment by 6 points. The whiskey excise, at −70 on frontier settlers weighted 0.78, moves frontier base sentiment by about −3.3, which the six-month sentiment lag then spreads over half a year.
+
+**Two properties worth stating, because they are choices rather than accidents:**
+
+- **BASE sentiment, not the current value.** A permanent political fact should move the equilibrium a lagged stat converges toward (§7.1). Applying it to the stored value would produce a jump the model immediately undoes.
+- **A repeal does not refund it.** A country does not un-resent a law because it was taken back, and a repeal that refunded the political damage would make an unpopular bill temporarily free.
+
+**Why declare reactions now rather than with item 8.** An unused field rots: nobody can tell whether the numbers in it are calibrated, because nothing depends on them. Wiring it to something real means the slate's reactions were written against observable consequences. When item 8 lands it replaces this table and **nothing in `src/content/` changes** — which is the whole reason the reactions live in the content rather than being derived. `docs/DECISIONS.md` D-025.
+
 ---
 
 ## 8. Government type differences

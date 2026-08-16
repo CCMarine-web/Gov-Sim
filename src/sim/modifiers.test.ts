@@ -27,6 +27,7 @@ function mod(overrides: Partial<Modifier> = {}): Modifier {
     isPercentage: overrides.isPercentage ?? false,
     startDay: overrides.startDay ?? 0,
     endDay: overrides.endDay === undefined ? null : overrides.endDay,
+    rampDays: 0,
   };
 }
 

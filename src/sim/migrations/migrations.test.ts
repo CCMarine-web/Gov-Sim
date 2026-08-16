@@ -1,11 +1,12 @@
 import { describe, expect, it } from 'vitest';
-import { advanceDay } from '../advanceDay';
+import { advanceDay, resolveDecision } from '../advanceDay';
 import { createTestGame } from '../createGame';
 import { aggregateRate, spendingFor } from '../taxes';
 import { SCHEMA_VERSION } from '../types';
 import { PHASE_1_CONTENT } from '@/content';
 import v1Fixture from './fixtures/v1-republic-day900.json';
 import v2Fixture from './fixtures/v2-republic-day900.json';
+import v3Fixture from './fixtures/v3-republic-day900.json';
 import { MIGRATIONS, migrateToCurrent, parseSave } from './index';
 
 describe('loading a save of the current version', () => {
@@ -250,7 +251,7 @@ describe('the v1 fixture upgrades to the current version without losing anything
 
     let state = outcome.state;
     for (let i = 0; i < 40; i++) {
-      state = advanceDay(state, { version: 't', events: [], laws: [], offices: [] }).state;
+      state = advanceDay(state, { version: 't', events: [], bills: [], offices: [] }).state;
     }
 
     const before = (raw.treasury as Record<string, Record<string, number>>)
@@ -279,7 +280,7 @@ describe('the v1 fixture upgrades to the current version without losing anything
 
     let state = outcome.state;
     for (let i = 0; i < 40; i++) {
-      state = advanceDay(state, { version: 't', events: [], laws: [], offices: [] }).state;
+      state = advanceDay(state, { version: 't', events: [], bills: [], offices: [] }).state;
     }
 
     expect(state.treasury.receiptLines).toHaveLength(3);
@@ -412,6 +413,120 @@ describe('the v2 fixture gains political capital without losing anything', () =>
   });
 });
 
+/**
+ * THE v3 FIXTURE
+ *
+ * A real save in the version 3 format: bills were a flat list of enacted law
+ * ids, and modifiers had no phase-in ramp. Twelve bills had been passed by day
+ * 900, so this fixture actually carries the thing the migration has to convert.
+ */
+describe('the v3 fixture gains bill records without losing anything', () => {
+  const raw = JSON.parse(JSON.stringify(v3Fixture)) as Record<string, unknown>;
+  const oldPolicies = raw.policies as Record<string, unknown>;
+
+  it('is genuinely a v3 save, with none of the v4 fields', () => {
+    expect(raw.schemaVersion).toBe(3);
+    expect(oldPolicies.bills).toBeUndefined();
+    expect(Array.isArray(oldPolicies.enactedLawIds)).toBe(true);
+    for (const modifier of raw.activeModifiers as Array<Record<string, unknown>>) {
+      expect(modifier.rampDays).toBeUndefined();
+    }
+  });
+
+  it('carries a run with real legislation in it, not an empty one', () => {
+    // A fixture from an empty run would test almost nothing.
+    expect((oldPolicies.enactedLawIds as string[]).length).toBeGreaterThan(5);
+    expect((raw.activeModifiers as unknown[]).length).toBeGreaterThan(5);
+  });
+
+  it('turns every enacted law id into a bill record still in force', () => {
+    const outcome = migrateToCurrent(JSON.parse(JSON.stringify(raw)));
+    expect(outcome.ok).toBe(true);
+    if (!outcome.ok) return;
+
+    const ids = oldPolicies.enactedLawIds as string[];
+    expect(outcome.state.policies.bills).toHaveLength(ids.length);
+
+    for (const record of outcome.state.policies.bills) {
+      expect(ids).toContain(record.billId);
+      expect(record.repealedDay).toBeNull();
+      // No enactment day was ever recorded, and there is no way to recover one.
+      // The founding is the honest answer; the day the player upgraded would be
+      // a fabrication in the game's own record of itself. (v3ToV4.ts)
+      expect(record.enactedDay).toBe(0);
+      expect(record.sliderValue).toBeNull();
+    }
+  });
+
+  it('drops the old list rather than keeping a copy that can drift', () => {
+    const outcome = migrateToCurrent(JSON.parse(JSON.stringify(raw)));
+    expect(outcome.ok).toBe(true);
+    if (!outcome.ok) return;
+
+    const policies = outcome.state.policies as unknown as Record<string, unknown>;
+    expect(policies.enactedLawIds).toBeUndefined();
+  });
+
+  it('gives every carried-forward modifier a zero ramp, not a retrofitted one', () => {
+    const outcome = migrateToCurrent(JSON.parse(JSON.stringify(raw)));
+    expect(outcome.ok).toBe(true);
+    if (!outcome.ok) return;
+
+    for (const modifier of outcome.state.activeModifiers) {
+      // They were applied under a build with no phase-in, so they were fully in
+      // force. Retro-fitting a ramp would weaken effects the player has already
+      // been living with.
+      expect(modifier.rampDays, modifier.id).toBe(0);
+    }
+  });
+
+  it('keeps the taxes, the ledger and the economy as the v3 save left them', () => {
+    const outcome = migrateToCurrent(JSON.parse(JSON.stringify(raw)));
+    expect(outcome.ok).toBe(true);
+    if (!outcome.ok) return;
+
+    const state = outcome.state;
+    expect(state.day).toBe(raw.day);
+    expect(state.policies.taxes).toEqual(oldPolicies.taxes);
+    expect(state.activeModifiers).toHaveLength(
+      (raw.activeModifiers as unknown[]).length,
+    );
+    expect(state.nation.gdp).toBe((raw.nation as Record<string, number>).gdp);
+    expect(state.politicalCapital.current).toBe(
+      (raw.politicalCapital as Record<string, number>).current,
+    );
+  });
+
+  it('runs on from the migrated state without breaking', () => {
+    const outcome = migrateToCurrent(JSON.parse(JSON.stringify(raw)));
+    expect(outcome.ok).toBe(true);
+    if (!outcome.ok) return;
+
+    let state = outcome.state;
+    for (let i = 0; i < 60; i++) {
+      state = advanceDay(state, PHASE_1_CONTENT).state;
+
+      // Answer anything blocking, as a player would. A decision event halts the
+      // day it fires (DESIGN.md §6.3), so a loop that ignored them would stall
+      // and report the migration as broken when it is the clock behaving.
+      while (state.eventState.pendingDecisions.length > 0) {
+        const pending = state.eventState.pendingDecisions[0];
+        const event = PHASE_1_CONTENT.events.find((e) => e.id === pending.eventId)!;
+        state = resolveDecision(
+          state,
+          PHASE_1_CONTENT,
+          pending.eventId,
+          event.options[0].id,
+        ).state;
+      }
+    }
+
+    expect(state.day).toBe((raw.day as number) + 60);
+    expect(Number.isFinite(state.nation.gdp)).toBe(true);
+    expect(Number.isFinite(state.politicalCapital.current)).toBe(true);
+  });
+});
+
 describe('a migrated save is still a valid game state', () => {
   it('survives a full round trip and remains simulable', async () => {
     const { advanceDay } = await import('../advanceDay');
@@ -423,7 +538,7 @@ describe('a migrated save is still a valid game state', () => {
 
     let resumed = outcome.state;
     for (let i = 0; i < 100; i++) {
-      resumed = advanceDay(resumed, { version: 't', events: [], laws: [], offices: [] }).state;
+      resumed = advanceDay(resumed, { version: 't', events: [], bills: [], offices: [] }).state;
     }
 
     expect(resumed.day).toBe(100);

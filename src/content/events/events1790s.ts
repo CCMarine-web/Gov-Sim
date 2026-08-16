@@ -82,7 +82,7 @@ export const EVENTS_1790S: GameEvent[] = [
           { kind: 'regionSentiment', regionId: 'mid_atlantic', delta: 8 },
           { kind: 'regionSentiment', regionId: 'south', delta: -14 },
           { kind: 'setFlag', key: 'assumption_passed', value: true },
-          { kind: 'unlockLaw', lawId: 'bank_of_the_united_states' },
+          { kind: 'unlockBill', billId: 'bank_of_the_united_states' },
         ],
       },
       {
@@ -113,7 +113,7 @@ export const EVENTS_1790S: GameEvent[] = [
           { kind: 'regionSentiment', regionId: 'south', delta: -4 },
           { kind: 'setFlag', key: 'assumption_passed', value: true },
           { kind: 'setFlag', key: 'capital_on_potomac', value: true },
-          { kind: 'unlockLaw', lawId: 'bank_of_the_united_states' },
+          { kind: 'unlockBill', billId: 'bank_of_the_united_states' },
         ],
       },
       {

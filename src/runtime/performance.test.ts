@@ -13,7 +13,7 @@ import {
 } from './gameLoop';
 import { SPEEDS, isUncapped, msPerDayAt } from './speeds';
 
-const EMPTY: ContentPack = { version: 'perf', events: [], laws: [], offices: [] };
+const EMPTY: ContentPack = { version: 'perf', events: [], bills: [], offices: [] };
 
 /** Play the whole span, answering every decision, as a real session would. */
 function playFullRun(): GameState {
@@ -141,6 +141,7 @@ describe('a full run does not grow without bound', () => {
         isPercentage: false,
         startDay: 0,
         endDay: 50,
+        rampDays: 0,
       },
     ];
 

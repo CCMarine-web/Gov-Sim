@@ -25,6 +25,7 @@
  */
 
 import { advanceDay, resolveDecision } from '@/sim/advanceDay';
+import { amendBill, enactBill, repealBill } from '@/sim/bills';
 import { createGame, type NewGameOptions } from '@/sim/createGame';
 import { enactPolicy } from '@/sim/policy';
 import type { ProposedPolicy } from '@/sim/projection';
@@ -418,6 +419,47 @@ export function answerDecision(eventId: string, optionId: string): void {
 export function enactBudget(proposed: ProposedPolicy): void {
   if (!loop.game) return;
   const result = enactPolicy(loop.game, proposed);
+  loop.game = result.state;
+  loop.pendingEffects.push(...result.effects);
+  publish(true);
+}
+
+// ============================================================================
+// LEGISLATION (Phase 2 brief §4)
+//
+// The loop is the only mutable owner of state, so every player action against a
+// bill goes through here. Each looks up the bill in the CONTENT PACK rather than
+// taking one as an argument, so a component can never pass a bill the engine
+// does not have.
+// ============================================================================
+
+function findBill(billId: string) {
+  const bill = loop.content?.bills.find((b) => b.id === billId);
+  if (!bill) {
+    throw new Error(`No bill with id "${billId}" in the content pack.`);
+  }
+  return bill;
+}
+
+export function enactLegislation(billId: string, sliderValue: number | null): void {
+  if (!loop.game || !loop.content) return;
+  const result = enactBill(loop.game, findBill(billId), sliderValue);
+  loop.game = result.state;
+  loop.pendingEffects.push(...result.effects);
+  publish(true);
+}
+
+export function amendLegislation(billId: string, sliderValue: number): void {
+  if (!loop.game || !loop.content) return;
+  const result = amendBill(loop.game, findBill(billId), sliderValue);
+  loop.game = result.state;
+  loop.pendingEffects.push(...result.effects);
+  publish(true);
+}
+
+export function repealLegislation(billId: string): void {
+  if (!loop.game || !loop.content) return;
+  const result = repealBill(loop.game, findBill(billId));
   loop.game = result.state;
   loop.pendingEffects.push(...result.effects);
   publish(true);

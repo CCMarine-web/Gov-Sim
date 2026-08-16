@@ -8,7 +8,7 @@ import { explainStat } from './modifiers';
 import { setTaxRate } from './taxes';
 import { FOUNDING_TAX_IDS, type ContentPack, type GameState } from './types';
 
-const EMPTY_CONTENT: ContentPack = { version: 'test', events: [], laws: [], offices: [] };
+const EMPTY_CONTENT: ContentPack = { version: 'test', events: [], bills: [], offices: [] };
 
 /** Run the simulation forward `days` days. */
 function run(state: GameState, days: number, content = EMPTY_CONTENT): GameState {
@@ -343,6 +343,7 @@ describe('every stat can explain itself (acceptance criterion 4)', () => {
         isPercentage: false,
         startDay: 0,
         endDay: null,
+        rampDays: 0,
       },
     ];
 
@@ -392,6 +393,7 @@ describe('permanent modifiers do not compound (regression)', () => {
         isPercentage: false,
         startDay: 0,
         endDay: null,
+        rampDays: 0,
       },
     ];
 
@@ -419,6 +421,7 @@ describe('permanent modifiers do not compound (regression)', () => {
         isPercentage: false,
         startDay: 0,
         endDay: 200,
+        rampDays: 0,
       },
     ];
 

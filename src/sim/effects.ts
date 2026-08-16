@@ -92,6 +92,9 @@ export function applyEffect(
           effect.durationDays === null
             ? null
             : context.day + effect.durationDays,
+        // Events take effect at once. A treaty signed is a treaty signed; it is
+        // BILLS that phase in, because a statute needs officers to carry it out.
+        rampDays: 0,
       };
 
       tickEffects.push({
@@ -163,36 +166,43 @@ export function applyEffect(
       };
     }
 
-    case 'unlockLaw': {
-      // Unlocking is expressed as a flag so that a law's `requirements` can
+    case 'unlockBill': {
+      // Unlocking is expressed as a flag so that a bill's `prerequisites` can
       // reference it through the ordinary condition grammar, rather than the
       // engine needing a separate notion of "unlocked".
       return {
         state: {
           ...state,
-          flags: { ...state.flags, [`law_unlocked:${effect.lawId}`]: true },
+          flags: { ...state.flags, [`bill_unlocked:${effect.billId}`]: true },
         },
         tickEffects,
       };
     }
 
-    case 'repealLaw': {
-      const enactedLawIds = state.policies.enactedLawIds.filter(
-        (id) => id !== effect.lawId,
+    case 'repealBill': {
+      // Marks the bill repealed rather than deleting the record, so the run
+      // keeps an account of what was passed and when. The tax or programme the
+      // bill created is NOT withdrawn here: content repealing a bill through
+      // this effect is doing so as a narrative consequence, and repealBill() in
+      // bills.ts is the full player-initiated path.
+      const bills = state.policies.bills.map((b) =>
+        b.billId === effect.billId && b.repealedDay === null
+          ? { ...b, repealedDay: context.day }
+          : b,
       );
 
-      // A repealed law's permanent modifiers must go with it, or the ledger
+      // A repealed bill's permanent modifiers must go with it, or the ledger
       // keeps applying effects from a law no longer in force.
       const activeModifiers = removeModifiersFromSource(
         state.activeModifiers,
         'law',
-        effect.lawId,
+        effect.billId,
       );
 
       return {
         state: {
           ...state,
-          policies: { ...state.policies, enactedLawIds },
+          policies: { ...state.policies, bills },
           activeModifiers,
         },
         tickEffects,
@@ -472,8 +482,8 @@ const KNOWN_EFFECT_KINDS = new Set([
   'regionSentiment',
   'setFlag',
   'scheduleEvent',
-  'unlockLaw',
-  'repealLaw',
+  'unlockBill',
+  'repealBill',
   'setTaxRate',
   'enactTax',
   'repealTax',

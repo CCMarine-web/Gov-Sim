@@ -60,7 +60,7 @@ export function projectionContent(content: ContentPack): ContentPack {
   return {
     version: `${content.version}:projection`,
     events: [],
-    laws: [],
+    bills: [],
     offices: content.offices,
   };
 }
@@ -265,7 +265,9 @@ export function projectionBasisKey(state: GameState): string {
     state.lastEconomyRecomputeDay,
     levies,
     programs,
-    state.policies.enactedLawIds.join('+'),
+    state.policies.bills
+      .map((b) => `${b.billId}@${b.sliderValue ?? '-'}/${b.repealedDay ?? '-'}`)
+      .join('+'),
     ledger,
   ].join('|');
 }

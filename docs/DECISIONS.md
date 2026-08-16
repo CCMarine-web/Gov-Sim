@@ -646,3 +646,133 @@ The next person to need a v3 fixture will copy the script, and the copy is where
 the rule gets lost. Making the refusal executable means the rule survives being
 forgotten — which is the only kind of rule worth having in a project meant to be
 picked up by a session with no memory of this one.
+
+---
+
+## D-023 — `Bill` replaces `Law` outright rather than sitting beside it
+
+**Context.** Brief §4 gives a bill schema — department, four capital costs, a
+slider, prerequisites, historicity, bloc reactions — modelled on Democracy 4's
+policy structure. Phase 1 had `Law`: a title, a treasury cost, some effects, six
+instances of it.
+
+**Decided.** `Law` is gone. `Bill` replaces it, the six existing laws are carried
+forward into the new schema, and `ContentPack.laws` becomes `ContentPack.bills`.
+`policies.enactedLawIds: string[]` becomes `policies.bills: EnactedBill[]`, and
+the condition and effect kinds are renamed to match (`billEnacted`,
+`unlockBill`, `repealBill`).
+
+**Why not keep both.** Two shapes for one concept means every screen, every
+condition and every migration has to handle both, and content authors have to
+know which to reach for. The rename cost about twenty call sites and one
+migration; carrying two systems would have cost that much again every time
+either was touched.
+
+**What the old shape could not express, and why it mattered.**
+`enactedLawIds: string[]` recorded only THAT a law had passed. Not when — so a
+chronicle could not say. Not at what intensity — so a slider was impossible. Not
+that it had since been repealed — so the record of a run's legislative history
+was simply absent. `EnactedBill` carries all three.
+
+---
+
+## D-024 — Phase-in is a property of the modifier, not of the stat
+
+**Context.** Brief §4.2 requires `phaseInDays` on every bill: "effects ramp in,
+never instant". The obvious objection is that most stats in this model are
+ALREADY lagged — stability over three months, sentiment over six, prosperity over
+twelve — because modifiers act on the target a lagged stat converges toward. Was
+a second ramp double-counting?
+
+**Decided.** No, and `Modifier` gains `rampDays`. The two model different things
+and both are real:
+
+- **`rampDays`** is the STATUTE taking hold. Officers have to be appointed, forms
+  printed, collectors sent. The Judiciary Act was signed in September 1789 and
+  the courts were not sitting everywhere for the better part of a year.
+- **The lag constants** are the COUNTRY responding to it. Sentiment moves over
+  six months because people take six months to change their minds.
+
+A law's provisions phasing in, and the country's reaction to them lagging, are
+sequential rather than duplicative. And for the stats that are *not* lagged —
+legitimacy is cumulative, not target-seeking — `rampDays` is the only ramp there
+is, so without it the Bank of the United States would deliver its full
+legitimacy effect on the day of signature.
+
+**The constraint that shaped the implementation.** The ledger's one invariant is
+that `base + Σcontributions + clamp === total`. So the ramp is applied to the
+value the breakdown REPORTS, not layered on afterwards: the popover shows what a
+modifier is contributing today, plus `rampProgress` so it can say "still phasing
+in". A popover reporting the eventual value while the stat reflected the ramped
+one would break the one thing the ledger may never break.
+
+**Amending does not restart the ramp.** A law already in force whose rate is
+adjusted is not a new law, and making the country absorb it from nothing again
+would be wrong.
+
+---
+
+## D-025 — Bloc reactions are declared now and land through a documented weighting
+
+**Context.** Brief §4.2 puts `blocReactions` on every bill; the bloc model itself
+is queue item 8. The easy move was to declare the field and leave it inert until
+then.
+
+**Decided.** Bills declare their reactions now, and until item 8 lands each bloc
+is distributed across the four regions by `BLOC_REGION_WEIGHTS` in
+`calibration.ts`. A bill's reactions move regional BASE sentiment in proportion.
+
+**Why not inert.** An unused field rots: nobody can tell whether the numbers in
+it are calibrated, because nothing depends on them. Wiring it to something real
+means the twenty-eight bills' reactions were written against observable
+consequences, and item 8 inherits content that has been exercised rather than
+content that has only been typed.
+
+**Why this is honest rather than a fudge.** The weighting is a documented
+calibration table with a stated economic geography — the planters are the South's
+staple agriculture, the seamen the northern carrying trade — and ECONOMY.md §7.18
+says plainly that item 8 replaces it. Nothing in `src/content/` changes when it
+does, which is the whole reason for declaring the reactions in the content rather
+than deriving them.
+
+**Two details worth defending:**
+
+- **Base sentiment, not current sentiment.** A permanent political fact should
+  move the equilibrium a lagged stat converges toward. Applying it to the stored
+  value would produce a jump the model immediately undoes.
+- **Repeal does not refund it.** A country does not un-resent a law because it
+  was taken back, and a repeal that refunded the political damage would make
+  passing an unpopular bill temporarily free.
+
+---
+
+## D-026 — What "counterfactual" and "anachronistic" actually mean here
+
+**Context.** Brief §4.4 asks for four tiers. Two are obvious — `enacted` and
+`proposed` are matters of record. The line between `counterfactual` and
+`anachronistic` is a judgement, and getting it wrong in either direction spoils
+the point.
+
+**Decided.** The test is **whether anything made it impossible, as opposed to
+merely unlikely**.
+
+| Bill | Tier | Why |
+|---|---|---|
+| Export duty on staples | anachronistic | Article I §9 cl. 5 forbids it outright. A ratification condition for the South, never amended, still good law. |
+| Federal income tax | anachronistic | A direct tax, which Article I requires to be apportioned by population, which income is not. Decisive in *Pollock* (1895); needed the Sixteenth Amendment. |
+| General sales tax | **counterfactual** | Constitutionally available as an excise. Nothing forbade it — there was simply no machinery to assess retail sales and no inspectors to send. |
+| Federal gradual emancipation | **counterfactual** | Not unthinkable: four northern states had gradual emancipation statutes by 1799. Politically impossible at federal level, which the model prices at 200 capital and −100 planters rather than by locking it. |
+| National road programme | counterfactual | The constitutional objection to internal improvements was real but contested, and Congress did authorise the Cumberland Road in 1806. |
+
+**The principle.** A LOCK is a statement that no amount of political skill could
+have achieved this. Anything a sufficiently determined government could have
+done is available and *priced*, however dearly. Locking gradual emancipation
+would have said the Constitution forbade it, which is false and would misteach
+the player about why it did not happen. Pricing it at 200 political capital and
+total planter opposition says the true thing: it was possible and nobody could
+carry it.
+
+**And every tier carries the history.** A counterfactual needs its factual note
+more than an enacted bill does, because the player has to know what they are
+departing from. `validateBill` enforces a 120-character minimum and at least one
+source on all four tiers.

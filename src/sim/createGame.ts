@@ -388,7 +388,7 @@ export function createGame(options: NewGameOptions): GameState {
     policies: {
       taxes: foundingTaxes(),
       programs: foundingPrograms(),
-      enactedLawIds: [],
+      bills: [],
       cumulativeInfrastructure: 0,
     },
 

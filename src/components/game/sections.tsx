@@ -13,7 +13,6 @@
 import { PHASE_1_CONTENT } from '@/content';
 import { formatLongDate } from '@/sim/calendar';
 import { RANGES, TAU_MONTHS } from '@/sim/calibration';
-import { describeUnmet, evaluateAll } from '@/sim/conditions';
 import { explainStat, type StatBreakdown } from '@/sim/modifiers';
 import { currentCrises, stateOfTheUnion } from '@/sim/narrative';
 import { taxesInForce } from '@/sim/taxes';
@@ -86,9 +85,15 @@ export function Desk({ state }: { state: GameState }) {
     treasury.annualisedOutlays.infrastructure;
 
   const crises = currentCrises(state);
-  const enactedLaws = PHASE_1_CONTENT.laws.filter((l) =>
-    policies.enactedLawIds.includes(l.id),
-  );
+  // Bills currently in force, by name. Repealed bills stay in the record but
+  // are not 'active', which is why this filters on the day rather than on
+  // membership of a list.
+  const enactedBills = state.policies.bills
+    .filter(
+      (b) => b.enactedDay <= day && (b.repealedDay === null || b.repealedDay > day),
+    )
+    .map((b) => PHASE_1_CONTENT.bills.find((bill) => bill.id === b.billId))
+    .filter((bill): bill is NonNullable<typeof bill> => bill !== undefined);
 
   return (
     <div className="grid gap-3 lg:grid-cols-3">
@@ -190,15 +195,15 @@ export function Desk({ state }: { state: GameState }) {
       </Panel>
 
       <Panel title="Active laws">
-        {enactedLaws.length === 0 ? (
+        {enactedBills.length === 0 ? (
           <p className="text-small text-content-muted">
             No laws enacted. The statute book is empty.
           </p>
         ) : (
           <ul className="space-y-1">
-            {enactedLaws.map((law) => (
-              <li key={law.id} className="text-small text-content-secondary">
-                · {law.title}
+            {enactedBills.map((bill) => (
+              <li key={bill.id} className="text-small text-content-secondary">
+                · {bill.name}
               </li>
             ))}
           </ul>
@@ -410,83 +415,6 @@ function Exposure({ label, value }: { label: string; value: number }) {
         </span>{' '}
         <span className="text-content-muted">{exposureWord(value)}</span>
       </p>
-    </div>
-  );
-}
-
-// ============================================================================
-// LEGISLATION
-// ============================================================================
-
-export function Legislation({ state }: { state: GameState }) {
-  return (
-    <div className="grid gap-3 lg:grid-cols-2">
-      {PHASE_1_CONTENT.laws.map((law) => {
-        const enacted = state.policies.enactedLawIds.includes(law.id);
-        const available = evaluateAll(law.requirements, state);
-        const reasons = available ? [] : describeUnmet(law.requirements, state);
-
-        return (
-          <section
-            key={law.id}
-            className={`rounded-card border p-3 ${
-              enacted
-                ? 'border-brass-400/50 bg-ink-600'
-                : available
-                  ? 'border-ink-400 bg-ink-700'
-                  : 'border-ink-400/60 bg-ink-800'
-            }`}
-          >
-            <div className="flex items-baseline justify-between gap-2">
-              <h3 className="font-serif text-h2 text-content-primary">{law.title}</h3>
-              {enacted ? (
-                <span className="text-label uppercase tracking-wider text-brass-300">
-                  Enacted
-                </span>
-              ) : (
-                !available && (
-                  <span className="text-label uppercase tracking-wider text-content-muted">
-                    Locked
-                  </span>
-                )
-              )}
-            </div>
-            <p className="text-label uppercase tracking-wider text-content-muted">
-              {law.category}
-            </p>
-
-            <p className="mt-2 text-body text-content-secondary">{law.description}</p>
-
-            <Row label="Cost" value={formatCurrency(law.enactmentCost)} />
-
-            {!available && (
-              <ul className="mt-2 space-y-0.5">
-                {reasons.map((reason) => (
-                  <li key={reason} className="text-small text-oxblood-300">
-                    Requires: {reason}
-                  </li>
-                ))}
-              </ul>
-            )}
-
-            <details className="mt-2">
-              <summary className="cursor-pointer text-small text-brass-300">
-                Historical context
-              </summary>
-              <p className="mt-1.5 font-serif text-body-serif text-content-secondary">
-                {law.historicalContext}
-              </p>
-              <ul className="mt-1.5">
-                {law.sources.map((source) => (
-                  <li key={source} className="text-small text-content-muted">
-                    {source}
-                  </li>
-                ))}
-              </ul>
-            </details>
-          </section>
-        );
-      })}
     </div>
   );
 }

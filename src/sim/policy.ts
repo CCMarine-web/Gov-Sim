@@ -273,6 +273,9 @@ export function enactPolicy(
       isPercentage: false,
       startDay: state.day,
       endDay: state.day + POLICY_COST_DURATION_DAYS,
+      // A budget change is an act, not a statute: the political cost lands at
+      // once. Bills phase in; decisions do not.
+      rampDays: 0,
     });
 
     effects.push({

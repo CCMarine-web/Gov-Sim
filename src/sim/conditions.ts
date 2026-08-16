@@ -119,8 +119,13 @@ export function evaluate(condition: Condition, state: GameState): boolean {
     case 'flag':
       return state.flags[condition.key] === condition.equals;
 
-    case 'lawEnacted':
-      return state.policies.enactedLawIds.includes(condition.lawId);
+    case 'billEnacted':
+      return state.policies.bills.some(
+        (b) =>
+          b.billId === condition.billId &&
+          b.enactedDay <= state.day &&
+          (b.repealedDay === null || b.repealedDay > state.day),
+      );
 
     case 'eventFired':
       return state.eventState.firedEventIds.includes(condition.eventId);
@@ -208,8 +213,8 @@ export function describe(condition: Condition): string {
     case 'flag':
       return `${humanisePath(condition.key)} is ${String(condition.equals)}`;
 
-    case 'lawEnacted':
-      return `The law "${condition.lawId}" has been enacted`;
+    case 'billEnacted':
+      return `The bill "${condition.billId}" is in force`;
 
     case 'eventFired':
       return `The event "${condition.eventId}" has occurred`;
@@ -255,7 +260,7 @@ const KNOWN_KINDS = new Set([
   'stat',
   'regionStat',
   'flag',
-  'lawEnacted',
+  'billEnacted',
   'eventFired',
   'optionChosen',
   'governmentType',

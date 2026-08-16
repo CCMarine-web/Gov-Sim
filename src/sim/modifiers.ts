@@ -71,6 +71,34 @@ export function activeFor(
   return modifiers.filter((m) => m.target === target && isActiveOn(m, day));
 }
 
+/**
+ * How much of a modifier's declared value is in force today, 0…1.
+ *
+ * A statute does not change a country the day it is signed: officers have to be
+ * appointed, forms printed, collectors sent. `rampDays` expresses that, and it
+ * ramps LINEARLY rather than on a curve because the player has to be able to
+ * predict it — "half of it by halfway" is a promise a straight line keeps and an
+ * ease-in does not. (brief §4.2)
+ *
+ * `rampDays: 0` is immediate, which is right for an event: a treaty signed is a
+ * treaty signed.
+ *
+ * The ramped value is what the breakdown shows. A popover reporting the
+ * eventual value while the stat reflects the ramped one would break the
+ * reconciliation invariant, which is the one thing the ledger may never do.
+ */
+export function rampFactor(modifier: Modifier, day: number): number {
+  if (modifier.rampDays <= 0) return 1;
+  const elapsed = day - modifier.startDay;
+  if (elapsed <= 0) return 0;
+  return Math.min(1, elapsed / modifier.rampDays);
+}
+
+/** A modifier's contribution today, after phase-in. */
+export function effectiveValue(modifier: Modifier, day: number): number {
+  return modifier.value * rampFactor(modifier, day);
+}
+
 // ============================================================================
 // RESOLUTION
 // ============================================================================
@@ -79,11 +107,17 @@ export interface StatContribution {
   modifierId: string;
   source: string;
   sourceType: ModifierSourceType;
-  /** The modifier's declared value: a flat amount, or a rate like 0.1 for +10%. */
+  /**
+   * The value in force today: a flat amount, or a rate like 0.1 for +10%.
+   * Already ramped, so it is what the modifier is contributing now rather than
+   * what it will contribute when fully phased in.
+   */
   value: number;
   isPercentage: boolean;
   /** What this modifier actually added to the total, in the stat's own units. */
   effect: number;
+  /** 0…1. Below 1 means the source is still phasing in. */
+  rampProgress: number;
 }
 
 export interface StatBreakdown {
@@ -129,11 +163,14 @@ export function explainStat(
   let flatTotal = 0;
   let percentageTotal = 0;
 
+  // Every sum below uses the RAMPED value, not the declared one, so a bill part
+  // way through its phase-in contributes part way. (see `rampFactor`)
   for (const modifier of applicable) {
+    const value = effectiveValue(modifier, day);
     if (modifier.isPercentage) {
-      percentageTotal += modifier.value;
+      percentageTotal += value;
     } else {
-      flatTotal += modifier.value;
+      flatTotal += value;
     }
   }
 
@@ -143,14 +180,20 @@ export function explainStat(
   // Each modifier's real contribution, in the stat's own units. Percentage
   // modifiers act on the post-flat subtotal, which is why they are computed
   // after the flat pass rather than during it.
-  const contributions: StatContribution[] = applicable.map((modifier) => ({
-    modifierId: modifier.id,
-    source: modifier.source,
-    sourceType: modifier.sourceType,
-    value: modifier.value,
-    isPercentage: modifier.isPercentage,
-    effect: modifier.isPercentage ? afterFlat * modifier.value : modifier.value,
-  }));
+  const contributions: StatContribution[] = applicable.map((modifier) => {
+    const value = effectiveValue(modifier, day);
+    return {
+      modifierId: modifier.id,
+      source: modifier.source,
+      sourceType: modifier.sourceType,
+      value,
+      isPercentage: modifier.isPercentage,
+      effect: modifier.isPercentage ? afterFlat * value : value,
+      // Surfaced so the popover can say "phasing in — 40% applied" rather than
+      // showing a number smaller than the law promised with no explanation.
+      rampProgress: rampFactor(modifier, day),
+    };
+  });
 
   const total = clamp
     ? Math.min(clamp.max, Math.max(clamp.min, rawTotal))
@@ -310,6 +353,11 @@ export function aggregate(
     isPercentage: anyPercentage,
     startDay,
     endDay,
+    // An aggregate of several ramps has no single ramp. Collapsing modifiers
+    // that phase in at different rates would misstate all of them, so the
+    // aggregate is immediate and the caller is responsible for only
+    // aggregating things that belong together.
+    rampDays: 0,
   };
 }
 

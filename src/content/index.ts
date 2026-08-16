@@ -12,7 +12,7 @@
 import type { ContentPack } from '@/sim/types';
 import { EVENTS_1790S } from './events/events1790s';
 import { EVENTS_1790S_ADDITIONAL } from './events/events1790sAdditional';
-import { LAWS_1790S } from './laws/laws1790s';
+import { BILLS_1790S } from './bills';
 import { OFFICES } from './government/cabinet';
 
 export const CONTENT_VERSION = '1790s.3';
@@ -22,7 +22,7 @@ const ALL_EVENTS = [...EVENTS_1790S, ...EVENTS_1790S_ADDITIONAL];
 export const PHASE_1_CONTENT: ContentPack = {
   version: CONTENT_VERSION,
   events: ALL_EVENTS,
-  laws: LAWS_1790S,
+  bills: BILLS_1790S,
   /*
     The offices are read by the ENGINE, not only by the Government screen: how
     much of the administration exists and is staffed drives political capital
@@ -32,5 +32,5 @@ export const PHASE_1_CONTENT: ContentPack = {
   offices: OFFICES,
 };
 
-export { EVENTS_1790S, EVENTS_1790S_ADDITIONAL, LAWS_1790S, OFFICES };
+export { EVENTS_1790S, EVENTS_1790S_ADDITIONAL, BILLS_1790S, OFFICES };
 export { REGION_SEEDS, CENSUS_1790_TOTALS } from './regions/regions1790';

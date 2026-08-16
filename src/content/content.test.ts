@@ -4,10 +4,11 @@ import { PHASE_1_END_DAY, PHASE_1_START_DAY, isoToDay } from '@/sim/calendar';
 import { validateCondition } from '@/sim/conditions';
 import { createTestGame } from '@/sim/createGame';
 import { validateEffect } from '@/sim/effects';
+import { validateBill } from '@/sim/bills';
 import { REGION_IDS, type Condition, type GameState } from '@/sim/types';
 import { CENSUS_1790_TOTALS, PHASE_1_CONTENT, REGION_SEEDS } from './index';
 
-const { events, laws } = PHASE_1_CONTENT;
+const { events, bills } = PHASE_1_CONTENT;
 
 /** Every condition in a tree, flattened. */
 function flattenConditions(condition: Condition): Condition[] {
@@ -28,8 +29,8 @@ describe('structural validity', () => {
     expect(new Set(ids).size).toBe(ids.length);
   });
 
-  it('every law id is unique', () => {
-    const ids = laws.map((l) => l.id);
+  it('every bill id is unique', () => {
+    const ids = bills.map((b) => b.id);
     expect(new Set(ids).size).toBe(ids.length);
   });
 
@@ -58,10 +59,16 @@ describe('structural validity', () => {
         }
       }
     }
-    for (const law of laws) {
-      for (const condition of law.requirements) {
-        expect(validateCondition(condition, law.id)).toEqual([]);
+    for (const bill of bills) {
+      for (const condition of bill.prerequisites) {
+        expect(validateCondition(condition, bill.id)).toEqual([]);
       }
+    }
+  });
+
+  it('every bill validates', () => {
+    for (const bill of bills) {
+      expect(validateBill(bill), bill.id).toEqual([]);
     }
   });
 
@@ -73,17 +80,13 @@ describe('structural validity', () => {
         }
       }
     }
-    for (const law of laws) {
-      for (const effect of law.effects) {
-        expect(validateEffect(effect, law.id)).toEqual([]);
-      }
-    }
+
   });
 });
 
 describe('referential integrity', () => {
   const eventIds = new Set(events.map((e) => e.id));
-  const lawIds = new Set(laws.map((l) => l.id));
+  const billIds = new Set(bills.map((b) => b.id));
   const regionIds = new Set<string>(REGION_IDS);
 
   it('every scheduled event refers to an event that exists', () => {
@@ -98,12 +101,12 @@ describe('referential integrity', () => {
     }
   });
 
-  it('every unlocked or repealed law refers to a law that exists', () => {
+  it('every unlocked or repealed bill refers to a bill that exists', () => {
     for (const event of events) {
       for (const option of event.options) {
         for (const effect of option.effects) {
-          if (effect.kind === 'unlockLaw' || effect.kind === 'repealLaw') {
-            expect(lawIds.has(effect.lawId), `${event.id} -> ${effect.lawId}`).toBe(true);
+          if (effect.kind === 'unlockBill' || effect.kind === 'repealBill') {
+            expect(billIds.has(effect.billId), `${event.id} -> ${effect.billId}`).toBe(true);
           }
         }
       }
@@ -122,17 +125,17 @@ describe('referential integrity', () => {
     }
   });
 
-  it('every condition referencing an event or law resolves', () => {
+  it('every condition referencing an event or bill resolves', () => {
     const all = [
       ...events.flatMap((e) => e.triggerConditions.flatMap(flattenConditions)),
-      ...laws.flatMap((l) => l.requirements.flatMap(flattenConditions)),
+      ...bills.flatMap((b) => b.prerequisites.flatMap(flattenConditions)),
     ];
     for (const condition of all) {
       if (condition.kind === 'eventFired' || condition.kind === 'optionChosen') {
         expect(eventIds.has(condition.eventId)).toBe(true);
       }
-      if (condition.kind === 'lawEnacted') {
-        expect(lawIds.has(condition.lawId)).toBe(true);
+      if (condition.kind === 'billEnacted') {
+        expect(billIds.has(condition.billId)).toBe(true);
       }
     }
   });
@@ -158,10 +161,10 @@ describe('historical integrity', () => {
     }
   });
 
-  it('every law carries historical context and a source', () => {
-    for (const law of laws) {
-      expect(law.historicalContext.length, law.id).toBeGreaterThan(120);
-      expect(law.sources.length, law.id).toBeGreaterThan(0);
+  it('every bill carries historical context and a source', () => {
+    for (const bill of bills) {
+      expect(bill.historicalNote.length, bill.id).toBeGreaterThan(120);
+      expect(bill.sources.length, bill.id).toBeGreaterThan(0);
     }
   });
 

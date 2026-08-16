@@ -22,6 +22,7 @@
 import { existsSync, writeFileSync } from 'node:fs';
 import { advanceDay, resolveDecision } from '../src/sim/advanceDay.js';
 import { createTestGame } from '../src/sim/createGame.js';
+import { billStatus, enactBill } from '../src/sim/bills.js';
 import { PHASE_1_CONTENT } from '../src/content/index.js';
 import { aggregateRate, spendingFor } from '../src/sim/taxes.js';
 import type { GameState } from '../src/sim/types.js';
@@ -44,7 +45,27 @@ if (existsSync(path)) {
 }
 
 // --- Play a real game to day 900 -------------------------------------------
+//
+// Events are answered with the first option, and every affordable bill is
+// passed at two checkpoints. A fixture from an empty run tests almost nothing:
+// the point of committing one is that it carries a real save's worth of taxes,
+// bills, modifiers and log entries for the migration to carry forward.
 let state: GameState = createTestGame();
+
+function passWhatItCan(): void {
+  // Given plenty of capital, so the fixture is about the schema rather than
+  // about affordability.
+  state = {
+    ...state,
+    politicalCapital: { ...state.politicalCapital, current: 900, cap: 900 },
+  };
+
+  for (const bill of PHASE_1_CONTENT.bills) {
+    if (billStatus(state, bill).kind !== 'available') continue;
+    state = enactBill(state, bill, bill.hasSlider ? bill.sliderRange![0] : null).state;
+  }
+}
+
 for (let i = 0; i < 900; i++) {
   state = advanceDay(state, PHASE_1_CONTENT).state;
   while (state.eventState.pendingDecisions.length > 0) {
@@ -57,10 +78,29 @@ for (let i = 0; i < 900; i++) {
       event.options[0].id,
     ).state;
   }
+  if (state.day === 400 || state.day === 800) passWhatItCan();
 }
 
 // --- Downgrade to the requested format --------------------------------------
 type Loose = Record<string, unknown>;
+
+/** v4 → v3: `policies.bills` was a flat list of enacted law ids. */
+function downgradeToV3(current: Loose, played: GameState): Loose {
+  const policies = { ...(current.policies as Loose) };
+  delete policies.bills;
+  policies.enactedLawIds = played.policies.bills
+    .filter((b) => b.repealedDay === null)
+    .map((b) => b.billId);
+
+  // Modifiers had no phase-in ramp.
+  const activeModifiers = (current.activeModifiers as Loose[]).map((m) => {
+    const copy = { ...m };
+    delete copy.rampDays;
+    return copy;
+  });
+
+  return { ...current, schemaVersion: 3, policies, activeModifiers };
+}
 
 /** v3 → v2: political capital and administrative capacity did not exist. */
 function downgradeToV2(current: Loose): Loose {
@@ -92,7 +132,8 @@ function downgradeToV1(current: Loose, played: GameState): Loose {
         civil: spendingFor(played.policies, played.day, 'civil'),
         infrastructure: spendingFor(played.policies, played.day, 'infrastructure'),
       },
-      enactedLawIds: played.policies.enactedLawIds,
+      // Already downgraded to the v3 shape by the time this runs.
+      enactedLawIds: (current.policies as Loose).enactedLawIds ?? [],
       cumulativeInfrastructure: played.policies.cumulativeInfrastructure,
     },
     treasury,
@@ -100,6 +141,7 @@ function downgradeToV1(current: Loose, played: GameState): Loose {
 }
 
 let fixture: Loose = JSON.parse(JSON.stringify(state));
+if (version <= 3) fixture = downgradeToV3(fixture, state);
 if (version <= 2) fixture = downgradeToV2(fixture);
 if (version <= 1) fixture = downgradeToV1(fixture, state);
 

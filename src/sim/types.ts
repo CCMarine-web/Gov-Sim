@@ -31,7 +31,7 @@ import type { TaxBase } from './taxBases';
  * migrated forward or refused cleanly — never crashed, never silently loaded
  * into a broken state. (DESIGN.md Rule 8)
  */
-export const SCHEMA_VERSION = 3;
+export const SCHEMA_VERSION = 4;
 
 // ============================================================================
 // GOVERNMENT AND REGIONS
@@ -81,6 +81,17 @@ export interface Modifier {
   startDay: number;
   /** null = permanent. */
   endDay: number | null;
+  /**
+   * Days over which this modifier ramps from nothing to its full value.
+   *
+   * 0 means immediate, which is right for an event: a treaty signed is a treaty
+   * signed. A BILL is different — a statute does not change a country the day
+   * it is signed, because officers have to be appointed and collectors sent
+   * (brief §4.2, `phaseInDays`). The ledger shows the ramped contribution and
+   * still reconciles: the popover reports what the modifier is contributing
+   * today, not what it will contribute eventually.
+   */
+  rampDays: number;
 }
 
 // ============================================================================
@@ -416,7 +427,14 @@ export interface PolicyState {
   taxes: TaxInstance[];
   /** Every spending programme ever created this run, including repealed ones. */
   programs: SpendingProgram[];
-  enactedLawIds: string[];
+  /**
+   * Every bill ever passed this run, including repealed ones.
+   *
+   * Replaces `enactedLawIds: string[]`, which could record only that a law had
+   * passed — not when, not at what intensity, and not that it had since been
+   * repealed. (brief §4)
+   */
+  bills: EnactedBill[];
   /** Cumulative infrastructure spend; drives diminishing returns. */
   cumulativeInfrastructure: number;
 }
@@ -637,7 +655,10 @@ export type TickEffectKind =
   | 'programDefunded'
   | 'capitalSpent'
   | 'emergencyPowersGranted'
-  | 'emergencyPowersLapsed';
+  | 'emergencyPowersLapsed'
+  | 'billEnacted'
+  | 'billAmended'
+  | 'billRepealed';
 
 export interface TickEffect {
   kind: TickEffectKind;
@@ -679,7 +700,7 @@ export type Condition =
       value: number;
     }
   | { kind: 'flag'; key: string; equals: string | number | boolean }
-  | { kind: 'lawEnacted'; lawId: string }
+  | { kind: 'billEnacted'; billId: string }
   | { kind: 'eventFired'; eventId: string }
   | { kind: 'optionChosen'; eventId: string; optionId: string }
   | { kind: 'governmentType'; is: GovernmentType }
@@ -706,8 +727,8 @@ export type EffectSpec =
   | { kind: 'regionSentiment'; regionId: RegionId | 'all'; delta: number }
   | { kind: 'setFlag'; key: string; value: string | number | boolean }
   | { kind: 'scheduleEvent'; eventId: string; inDays: number }
-  | { kind: 'unlockLaw'; lawId: string }
-  | { kind: 'repealLaw'; lawId: string }
+  | { kind: 'unlockBill'; billId: string }
+  | { kind: 'repealBill'; billId: string }
   /** Change the rate of a tax that already exists, by id. */
   | { kind: 'setTaxRate'; taxId: string; value: number }
   /**
@@ -801,25 +822,241 @@ export interface GameEvent {
   oneShot: boolean;
 }
 
-export type LawCategory =
-  | 'fiscal'
-  | 'commercial'
-  | 'military'
-  | 'judicial'
-  | 'civil';
+// ----------------------------------------------------------------------------
+// BILLS (Phase 2 brief §4)
+//
+// Phase 1 had `Law`: a title, a treasury cost, some effects. Brief §4 makes
+// legislation the heart of the game, so a bill now carries what a bill actually
+// has — a department, a political price separate from its fiscal one, an
+// intensity where one makes sense, preconditions that explain themselves, a
+// declared relationship to the historical record, and a statement of who gains
+// and who loses.
+//
+// Modelled closely on Democracy 4's policy structure, as the brief asks.
+// ----------------------------------------------------------------------------
 
-export interface Law {
+/**
+ * The seventeen departments a bill can belong to. (brief §4.1)
+ *
+ * Not every one has content in 1790, and that is deliberate: an empty
+ * department shows what would unlock it and when, rather than being hidden. A
+ * player should be able to see the shape of the government they do not yet have.
+ */
+export type Department =
+  | 'taxation'
+  | 'trade'
+  | 'banking'
+  | 'military'
+  | 'judiciary'
+  | 'public_works'
+  | 'land'
+  | 'immigration'
+  | 'slavery_civil_rights'
+  | 'education'
+  | 'postal'
+  | 'foreign_affairs'
+  | 'agriculture'
+  | 'labor'
+  | 'health_welfare'
+  | 'elections'
+  | 'administration';
+
+export const DEPARTMENTS: readonly Department[] = [
+  'taxation',
+  'trade',
+  'banking',
+  'military',
+  'judiciary',
+  'public_works',
+  'land',
+  'immigration',
+  'slavery_civil_rights',
+  'education',
+  'postal',
+  'foreign_affairs',
+  'agriculture',
+  'labor',
+  'health_welfare',
+  'elections',
+  'administration',
+] as const;
+
+/**
+ * A bill's relationship to the historical record. (brief §4.4)
+ *
+ * Every tier carries factual context — that is the educational spine and it is
+ * not dropped because a bill is counterfactual.
+ */
+export type BillHistoricity =
+  /** Became law in reality. The real date and outcome are shown. */
+  | 'enacted'
+  /** Genuinely debated at the time but failed or stalled. Fully available. */
+  | 'proposed'
+  /** Plausible for the era, never seriously advanced. Available, marked. */
+  | 'counterfactual'
+  /** Impossible for the period. Locked, with the reason stated. */
+  | 'anachronistic';
+
+/**
+ * The economic and social groupings a bill acts on. (brief §1, from Democracy 4)
+ *
+ * Membership is graduated and overlapping — a Virginia planter is also a
+ * slaveholder and often a debtor — and modelling that properly is queue item 8.
+ * Bills declare their reactions NOW so that the content does not have to be
+ * rewritten when the model lands, and so the reactions can drive regional
+ * sentiment in the meantime through a documented weighting
+ * (`BLOC_REGION_WEIGHTS`, ECONOMY.md §7.18).
+ */
+export type BlocId =
+  | 'planters'
+  | 'merchants'
+  | 'frontier_settlers'
+  | 'artisans'
+  | 'financiers'
+  | 'clergy'
+  | 'seamen'
+  | 'small_farmers';
+
+export const BLOC_IDS: readonly BlocId[] = [
+  'planters',
+  'merchants',
+  'frontier_settlers',
+  'artisans',
+  'financiers',
+  'clergy',
+  'seamen',
+  'small_farmers',
+] as const;
+
+export interface BlocReaction {
+  bloc: BlocId;
+  /** −100…+100. How strongly this bloc gains or loses by the bill. */
+  strength: number;
+  /**
+   * Why, in one clause. Shown on the bill card and, from item 7, in the whip
+   * count. Authored rather than generated: "loses the only market a bulk crop
+   * can reach" says something a number cannot.
+   */
+  reason: string;
+}
+
+/**
+ * An effect a bill applies, expressed so it can scale with the bill's slider.
+ *
+ * Distinct from `EffectSpec`, which is a one-shot instruction. A bill's effects
+ * persist while it is in force, scale with its intensity, and are withdrawn
+ * when it is repealed, so they are declared as a template the engine
+ * instantiates rather than as an instruction it executes.
+ */
+export interface ModifierTemplate {
+  target: string;
+  /**
+   * The magnitude. For a slider bill this is the value AT THE TOP of the slider
+   * range when `scalesWithSlider` is true, so the declared number is the
+   * strongest the bill can be.
+   */
+  value: number;
+  isPercentage: boolean;
+  /** Scale linearly with the slider position across its range. */
+  scalesWithSlider: boolean;
+  /** null = in force as long as the bill is. */
+  durationDays: number | null;
+}
+
+/** A tax a bill brings into existence when it passes. (brief §4.3) */
+export interface BillTaxTemplate {
+  taxId: string;
+  name: string;
+  base: TaxBase;
+  /** Rate for a flat bill. Slider bills take their rate from the slider. */
+  rate: number;
+  exemptions: string[];
+  collectionEfficiency: number | null;
+}
+
+/** A spending programme a bill funds when it passes. */
+export interface BillProgramTemplate {
+  programId: string;
+  name: string;
+  category: SpendingCategory;
+  /** Annual amount for a flat bill. Slider bills take it from the slider. */
+  annualAmount: number;
+}
+
+export interface Bill {
   id: string;
-  title: string;
-  category: LawCategory;
+  category: Department;
+  name: string;
   description: string;
-  /** One-off treasury cost to enact. */
-  enactmentCost: number;
-  requirements: Condition[];
-  effects: EffectSpec[];
-  historicalContext: string;
+  /** What actually happened, factually. Required on every tier. */
+  historicalNote: string;
   sources: string[];
+
+  /** A rate or intensity, rather than a flat enact/repeal. */
+  hasSlider: boolean;
+  sliderRange: [number, number] | null;
+  /** What the slider means, e.g. "Duty on carriage value". */
+  sliderLabel: string | null;
+  sliderUnit: 'rate' | 'dollars' | null;
+
+  /**
+   * The political price, in political capital. Four numbers because the four
+   * acts are different: introducing a thing is not the same as repealing it,
+   * and raising a rate is not the same as lowering it. (Democracy 4's schema.)
+   */
+  capitalCost: {
+    introduce: number;
+    repeal: number;
+    /** Per unit of slider increase. */
+    raise: number;
+    /** Per unit of slider decrease. */
+    lower: number;
+  };
+
+  /** One-off treasury cost, across the slider range. */
+  treasuryCost: { min: number; max: number };
+
+  /**
+   * Days over which the bill's effects ramp from nothing to full.
+   *
+   * A statute does not change a country the day it is signed: officers have to
+   * be appointed, forms printed, collectors sent. Never zero for anything real.
+   */
+  phaseInDays: number;
+
+  prerequisites: Condition[];
+  /** Earliest plausible date, ISO. */
+  availableFrom: string;
+  availableUntil: string | null;
+
+  historicity: BillHistoricity;
+  /**
+   * Why it cannot be passed, when `historicity` is 'anachronistic'.
+   *
+   * Rendered verbatim, so it has to be a real reason and not a shrug. A player
+   * who wonders why they cannot lay an income tax in 1791 should learn the
+   * constitutional and administrative answer from the game.
+   */
+  lockedBecause: string | null;
+
+  effects: ModifierTemplate[];
+  blocReactions: BlocReaction[];
+
+  /** Instances this bill creates in Treasury when it passes. (brief §4.3) */
+  createsTax: BillTaxTemplate | null;
+  createsProgram: BillProgramTemplate | null;
+
   repealable: boolean;
+}
+
+/** A bill as it stands in a particular run. */
+export interface EnactedBill {
+  billId: string;
+  enactedDay: number;
+  /** null = still in force. Repealed bills stay, so the record survives. */
+  repealedDay: number | null;
+  /** Slider position, or null for a flat bill. */
+  sliderValue: number | null;
 }
 
 // ============================================================================
@@ -860,7 +1097,7 @@ export interface Office {
 export interface ContentPack {
   version: string;
   events: GameEvent[];
-  laws: Law[];
+  bills: Bill[];
   /**
    * The offices of the federal government and who held them.
    *
