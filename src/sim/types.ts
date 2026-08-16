@@ -178,10 +178,10 @@ export interface NationStats {
    * begins with a constitution and almost no machinery. It is a driver of
    * political capital accrual (§7.17).
    *
-   * Phase 2 item 13 replaces "how many offices are filled" with "how competent
-   * and loyal the people filling them are". The term is here now so the
-   * currency has a real administrative component from the start rather than an
-   * inert placeholder.
+   * Phase 2 item 13 DID replace "how many offices are filled" with "how
+   * competent and loyal the people filling them are": capacity is now existence
+   * × staffing × quality, where quality comes from the mean competence of the
+   * men in post. See `src/sim/cabinet.ts` and ECONOMY.md §7.25.
    */
   administrativeCapacity: number;
   /**

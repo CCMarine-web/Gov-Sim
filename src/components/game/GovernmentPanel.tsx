@@ -126,12 +126,14 @@ export function GovernmentPanel({
             ) : (
               <>
                 <p className="mt-1 text-body text-content-secondary">
-                  Elections are held, and the administration changes hands.
+                  A new Congress is seated on 4 March of every odd year, drawn
+                  from the country as it then is. The whole House, and a third of
+                  the Senate.
                 </p>
                 <p className="mt-1 text-small text-content-muted">
-                  Congress and elections arrive with queue item 7. A president
-                  does not die in office in this model — that is the crown&rsquo;s
-                  risk, and its price.
+                  A president does not die in office in this model — that is the
+                  crown&rsquo;s risk, and its price. What a republic faces instead
+                  is a legislature it must persuade again every two years.
                 </p>
               </>
             )}

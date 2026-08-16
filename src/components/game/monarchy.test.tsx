@@ -151,8 +151,12 @@ describe('the succession outlook is stated, and it is the player’s doing', () 
       <GovernmentPanel state={createTestGame({ governmentType: 'republic' })} />,
     );
 
+    // No succession outlook at all: a president does not die in office in this
+    // model. What a republic faces instead is a legislature it must persuade
+    // again every two years, and that is what the panel describes.
     expect(container.querySelector('[data-testid="succession-outlook"]')).toBeNull();
-    expect(container.textContent).toContain('Elections are held');
+    expect(container.textContent).toContain('4 March of every odd year');
+    expect(container.textContent).toContain('a third of the Senate');
   });
 
   it('counts predecessors once the crown has passed', () => {

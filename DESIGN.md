@@ -1,8 +1,8 @@
 # DESIGN.md — Government Simulator
 
-**Status:** Draft for approval (Phase 1 not yet implemented)
-**Last updated:** 2026-08-15
-**Companion documents:** [`docs/ECONOMY.md`](docs/ECONOMY.md) (simulation model), [`docs/UI.md`](docs/UI.md) (interface specification)
+**Status:** Phase 1 shipped; the Phase 2 §9 queue is complete. Current state of the build is [`docs/PROGRESS.md`](docs/PROGRESS.md).
+**Last updated:** 2026-08-16
+**Companion documents:** [`docs/ECONOMY.md`](docs/ECONOMY.md) (simulation model), [`docs/UI.md`](docs/UI.md) (interface specification), [`docs/THEMING.md`](docs/THEMING.md) (tokens, skins, assets, audio)
 
 ---
 
@@ -63,17 +63,17 @@ The practical test: **a history teacher should be able to look at any event card
 
 ## 2. Phase roadmap
 
-Only Phase 1 is being built. Later phases are recorded here so that Phase 1 decisions don't foreclose them.
+Phase 1 shipped and the Phase 2 §9 queue is complete. Later phases are recorded here so that earlier decisions don't foreclose them.
 
 | Phase | Period | Adds |
 |---|---|---|
 | **1** | 1789–1800 | Core loop, economy, treasury, legislation, events, regions-as-cards, history comparison, save/load, deployment |
-| **2** | 1800–1860 | SVG map layer, territorial expansion, elections and succession, sectional tension mechanics |
+| **2** | 1800–1860 | SVG map layer, territorial expansion, elections and succession, sectional tension mechanics. **The §9 queue is done**: political capital, bills, the decree and congressional paths, blocs, the map, diplomacy, war declaration, the cabinet, theming, and the causal web. The CONTENT still stops at 1800 — see BLOCKERS.md B-005 |
 | **3** | 1860–1900 | Civil War system, military and combat, industrialization |
 | **4** | 1900–1945 | Foreign diplomacy, WWI, the Depression, WWII |
 | **5** | 1945–present | Cold War through present, full scoring and "greatest country" endgame evaluation |
 
-**Forward-compatibility commitments made in Phase 1** (these exist to prevent Phase 2+ from becoming a rewrite):
+**Forward-compatibility commitments made in Phase 1** (these exist to prevent Phase 2+ from becoming a rewrite). **Every one of them held** — Phase 2 attached a map to the existing regions, made succession live on the `Ruler` fields that were already there, and added ten schema versions without a rewrite:
 
 - Regions are modeled in data from day one, and each region contains a list of constituent states — so Phase 2's map attaches geometry to existing entities rather than introducing them (§8).
 - `Ruler` carries birth year and heir fields even though succession is inert in Phase 1 (§9.3).

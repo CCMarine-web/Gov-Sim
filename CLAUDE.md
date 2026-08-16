@@ -98,6 +98,15 @@ This matters as much as the architecture rules.
 
 ## Current status
 
-Phase 1, pre-implementation. The Next.js scaffold, design tokens, and
-deployment pipeline are being established. **No game logic has been written
-yet.** Build the engine before the UI.
+**Phase 1 shipped. The Phase 2 §9 queue is complete — all fifteen items.**
+
+Read **[docs/PROGRESS.md](docs/PROGRESS.md)** for where things actually stand:
+what each item built, what was decided and why, and what is still open. It is
+written so a session with no memory of the work can resume from the repository
+alone.
+
+At the last commit: 902 tests, save schema version 10 with nine committed
+fixtures, all four gates green, deployed.
+
+Open items are in **[docs/BLOCKERS.md](docs/BLOCKERS.md)** — none of them block
+anything, and each records what was tried and what would clear it.

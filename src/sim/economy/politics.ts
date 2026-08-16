@@ -112,9 +112,11 @@ export function administrativeCapacityTarget(params: {
  * fails faster when the elite turns.
  *
  * (Brief §3 specifies seat share for the republic and noble satisfaction for
- * the monarchy. Congress arrives in queue item 7; until then the republican
- * term is mean regional sentiment, which is what a seat share would be a
- * consequence of. Recorded in ECONOMY.md §7.17.)
+ * the monarchy. The republican term is mean regional SENTIMENT rather than the
+ * seat share itself, and it stayed that way after Congress was built in queue
+ * item 7 — deliberately. A seat share is a consequence of sentiment, lagging it
+ * by up to two years, so using the share would make the currency respond to the
+ * last election rather than to the country. Recorded in ECONOMY.md §7.17.)
  */
 export function capitalAccrualTarget(params: {
   governmentType: GovernmentType;
