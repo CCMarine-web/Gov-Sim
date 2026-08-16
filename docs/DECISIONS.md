@@ -1,9 +1,12 @@
 # DECISIONS.md
 
-Decisions taken on the project owner's behalf during the autonomous run of
-2026-08-15, with reasoning. Reverse anything here you disagree with.
+Decisions taken on the project owner's behalf during the autonomous runs of
+2026-08-15 (Phase 1) and 2026-08-16 (Phase 2), with reasoning. Reverse anything
+here you disagree with.
 
 Format: what was decided, why, and what the alternative was.
+
+D-001 to D-009 are Phase 1. D-010 onwards are Phase 2.
 
 ---
 
@@ -172,3 +175,173 @@ slower than total population).
 
 **Outstanding.** Should be anchored against 1800 census state-level figures.
 Logged in `BLOCKERS.md`.
+
+---
+
+# Phase 2
+
+## D-010 — A DOM test environment was added, opt-in per file
+
+**Context.** Brief §0.1 asked for a regression test that would have caught the
+number flicker, and specifically for the verification to be pushed into code
+rather than left to a human watching the screen. The test suite had no DOM:
+`vitest.config.mts` sets `environment: 'node'` deliberately, because running the
+simulation tests without a DOM is what enforces DESIGN.md Rule 1.
+
+**Decided.** Added `jsdom`, `@testing-library/react` and `@testing-library/dom`
+as **dev** dependencies. The default vitest environment stays `node`. Component
+tests opt in per file with a `// @vitest-environment jsdom` docblock.
+
+**Why.** Opting in per file keeps the Rule 1 guarantee intact — a `window`
+reference that leaks into `src/sim/` still fails, because the simulation tests
+still run with no DOM. A global jsdom environment would have quietly removed the
+enforcement that made Rule 1 real.
+
+Nothing ships to the browser: all three are `devDependencies` and none is
+imported by application code.
+
+**Alternative rejected.** A second vitest project for UI tests. More
+configuration for the same result, and two configs drift.
+
+---
+
+## D-011 — The number flicker: diagnosis before the fix
+
+**The hypothesis, written before touching code**, per the brief's instruction to
+diagnose first. Five suspects were offered. Taking them in order:
+
+| Suspect | Verdict |
+|---|---|
+| Value-interpolation animation restarting on every publish | **Not the cause.** There is no interpolation anywhere in the codebase. DESIGN.md §6.3 and §6.5 promise it; it was never built. See D-013. |
+| Unstable React keys causing remounts | **Not the cause.** Measured: 2,000 frames of the full shell under a running clock produced **zero** DOM node identity changes for any stat. |
+| Conditional rendering briefly returning null between frames | **This is the cause**, in the Treasury panel. Details below. |
+| `tabular-nums` missing somewhere | **Not the cause.** Every numeric display goes through `<Stat>` or a `.tabular` span; the utility is defined in `globals.css` and both fonts carry `tnum`. |
+| The throttle and the animation duration fighting each other | **Effectively yes** — but it is the throttle and a *debounce* fighting, not an animation. |
+
+**The actual mechanism.** `TreasuryPanel` computed its projection in a
+`useEffect` whose dependency array was `[state, draft]`, where `state` is the
+published snapshot. The loop publishes a **new state object four times a
+second** while the clock runs (DESIGN.md §6.2). So, on a 250ms cadence:
+
+1. A publish arrives. `state` is a new object.
+2. `fresh = result.forState === state` becomes false, so `projection` becomes
+   `null`.
+3. Every figure on the screen renders as an em-dash: all five projection rows in
+   both columns, the three per-slider revenue figures, and the header flips to
+   "simulating…".
+4. The effect re-runs. Its cleanup clears the pending 180ms debounce and starts
+   a new one.
+5. 180ms later the debounce fires, two full 365-day forward simulations run
+   **synchronously on the main thread**, and the figures reappear.
+6. 70ms after that the next publish arrives and it starts again.
+
+So the Treasury screen's numbers blanked out and returned four times a second,
+and the machine ran 8 × 365 simulated days per second to achieve it. That is
+both halves of the report — the flicker *and* the "feels broken" — from one
+defect.
+
+The 180ms debounce being shorter than the 250ms publish interval is why the
+numbers reappeared at all. Had it been longer than 250ms, the effect's cleanup
+would have cancelled every pending computation and the projection would have
+shown em-dashes **permanently** while the clock ran. The bug was 70ms away from
+being much more obvious.
+
+**Why no test caught it.** There were no component tests at all. Every existing
+test of this area asserts that `comparePolicies` returns the right numbers,
+which it does. The defect is entirely in *when* the component asks for them.
+
+---
+
+## D-012 — The projection re-bases on material change, not on every publish
+
+**Decided.** The Treasury projection recomputes when its *basis* changes, not
+when the state object's identity changes. The basis is defined in
+`src/sim/projection.ts` as `projectionBasisKey(state)`, covering:
+
+- the day the economy was last recomputed (the monthly cadence — everything
+  downstream of it is constant in between),
+- the committed tax rates and spending,
+- the enacted law set,
+- the active modifier ledger, by id and value.
+
+Deliberately **excluded**: `state.day` and the treasury balance. One day of
+accrual does not move a 365-day forward simulation by anything a player could
+read, and including it is precisely what forced a recompute on every tick.
+
+**And the numbers never blank.** While a fresh projection computes, the previous
+one stays on screen and is labelled with the in-game date it was computed from.
+A figure that is twenty days stale and says so is better than an em-dash, and
+far better than an em-dash that flashes.
+
+**Why this shape.** The alternative — memoising harder, or comparing states
+deeply — treats the symptom. The real statement is that a 365-day projection has
+a *basis*, that basis changes monthly, and the screen should say which basis it
+is showing. Making that explicit in the sim layer also keeps Rule 7 intact: the
+component does not decide what makes a projection stale, `src/sim/` does.
+
+**Alternative rejected.** Recomputing in a web worker so the cost is off the
+main thread. That would have fixed the CPU burn while leaving the numbers
+flashing, which is the wrong half of the problem, and it would have put the
+engine behind an async boundary for no simulation benefit.
+
+---
+
+## D-013 — Displayed numbers do not interpolate, and DESIGN.md now says so
+
+**Context.** DESIGN.md §6.3 said "Displayed numbers interpolate over ~300ms
+toward the latest published value", and §6.5 said the display "interpolates
+between monthly values so numbers move smoothly rather than stepping once a
+month". Neither was ever implemented. The brief's first suspect for the flicker
+assumed the animation existed and was misbehaving.
+
+**Decided.** Remove the promise rather than build it. Both sections of DESIGN.md
+are corrected in the same commit, per the standing rule that a document and the
+code disagreeing is a bug in one of them.
+
+**Why.**
+
+1. **It would display numbers the simulation never produced.** This project's
+   hardest rule is that a figure on screen must be accountable to something real
+   (Rule 5, §12). An eased tween between $231,204 and $248,911 puts sixty values
+   on screen that no tick ever computed, and the stat popover — which shows the
+   arithmetic behind the number — would disagree with the number beside it.
+2. **The reference games do not do it.** HOI4 and Victoria 3 update their
+   numbers discretely and reserve the width instead. What makes their readouts
+   feel calm is stable layout, not motion.
+3. **It is a flicker source, not a flicker cure.** An interpolation retargeted
+   four times a second by the publish throttle is the brief's own first suspect.
+   Building it to fix a flicker would have been building the thing that was
+   suspected of causing it.
+
+**What replaces it.** Layout stability: every `<Stat>` reserves a minimum width
+so a changing digit count cannot move anything else on the row. See D-014.
+
+**Reversible.** If the motion is wanted later, the honest form is to animate
+only *presentation* — a brief highlight on change — never the digits themselves.
+
+---
+
+## D-014 — The command bar no longer scrolls horizontally
+
+**Context.** The command bar's stat row was `ml-auto flex items-center gap-5
+overflow-x-auto`. Two consequences, both bad:
+
+1. **A scrollbar that toggles.** Six stats plus the seal, ruler and clock
+   overflow a 1280px bar. `overflow-x-auto` therefore shows a horizontal
+   scrollbar — inside a 64px-tall header — and as the rendered values change
+   character count (`$8,587` → `$10.0K` → `$231.2K` → `$1.24M`) the content
+   width crosses the container width repeatedly, so the scrollbar appears and
+   disappears and the whole row jumps. `tabular-nums` does not help: it makes
+   digits equal in width to *each other*, not strings equal in length.
+2. **Clipped popovers.** `overflow-x-auto` establishes a scroll container, which
+   clips absolutely-positioned children. Every modifier breakdown opened from
+   the command bar was being cut off — and that breakdown is acceptance
+   criterion 4.
+
+**Decided.** Drop `overflow-x-auto`, and give each `<Stat>` a reserved minimum
+width so its value can change length without moving its neighbours.
+
+**Note on evidence.** Unlike D-011 this was found by reading, not measured:
+jsdom has no layout engine, so a scrollbar cannot be observed in a test. The
+popover clipping, however, is unconditional and follows from the CSS alone.
+Recorded in `docs/MANUAL-QA.md` as a check to make with human eyes.

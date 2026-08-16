@@ -83,6 +83,14 @@ export function Stat({
   return (
     <div
       className={`relative inline-flex flex-col ${className}`}
+      /*
+        Test hooks. Number stability is asserted by reading these off the DOM
+        (see numberStability.test.tsx), which is the same thing the player's eye
+        does — a value that has dropped out reads as empty here rather than
+        being papered over by inspecting component state instead.
+      */
+      data-stat-label={label}
+      data-stat-value={value}
       onMouseEnter={() => interactive && setOpen(true)}
       onMouseLeave={() => setOpen(false)}
     >

@@ -4,10 +4,10 @@
 that produced it.**
 
 If you are resuming with no context: read `DESIGN.md` first, then this file,
-then `docs/DECISIONS.md` and `docs/BLOCKERS.md`. Then continue the queue in
-`gov-sim-autonomous-run.md` §5 without asking anything.
+then `docs/DECISIONS.md` and `docs/BLOCKERS.md`. Then continue the **Phase 2
+queue** below, which is `gov-sim-phase2-brief.md` §9.
 
-**Last updated:** autonomous run of 2026-08-15, after Item 5.
+**Last updated:** Phase 2 run of 2026-08-16, after queue item 1.
 
 ---
 
@@ -17,13 +17,79 @@ then `docs/DECISIONS.md` and `docs/BLOCKERS.md`. Then continue the queue in
 |---|---|
 | Production URL | <https://gov-sim.vercel.app> |
 | Deploy | auto-deploys from `main` on push |
-| Tests | 302 passing |
+| Tests | 308 passing |
 | Gates | tests, lint, typecheck, production build — all green |
 | Database | Supabase, `save_games` table migrated, verified reachable from production |
+| Phase | **2 — in progress.** Phase 1 shipped. |
 
 ---
 
-## Autonomous run queue
+## Phase 2 queue — `gov-sim-phase2-brief.md` §9
+
+| Item | Status |
+|---|---|
+| 1 — Numbers flicker fix + regression test | **complete** — see below and DECISIONS.md D-010…D-014 |
+| 2 — Speed rebalance with config table | not started |
+| 3 — Dynamic tax and spending instances | not started |
+| 4 — Political capital system | not started |
+| 5 — Legislation categories and bill schema (≥25 bills) | not started |
+| 6 — Monarchy decree path | not started |
+| 7 — Congress and the republic path | not started |
+| 8 — Bloc model | not started |
+| 9 — Map view replacing the Desk | not started |
+| 10 — Remaining map modes and state detail panel | not started |
+| 11 — Diplomacy tab | not started |
+| 12 — War declaration paths | not started |
+| 13 — Cabinet competence and loyalty | not started |
+| 14 — Theming, asset registry, audio abstraction | not started |
+| 15 — Causal web view | not started |
+
+### Item 1 — the number flicker: complete
+
+**What it actually was.** `TreasuryPanel` keyed its projection on the identity
+of the published `GameState`. The loop publishes a new state object four times
+a second, so every 250ms the projection went stale, all ten figures rendered as
+em-dashes, and a 180ms debounce restarted — then two full 365-day forward
+simulations ran on the main thread to bring them back. Measured before the fix:
+**405 of 600 frames blank, 36 re-simulations in ten seconds of wall time.**
+
+Full diagnosis, including which of the brief's five suspects were ruled out and
+how, is `DECISIONS.md` D-011.
+
+**What changed.**
+
+- `src/sim/projection.ts` — new `projectionBasisKey(state)`. Staleness is now a
+  simulation question answered in `src/sim/`, not an identity comparison in a
+  component (Rule 7). The basis is the monthly economy recompute, the committed
+  policy, the enacted laws and the modifier ledger; `state.day` and the treasury
+  balance are deliberately excluded.
+- `src/components/game/TreasuryPanel.tsx` — re-bases on that key, and never
+  blanks: the previous projection stays on screen while a new one computes,
+  labelled with the in-game date it was simulated from.
+- `src/components/game/CommandBar.tsx` — dropped `overflow-x-auto`, which
+  toggled a scrollbar inside the 64px bar as value lengths changed and was also
+  clipping every stat popover opened from there.
+- `src/app/globals.css` — new `stat-slot` utility reserving width, so a value
+  changing length cannot move its neighbours.
+- `DESIGN.md` §6.3/§6.5 and `docs/UI.md` §2.5 — corrected. They promised a
+  300ms number interpolation that was never built and will not be; D-013 has the
+  reasoning.
+
+**How it is protected.** `src/components/game/numberStability.test.tsx` (6 tests)
+drives the real loop against a real DOM under a controlled clock and asserts:
+no value ever blank/NaN/undefined; commits stay inside the publication budget at
+every speed; a rendered value never changes while the published snapshot stands
+still; the projection never blanks over 600 frames; and it re-simulates at most
+four times in ten seconds. `src/components/game/testHarness.tsx` is the shared
+fake-clock, fake-rAF and render-counting infrastructure.
+
+Two checks still need human eyes, because jsdom has no layout engine: the
+command bar not jumping, and popovers not being clipped. Both are
+`docs/MANUAL-QA.md` §10.
+
+---
+
+## Phase 1 run queue (complete)
 
 | Item | Status |
 |---|---|

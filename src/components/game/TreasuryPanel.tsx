@@ -23,12 +23,14 @@
  */
 
 import { useEffect, useMemo, useRef, useState } from 'react';
+import { formatLongDate } from '@/sim/calendar';
 import { TARIFF_REVENUE_PEAK } from '@/sim/calibration';
 import { policyLegitimacyCost } from '@/sim/policy';
 import {
   PROJECTION_DAYS,
   comparePolicies,
   policyDiffers,
+  projectionBasisKey,
   type PolicyProjection,
   type ProposedPolicy,
 } from '@/sim/projection';
@@ -53,39 +55,72 @@ export function TreasuryPanel({ state }: { state: GameState }) {
    * The projection is stored WITH the inputs it was computed from.
    *
    * That makes "are we still computing" a derived fact — the stored result
-   * either matches the current draft and state or it does not — rather than a
-   * second piece of state needing an effect to keep it in sync. The
-   * setState-in-effect lint rule caught the earlier version, and as before it
-   * was pointing at one fact held in two places.
+   * either matches the current draft and basis or it does not — rather than a
+   * second piece of state needing an effect to keep it in sync.
+   *
+   * `forBasis` is a projectionBasisKey, NOT the state object. Keying on the
+   * state object meant re-simulating 730 days four times a second and blanking
+   * every figure in between, which was the flicker reported in Phase 2 brief
+   * §0.1. What makes a projection stale is a simulation question, so it is
+   * answered in src/sim/. (DECISIONS.md D-011, D-012)
    */
   const [result, setResult] = useState<{
     forDraft: ProposedPolicy;
-    forState: GameState;
+    forBasis: string;
+    asAtDay: number;
     current: PolicyProjection;
     proposed: PolicyProjection;
   } | null>(null);
 
-  const timer = useRef<ReturnType<typeof setTimeout> | null>(null);
-  const fresh = result?.forDraft === draft && result?.forState === state;
-  const projection = fresh ? result : null;
+  const basis = projectionBasisKey(state);
+  const fresh = result?.forDraft === draft && result?.forBasis === basis;
+
+  /**
+   * STALE-WHILE-REVALIDATE. The last projection stays on screen while a new one
+   * computes, and the screen states the date it was computed from. A figure a
+   * few weeks old that says so is better than an em-dash, and far better than
+   * an em-dash that flashes four times a second.
+   */
+  const projection = result;
   const computing = !fresh;
 
   const dirty = policyDiffers(state, draft);
 
-  // Recompute when the draft settles. setState happens inside the timeout
-  // callback, not synchronously in the effect body.
+  /**
+   * The latest state, without making it an effect dependency.
+   *
+   * The recompute effect must NOT re-run on every publish: its cleanup would
+   * cancel the pending debounce every 250ms and the projection would never
+   * settle. But when the debounce does fire it should simulate from the
+   * freshest state available, not the one captured when it was scheduled.
+   */
+  const latestState = useRef(state);
   useEffect(() => {
-    if (timer.current) clearTimeout(timer.current);
+    latestState.current = state;
+  });
 
-    timer.current = setTimeout(() => {
-      const computed = comparePolicies(state, draft);
-      setResult({ forDraft: draft, forState: state, ...computed });
-    }, DEBOUNCE_MS);
+  /** Only the first computation is immediate; later ones absorb slider drags. */
+  const computedOnce = useRef(false);
 
-    return () => {
-      if (timer.current) clearTimeout(timer.current);
-    };
-  }, [state, draft]);
+  useEffect(() => {
+    const timer = setTimeout(
+      () => {
+        const from = latestState.current;
+        computedOnce.current = true;
+        // setState happens inside the timeout callback, not synchronously in
+        // the effect body.
+        setResult({
+          forDraft: draft,
+          forBasis: projectionBasisKey(from),
+          asAtDay: from.day,
+          ...comparePolicies(from, draft),
+        });
+      },
+      computedOnce.current ? DEBOUNCE_MS : 0,
+    );
+
+    return () => clearTimeout(timer);
+  }, [basis, draft]);
 
   const legitimacyCost = useMemo(
     () => policyLegitimacyCost(state, draft),
@@ -208,8 +243,19 @@ export function TreasuryPanel({ state }: { state: GameState }) {
           <h3 className="text-label uppercase tracking-wider text-content-muted">
             Projection
           </h3>
+          {/*
+            The figures below are never blanked while a new run computes, so
+            this line has to carry the honesty instead: it names the in-game
+            date the projection was simulated from, which may be up to a month
+            behind the clock. (DECISIONS.md D-012)
+          */}
           <span className="text-small text-content-muted">
-            {computing ? 'simulating…' : `${PROJECTION_DAYS} days forward`}
+            {projection
+              ? `${PROJECTION_DAYS} days forward from ${formatLongDate(projection.asAtDay)}`
+              : 'simulating…'}
+            {computing && projection && (
+              <span className="ml-1.5 text-content-disabled">· recomputing</span>
+            )}
           </span>
         </div>
 
@@ -346,10 +392,16 @@ function ProjectionRow({
       >
         {label}
       </p>
-      <p className="tabular text-data-sm text-content-primary">
+      {/* data-projection-value: read by numberStability.test.tsx, which asserts
+          these figures never blank while the clock runs. (DECISIONS.md D-011) */}
+      <p
+        data-projection-value={label}
+        className="tabular text-data-sm text-content-primary"
+      >
         {current === undefined ? '—' : format(current)}
       </p>
       <p
+        data-projection-value={label}
         className={`tabular text-data-sm ${
           better === null
             ? 'text-brass-300'

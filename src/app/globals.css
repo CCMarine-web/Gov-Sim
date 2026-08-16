@@ -96,6 +96,9 @@
   --radius-card: 4px;
 
   /* --- Motion. docs/UI.md §2.5 ------------------------------------------ */
+  /* Numbers themselves never animate — see DECISIONS.md D-013. The
+     `--duration-number` token is kept for a future presentation-only change
+     highlight, which is the honest form of that idea. */
   --duration-panel: 160ms;
   --duration-number: 300ms;
   --duration-flash: 400ms;
@@ -137,10 +140,26 @@
   font-feature-settings: "tnum";
 }
 
+/* ----------------------------------------------------------------------------
+   RESERVED WIDTH — the other half of the jitter problem.
+
+   Tabular numerals make digits equal in width TO EACH OTHER. They do nothing
+   about a value whose LENGTH changes: "$8,587" becoming "$10.0K" becoming
+   "$231.2K" becoming "$1.24M" is four different string widths, and in a flex
+   row every one of them shifts whatever sits beside it.
+
+   So a headline stat reserves a slot wide enough for its longest realistic
+   value. The number changes; nothing moves. docs/UI.md §2.2, DECISIONS.md D-014
+   -------------------------------------------------------------------------- */
+@utility stat-slot {
+  min-width: 6.5rem;
+}
+
 /* ============================================================================
    REDUCED MOTION
-   Number interpolation snaps, modals do not rise, transitions become
-   opacity-only. Nothing becomes unusable. docs/UI.md §2.5
+   Modals do not rise, transitions become opacity-only. Numbers never animate
+   in the first place, so there is nothing to disable there. Nothing becomes
+   unusable. docs/UI.md §2.5
    ========================================================================= */
 
 @media (prefers-reduced-motion: reduce) {

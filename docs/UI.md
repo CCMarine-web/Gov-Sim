@@ -150,12 +150,15 @@ Density targets:
 | Interaction | Duration | Notes |
 |---|---|---|
 | Panel / section transition | 160ms | Under the 200ms budget |
-| Number interpolation | 300ms | Ease-out; **never causes layout shift** (tabular numerals + fixed-width containers) |
 | Commit flash on a stat | 400ms | Brass wash, fades out |
 | Popover open | 100ms | Near-instant; this is an inspection tool |
 | Modal enter | 180ms | Fade + 4px rise |
 
-**`prefers-reduced-motion: reduce`** disables number interpolation (values snap), disables the rise on modals, and reduces all transitions to opacity-only at 80ms. Nothing becomes unusable.
+**Numbers do not animate.** A displayed value changes the moment a publication changes it. What keeps a ticking readout calm is reserved width, not motion: the `stat-slot` utility gives each headline stat a slot wide enough for its longest realistic value, so a value going from `$8,587` to `$10.0K` to `$1.24M` moves nothing beside it. Tabular numerals make digits equal in width to *each other*; they do nothing about a string whose length changes, and that distinction is the whole reason this utility exists.
+
+The reasoning for not tweening — chiefly that an interpolated figure is one the simulation never produced, and the modifier popover sitting beside it could not account for — is in `docs/DECISIONS.md` D-013. The `--duration-number` token is retained for a future *presentation-only* change highlight, which is the honest form of this idea.
+
+**`prefers-reduced-motion: reduce`** disables the rise on modals and reduces all transitions to opacity-only at 80ms. Nothing becomes unusable.
 
 ---
 

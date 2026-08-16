@@ -155,3 +155,60 @@ export function comparePolicies(
   };
 }
 
+// ============================================================================
+// WHEN A PROJECTION GOES STALE
+// ============================================================================
+
+/**
+ * The BASIS of a projection: everything about the state that would change the
+ * answer enough for a player to notice.
+ *
+ * WHY THIS EXISTS
+ * The runtime publishes a brand new `GameState` object four times a second
+ * while the clock runs (DESIGN.md §6.2). A screen that treats "the state object
+ * changed" as "my projection is stale" therefore re-simulates 730 days four
+ * times a second and blanks its figures in between — which is exactly the
+ * flicker reported in the Phase 2 brief §0.1. (DECISIONS.md D-011)
+ *
+ * So staleness is defined here, in simulation terms, rather than being inferred
+ * from object identity in a component. A projection is stale when:
+ *
+ *   - the economy has been recomputed (the monthly cadence, §6.5 — every
+ *     aggregate the projection starts from is constant in between),
+ *   - the committed tax rates or spending changed,
+ *   - a law was enacted or repealed,
+ *   - the modifier ledger changed.
+ *
+ * DELIBERATELY EXCLUDED: `state.day`, and the treasury balance. One day of
+ * accrual moves the end of a 365-day forward run by roughly one part in ten
+ * thousand, which no player can read, and including either one puts us straight
+ * back to re-simulating on every tick.
+ *
+ * The consequence the UI must honour: a projection can be up to a month old, so
+ * the screen states the date it was computed from rather than implying it is
+ * live.
+ */
+export function projectionBasisKey(state: GameState): string {
+  const t = state.policies.taxRates;
+  const s = state.policies.spending;
+
+  // Modifiers by id AND value: a source can re-emit an aggregated modifier
+  // under the same deterministic id with a different magnitude (Rule 5), and
+  // counting alone would miss it.
+  const ledger = state.activeModifiers
+    .map((m) => `${m.id}=${m.value}`)
+    .join(',');
+
+  return [
+    state.lastEconomyRecomputeDay,
+    t.tariffAvg,
+    t.excise,
+    t.landTax,
+    s.military,
+    s.civil,
+    s.infrastructure,
+    state.policies.enactedLawIds.join('+'),
+    ledger,
+  ].join('|');
+}
+

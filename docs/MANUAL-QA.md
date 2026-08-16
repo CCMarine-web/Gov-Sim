@@ -257,3 +257,38 @@ and confusing them makes the player wonder whether the log is broken.
 **9.4 — Clear**
 The Clear button should appear only when a filter is active, and reset all
 three controls.
+
+---
+
+## 10. Number stability — Phase 2 brief §0.1
+
+Most of this is now asserted in code by
+`src/components/game/numberStability.test.tsx`, which drives the real loop
+against a real DOM. The checks below are the ones a test cannot make, because
+jsdom has no layout engine.
+
+**10.1 — The Treasury projection does not blank while the clock runs**
+Open Treasury, press play, and let it run at 5x for a minute. The five
+projection rows and the three per-slider revenue figures should stay on screen
+the whole time. **None of them should flash to an em-dash.** The header should
+read "365 days forward from <a date>", and that date should advance about once
+per in-game month rather than continuously.
+
+*This was the reported defect.* Before the fix, 405 of every 600 frames showed
+em-dashes. See `DECISIONS.md` D-011.
+
+**10.2 — The command bar does not jump**
+Play at 5x and watch the six headline stats, particularly Treasury as it grows
+past $10,000 and then past $1,000,000. The row must not shift horizontally or
+vertically, and **no horizontal scrollbar may appear in the command bar at any
+window width.** Try it narrow — around 1024px is where it used to appear.
+
+**10.3 — A stat popover is not clipped**
+At a narrow width, hover the rightmost command bar stat (GDP). The full
+breakdown panel must be visible; it used to be cut off by the bar's overflow
+container. Check the leftmost (Treasury) too.
+
+**10.4 — CPU while idle**
+With the Treasury screen open and the clock running at 5x, the tab should not
+peg a core. Before the fix this screen ran two 365-day forward simulations four
+times a second — about 2,900 simulated days per second of wall time.

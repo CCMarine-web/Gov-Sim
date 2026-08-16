@@ -68,8 +68,21 @@ export function CommandBar() {
         <ClockControls clock={clock} />
       </div>
 
-      <div className="ml-auto flex items-center gap-5 overflow-x-auto">
+      {/*
+        NOT `overflow-x-auto`. It used to be, and it caused two problems.
+
+        A scrollbar inside a 64px bar appears and disappears as the rendered
+        values change length, so the whole row jumped while the clock ran. And
+        an overflow container clips absolutely-positioned children, which meant
+        every modifier breakdown opened from here — acceptance criterion 4 —
+        was being cut off.
+
+        Instead the stats shrink-wrap into reserved slots and the row wraps
+        rather than scrolling. (DECISIONS.md D-014)
+      */}
+      <div className="ml-auto flex min-w-0 items-center gap-5">
         <Stat
+          className="stat-slot"
           label="Treasury"
           value={formatCurrency(treasury.balance)}
           direction={direction(
@@ -80,6 +93,7 @@ export function CommandBar() {
           size="md"
         />
         <Stat
+          className="stat-slot"
           label="Debt"
           value={formatCurrency(treasury.debtPrincipal)}
           direction={direction(treasury.debtPrincipal, prev(series.debt), 1000)}
@@ -87,6 +101,7 @@ export function CommandBar() {
           size="md"
         />
         <Stat
+          className="stat-slot"
           label="Stability"
           value={formatIndex(nation.stability)}
           direction={direction(nation.stability, prev(series.stability))}
@@ -104,6 +119,7 @@ export function CommandBar() {
           }}
         />
         <Stat
+          className="stat-slot"
           label="Legitimacy"
           value={formatIndex(nation.legitimacy)}
           direction={direction(nation.legitimacy, prev(series.legitimacy))}
@@ -117,12 +133,14 @@ export function CommandBar() {
           )}
         />
         <Stat
+          className="stat-slot"
           label="Population"
           value={formatPopulation(nation.population)}
           direction={direction(nation.population, prev(series.population), 100)}
           size="md"
         />
         <Stat
+          className="stat-slot"
           label="GDP"
           value={formatCurrency(nation.gdp)}
           direction={direction(nation.gdp, prev(series.gdp), 10_000)}

@@ -319,7 +319,11 @@ Naively putting `GameState` in Zustand and calling `advanceDay` on an interval c
 
 **Selective subscription.** Components subscribe via narrow selectors with shallow equality. The command bar's date display re-renders on date change; the Treasury panel does not re-render because the date changed.
 
-**Number transitions are a UI concern, not a sim concern.** Displayed numbers interpolate over ~300ms toward the latest published value, using CSS/animation frames in the presentation layer. The simulation never emits intermediate values.
+**Displayed numbers do not interpolate.** They change when a publication changes them, and layout stability — not motion — is what keeps a ticking readout calm. Every headline stat reserves a slot wide enough for its longest realistic value, so a changing digit count cannot move anything beside it.
+
+This reverses an earlier version of this section, which specified a ~300ms tween toward each published value. Interpolating would put values on screen that no tick ever computed, and the stat popover beside the number shows the arithmetic that produced it — so the number and its own explanation would disagree. Reasoning in `docs/DECISIONS.md` D-013.
+
+**The screen may lag the engine, and says so where it matters.** The loop deliberately runs ahead of what the UI has been told. Anything expensive enough to be recomputed on a slower cadence than the publish throttle — the Treasury projection is the one such thing today — states the in-game date it was computed from rather than implying it is live, and never blanks its figures while recomputing. D-011 and D-012 record what happens when this is got wrong.
 
 **React Strict Mode.** Development double-invokes effects. The loop module is a singleton guarded against double-start; starting an already-running loop is a no-op.
 
@@ -335,7 +339,7 @@ The clock ticks daily, but GDP and agricultural output do not meaningfully chang
 
 - **Every day:** advance the calendar, expire modifiers, evaluate event triggers, accrue treasury cash flows (receipts and outlays accrue daily at 1/365 of their annual rate), fire scheduled events, append log entries.
 - **On the 1st of each month:** recompute the economic aggregates — output, trade, GDP, prosperity, sentiment — applying the lagged responses documented in `docs/ECONOMY.md`.
-- **Display:** interpolates between monthly values so numbers move smoothly rather than stepping once a month.
+- **Display:** shows the monthly value as computed. It steps once a month rather than being smoothed, because a smoothed figure is one the simulation never produced and the stat popover could not account for (§6.3, `docs/DECISIONS.md` D-013).
 
 This remains fully deterministic: the recompute is triggered by calendar date derived from `day`, not by wall-clock timing. The exact cadence and lag structure are specified in `docs/ECONOMY.md`.
 
