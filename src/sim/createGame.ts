@@ -17,6 +17,13 @@ import {
   seedEnslavedPopulation,
   seedPopulation,
 } from '@/content/regions/regions1790';
+/*
+  The same established pattern as the region seeds above: createGame reads the
+  founding data straight from content, because a new game is defined by the
+  content pack it is created against. Both are pure data with no logic.
+*/
+import { PARTIES as partyData, STATE_SEATS as seatData } from '@/content/government/congress';
+import { seatCongress } from './congress';
 import { START, START_DEBT_RATE, START_TRADE_CAPACITY } from './calibration';
 import {
   capitalAccrualTarget,
@@ -434,6 +441,27 @@ export function createGame(options: NewGameOptions): GameState {
       something the player did. (brief §2.1)
     */
     grievance: emptyGrievance(),
+
+    /*
+      THE FIRST CONGRESS, seated as it was on 4 March 1789 — eleven states, 59
+      House seats of the 65 the Constitution allotted, because North Carolina
+      and Rhode Island had not yet ratified. They join in November 1789 and May
+      1790, and the seats appear when they do.
+
+      Party shares are derived from each region's economic character and its
+      day-0 sentiment. They are a MODEL, not a record: this project has not
+      sourced a state-by-state party breakdown, and inventing one would dress a
+      model up as history. (ECONOMY.md §7.20, BLOCKERS.md B-006)
+    */
+    congress: seatCongress({
+      day: 0,
+      number: 1,
+      stateSeats: seatData,
+      parties: partyData,
+      sentimentByRegion: Object.fromEntries(
+        regions.map((r) => [r.id, r.sentiment]),
+      ),
+    }),
 
     activeModifiers: [],
 

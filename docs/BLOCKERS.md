@@ -130,3 +130,41 @@ and the state still round-trips through JSON so a save taken there loads.
 
 It is a design gap, not a defect — and if any of those four ever fails, that is
 the moment it becomes one.
+
+---
+
+## B-006 — Party composition of Congress by state and Congress, 1789–1800
+
+**Status:** open, known, not blocking. Raised by Phase 2 queue item 7.
+
+The **seat counts** in `src/content/government/congress.ts` are historical and
+cited: the Constitution's original allocation of 65, the Apportionment Act of
+1792 raising the House to 105, two senators per state, and the real admission
+dates. Those are solid.
+
+The **party split of those seats is a model**. It is derived from each region's
+economic character and its sentiment toward the government, documented in
+`ECONOMY.md` §7.20, and the Congress screen states plainly that it is a model
+rather than a record. No screen presents it as a historical figure.
+
+**What would improve it.** A state-by-state party breakdown for each Congress
+from 1789 to 1800. Two candidate sources:
+
+1. **Biographical Directory of the United States Congress** — gives party by
+   member, and labels the 1st and 2nd Congresses only "Pro-Administration" and
+   "Anti-Administration", which is itself the useful fact that no formal parties
+   existed. Extracting a per-state tally would mean reading several hundred
+   member entries.
+2. **US House of Representatives, "Party Divisions of the House of
+   Representatives, 1789 to Present"** — gives NATIONAL totals per Congress,
+   which would let the model be calibrated against a real aggregate even without
+   the state-level detail. This is the cheaper and probably better first step.
+
+**Why it was not worked around.** Fabricating per-state party counts and
+presenting them as history would violate the hardest rule in the project. A
+documented model that says it is a model does not.
+
+**What is affected.** Only the realism of the starting composition. The
+mechanics — how a delegation votes, how sectional interest overrides party, how
+elections shift seats — do not depend on it and would be unchanged by better
+data.

@@ -28,6 +28,7 @@
  */
 
 import {
+  dayToDate,
   daysInYear,
   isFirstOfMonth,
   isFirstOfYear,
@@ -60,7 +61,10 @@ import {
   capitalCapTarget,
   eliteSupport,
 } from './economy/politics';
-import { MAX_CAPITAL_ACCRUAL } from './calibration';
+import {
+  MAX_CAPITAL_ACCRUAL,
+  UNKEPT_PROMISE_LEGITIMACY_COST,
+} from './calibration';
 import {
   decayGrievance,
   grievanceCompliancePenalty,
@@ -68,6 +72,12 @@ import {
   reconcileUnrest,
   unrestStabilityCost,
 } from './grievance';
+import {
+  dueObligations,
+  partiesOn,
+  seatCongress,
+  seatsByParty,
+} from './congress';
 import { censusOfOffices } from './offices';
 import { checkSuccession } from './succession';
 import { TAX_BASES } from './taxBases';
@@ -96,6 +106,8 @@ import type {
   GameEvent,
   GameState,
   OutlayLine,
+  Party,
+  PartyId,
   Region,
   RevenueLine,
   TickEffect,
@@ -128,6 +140,69 @@ const UNREST_BODY: Record<string, (region: string, bloc: string) => string> = {
     'the government must either answer this with force or concede it. Either ' +
     'answer will be remembered.',
 };
+
+/**
+ * Is today the day a new Congress convenes?
+ *
+ * 4 March of every odd-numbered year, which is where the Confederation Congress
+ * fixed the start of the new government and where every congressional term began
+ * until the Twentieth Amendment moved it to 3 January in 1935.
+ */
+function isCongressionalTerm(dayNumber: number): boolean {
+  const date = dayToDate(dayNumber);
+  return date.month === 3 && date.day === 4 && date.year % 2 === 1;
+}
+
+/** "First", "Second"… for the chronicle. Falls back to a numeral. */
+function ordinalCongress(n: number): string {
+  const words = [
+    '',
+    'First',
+    'Second',
+    'Third',
+    'Fourth',
+    'Fifth',
+    'Sixth',
+    'Seventh',
+    'Eighth',
+    'Ninth',
+    'Tenth',
+  ];
+  return words[n] ?? `${n}th`;
+}
+
+/**
+ * What the new Congress looks like, in words.
+ *
+ * Names the largest party in each chamber and its share, because "the Fourth
+ * Congress convenes" tells a player nothing they can act on.
+ */
+function describeCongress(
+  state: GameState,
+  number: number,
+  parties: readonly Party[],
+  day: number,
+): string {
+  const live = partiesOn(parties, day);
+  const byId = new Map(live.map((p) => [p.id, p]));
+
+  const describe = (chamber: 'house' | 'senate'): string => {
+    const seats = seatsByParty(state.congress, chamber, live);
+    const entries = Object.entries(seats).sort((a, b) => b[1] - a[1]);
+    if (entries.length === 0) return 'no members';
+
+    const total = entries.reduce((s, [, v]) => s + v, 0);
+    const [topId, topSeats] = entries[0];
+    const name = byId.get(topId as PartyId)?.shortName ?? topId;
+    return `${name} lead with about ${((topSeats / total) * 100).toFixed(0)} per cent`;
+  };
+
+  return (
+    `The ${ordinalCongress(number)} Congress is seated. ` +
+    `In the House, ${describe('house')}. In the Senate, ${describe('senate')}. ` +
+    'The government must carry both.'
+  );
+}
 
 /** Read a numeric flag, defaulting to 0. Content sets these; the engine reads them. */
 function numericFlag(state: GameState, key: string): number {
@@ -944,6 +1019,116 @@ export function advanceDay(state: GameState, content: ContentPack): TickResult {
       day,
       description: `Fiscal year ${yearOf(day) - 1} closed`,
       refs: [],
+    });
+  }
+
+  // --- Congress: elections and promises coming due -------------------------
+  /*
+    A Congress sits two years, from 4 March of every odd year (Art. I §4 and the
+    Act of 1792 fixing the term). At each new Congress the seats are re-drawn
+    from the CURRENT state of the country: a region the government has alienated
+    returns members who will not vote for it. That is the whole point of holding
+    elections in a game where the player never leaves office — the player
+    persists, but the legislature they must carry does not. (brief §2.2)
+  */
+  if (isCongressionalTerm(day)) {
+    const previous = next.congress;
+    const sentimentByRegion: Record<string, number> = {};
+    for (const region of next.regions) sentimentByRegion[region.id] = region.sentiment;
+
+    next = {
+      ...next,
+      congress: seatCongress({
+        day,
+        number: previous.number + 1,
+        stateSeats: content.stateSeats,
+        parties: content.parties,
+        sentimentByRegion,
+        previous,
+      }),
+      log: [
+        ...next.log,
+        {
+          id: `${day}:congress:${previous.number + 1}`,
+          day,
+          tier: 'info',
+          category: 'system',
+          title: `The ${ordinalCongress(previous.number + 1)} Congress convenes`,
+          body: describeCongress(next, previous.number + 1, content.parties, day),
+          relatedEventId: null,
+        },
+      ],
+    };
+
+    effects.push({
+      kind: 'congressElected',
+      day,
+      description: `The ${ordinalCongress(previous.number + 1)} Congress convenes`,
+      refs: [],
+    });
+  }
+
+  /*
+    Promises come due. A log-roll bought votes months ago and the favour is
+    called in now — paid in capital if the government has it, in standing if it
+    does not. A promise with no cost is not a promise.
+  */
+  for (const obligation of dueObligations(next.congress, day)) {
+    const affordable = obligation.cost <= next.politicalCapital.current;
+
+    next = {
+      ...next,
+      politicalCapital: {
+        ...next.politicalCapital,
+        current: affordable
+          ? next.politicalCapital.current - obligation.cost
+          : next.politicalCapital.current,
+        totalSpent: affordable
+          ? next.politicalCapital.totalSpent + obligation.cost
+          : next.politicalCapital.totalSpent,
+      },
+      nation: affordable
+        ? next.nation
+        : {
+            ...next.nation,
+            // A promise the government cannot keep costs more than one it can.
+            legitimacyBase: Math.max(
+              0,
+              next.nation.legitimacyBase - UNKEPT_PROMISE_LEGITIMACY_COST,
+            ),
+          },
+      congress: {
+        ...next.congress,
+        obligations: next.congress.obligations.map((o) =>
+          o.id === obligation.id ? { ...o, settledDay: day } : o,
+        ),
+      },
+      log: [
+        ...next.log,
+        {
+          id: `${day}:obligation:${obligation.id}`,
+          day,
+          tier: affordable ? 'info' : 'crisis',
+          category: 'legislation',
+          title: affordable
+            ? 'A promise is called in'
+            : 'A promise cannot be kept',
+          body: affordable
+            ? `The support promised for ${obligation.forBillId} is asked for, and ` +
+              `given. It cost ${obligation.cost.toFixed(1)} political capital.`
+            : `The support promised for ${obligation.forBillId} is asked for and ` +
+              'cannot be given. The government has nothing left to trade, and ' +
+              'everyone now knows it.',
+          relatedEventId: null,
+        },
+      ],
+    };
+
+    effects.push({
+      kind: 'obligationSettled',
+      day,
+      description: affordable ? 'Obligation settled' : 'Obligation defaulted',
+      refs: [obligation.id],
     });
   }
 

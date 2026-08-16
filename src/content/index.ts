@@ -14,8 +14,9 @@ import { EVENTS_1790S } from './events/events1790s';
 import { EVENTS_1790S_ADDITIONAL } from './events/events1790sAdditional';
 import { BILLS_1790S } from './bills';
 import { OFFICES } from './government/cabinet';
+import { PARTIES, STATE_SEATS } from './government/congress';
 
-export const CONTENT_VERSION = '1790s.3';
+export const CONTENT_VERSION = '1790s.4';
 
 const ALL_EVENTS = [...EVENTS_1790S, ...EVENTS_1790S_ADDITIONAL];
 
@@ -30,7 +31,10 @@ export const PHASE_1_CONTENT: ContentPack = {
     item 4 for that reason.
   */
   offices: OFFICES,
+  /* The legislature the republic has to carry. (brief §2.2) */
+  parties: PARTIES,
+  stateSeats: STATE_SEATS,
 };
 
-export { EVENTS_1790S, EVENTS_1790S_ADDITIONAL, BILLS_1790S, OFFICES };
+export { EVENTS_1790S, EVENTS_1790S_ADDITIONAL, BILLS_1790S, OFFICES, PARTIES, STATE_SEATS };
 export { REGION_SEEDS, CENSUS_1790_TOTALS } from './regions/regions1790';

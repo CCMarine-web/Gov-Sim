@@ -558,17 +558,18 @@ Elections and succession are out of scope for Phase 1, and 1789–1800 contains 
 | Cost of unilateral action | Higher — unpopular laws cost more political capital | Lower — the crown acts more cheaply |
 | Crisis mishandling | Absorbed more gracefully | Sharper legitimacy penalties |
 | Event options | Some options available only to a republic | Some options available only to a monarchy |
-| Succession | Elections (queue item 7) | Bloodline — implemented, §9.3 |
+| Succession | Elections every two years for the House, a third of the Senate with them — implemented, §9.4 | Bloodline — implemented, §9.3 |
 
 **Phase 2 gave this real teeth (brief §2.1).** The rows above were the whole of it while every path enacted instantly. They now sit on top of a concrete bargain:
 
 | | Republic | Monarchy |
 |---|---|---|
-| Capital to pass a bill | full | **×0.35** — no votes to whip |
+| Capital to pass a bill | full, **plus whatever the votes cost** | **×0.35** — no votes to whip |
 | Legitimacy to pass a bill | **none** | floor plus power-weighted opposition |
 | Grievance created | ×1 | **×4** |
 | Ruler mortality | none | annual, with a legitimacy cost each time |
 | Capital ceiling | full | ×0.75 |
+| Can a bill simply be refused? | **Yes** — Congress votes it down, at a cost in standing | No |
 
 **The crown buys speed and pays in consent.** It can act when a legislature could not afford to, and the country remembers every time it does — specifically, by bloc, accumulating into unrest that takes the revenue away. The full model is `docs/ECONOMY.md` §7.19; the balance is argued in `docs/DECISIONS.md` D-027 and asserted by tests, because "neither path is strictly better" is a claim that has to be checkable rather than merely intended.
 
@@ -582,9 +583,33 @@ On the **monarchical** path the ruler ages and dies. Mortality is rolled once a 
 
 An orderly succession costs 9 legitimacy; a disputed one costs 26 and takes 15 stability with it for two years. **Which it is, is the player's doing**: a new ruler is credited with an heir only if the dynasty's legitimacy is above a threshold. A crown that has spent its standing on decrees finds the question of who comes next is suddenly worth arguing about (`docs/DECISIONS.md` D-028).
 
-On the **republican** path there is no mortality: a president is replaced by election, which arrives with queue item 7.
+On the **republican** path there is no mortality. What replaces it is §9.4: the president stays, and the legislature underneath him turns over.
 
 **The player does not leave, on either path.** Pillar 2. A succession is a change in the circumstances the player governs under, not a handover — the name at the top of the screen changes, the standing the office carries drops, and the player carries on.
+
+### 9.4 Congress, and the republic's half of the bargain
+
+*Implemented in Phase 2, queue item 7. Full model in `docs/ECONOMY.md` §7.20.*
+
+The monarchy's bargain was built first (§9.2) and for a while it was one-sided: the crown paid grievance for speed, and the republic paid… nothing, because nothing could refuse it. A bill cost capital and then passed. **Congress is the thing that can say no.**
+
+**Every state's delegation votes.** Seats are historical and cited — 65 House seats under the Constitution's original allocation, 105 after the Apportionment Act of 1792, two senators per state, real admission dates. Which way a delegation leans is a model, and the Congress screen says so on its face (§12.2, `docs/BLOCKERS.md` B-006).
+
+A delegation's inclination is party line plus sectional interest. **Sectional interest can override party**, which is the whole point: a Federalist delegation from a shipping state does not vote for a tariff that closes its own harbour, and no amount of party discipline changes that. Interests, not positions — a party in 1793 was a coalition of people with something in common, and it votes like one (`docs/DECISIONS.md` D-030).
+
+**Parties are dated content.** Until 4 March 1793 there are only "Pro-Administration" and "Anti-Administration", because that is what there was; the Federalists and Democratic-Republicans succeed them rather than replacing them, and a delegation's leaning carries across the transition.
+
+**The player can work the count, at a price**, and sees the projected division broken down by chamber, party and region *before* committing:
+
+| Tool | Effect | Price |
+|---|---|---|
+| Whip a party | shifts that party's undecideds | capital per point, spent win or lose |
+| Attach a rider | buys one bloc, offends another | capital, and the rider's own effect ships with the bill |
+| Promise a favour | buys votes now | capital now, and **twice as much later** — or legitimacy when the promise is broken |
+
+**Defeat costs something.** A bill voted down costs legitimacy, and the next defeat costs more than the last. It also puts that bill on a cooldown, so a losing bill cannot be re-introduced the same afternoon until the ground has changed.
+
+**Elections re-seat the whole House and a third of the Senate** on 4 March of odd years, from regional sentiment as it stands that morning. This is the republic's version of mortality: the player never leaves, but the country they have to persuade is not the one they persuaded last time.
 
 ---
 
@@ -644,7 +669,8 @@ See Rule 8 (§5). Migrations are pure `vN → vN+1` functions in `/src/sim/migra
 | 2 | Three tax rates and three spending lines become `TaxInstance[]` and `SpendingProgram[]` (§13, brief §4.3) | `v1ToV2.ts` | `fixtures/v2-republic-day900.json` |
 | 3 | Political capital and administrative capacity (brief §3) | `v2ToV3.ts` | `fixtures/v3-republic-day900.json` |
 | 4 | Bills replace laws; modifiers gain a phase-in ramp (§7.4, brief §4) | `v3ToV4.ts` | `fixtures/v4-republic-day900.json` |
-| 5 | Grievance, unrest, and a ruler who can die (brief §2.1) | `v4ToV5.ts` | — (current) |
+| 5 | Grievance, unrest, and a ruler who can die (brief §2.1) | `v4ToV5.ts` | `fixtures/v5-republic-day900.json` |
+| 6 | Congress, parties and the seat record (§9.4, brief §2.2) | `v5ToV6.ts` | — (current) |
 
 A fixture is **generated once and never regenerated**, by `scripts/make-fixture.mts <version>` — which *refuses* to overwrite one that already exists. A fixture rebuilt from current code stops recording the old format and becomes a restatement of the new one, which would make its migration test pass by construction and prove nothing. That rule used to be a comment; it is now behaviour.
 
@@ -653,6 +679,7 @@ Every migration must state whether it is **behaviour-preserving** or a deliberat
 - `v1ToV2` is behaviour-preserving. The three founding instances reproduce the three old formulas arithmetically, and the test asserts a migrated save's revenue is unchanged.
 - `v2ToV3` **adds** a mechanic that did not exist, so there is no prior behaviour to preserve. It seeds the new reserve generously rather than at zero: the mechanic is new, so its absence in the old save was not the player's choice, and charging them for it would be the wrong way round.
 - `v3ToV4` is behaviour-preserving where it can be and honest where it cannot. Carried-forward bills get `enactedDay: 0`, because no enactment day was ever recorded and there is no way to recover one — the founding is the honest answer, and the day the player happened to upgrade would be a fabrication in the game's own record of itself. Existing modifiers get `rampDays: 0`, because they were applied under a build with no phase-in and were therefore fully in force; retro-fitting a ramp would weaken effects the player has already been living with.
+- `v5ToV6` seats a Congress **as of the save's own day**, from the historical seat record and the save's current regional sentiment — not a fresh 1789 Congress, which would hand a save made in 1796 a legislature that had not existed for seven years. It cannot recover the sitting Senate class, because a v5 save has no record of one, so the Senate starts matching the House and the two diverge from the next election onward. That is a one-time loss of nuance in a migrated save rather than a fabricated history, which is the right way round.
 - `v4ToV5` seeds grievance **empty**, and that is the only defensible answer. Grievance is a record of things the government did to particular blocs, and a v4 save contains no such record. Deriving a starting grievance from, say, current regional sentiment would invent a history of decrees the player never issued and then hold them to it.
 
 ---
@@ -713,7 +740,7 @@ A refined version of the initial sketch. Full field-level definitions live in `/
 ```ts
 interface GameState {
   // --- identity & versioning ---
-  schemaVersion: number;         // current: 5 (v1-v4 migrate; see §11.4)
+  schemaVersion: number;         // current: 6 (v1-v5 migrate; see §11.4)
   gameId: string;
   createdAtISO: string;          // wall-clock, set once; never read by the sim
   contentVersion: string;
@@ -739,6 +766,10 @@ interface GameState {
   // tracked per BLOC and per region, plus the unrest it has produced. Full
   // model in docs/ECONOMY.md §7.19.
   grievance: GrievanceState;
+  // Phase 2 §2.2. The thing that can say no: delegations and their party
+  // shares, the cooldowns on defeated bills, the promises still owed, and the
+  // count of divisions lost. Seats are history; the split is a model (§9.4).
+  congress: CongressState;
 
   // --- the ledger ---
   activeModifiers: Modifier[];

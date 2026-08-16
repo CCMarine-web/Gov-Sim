@@ -61,7 +61,14 @@ export function projectionContent(content: ContentPack): ContentPack {
     version: `${content.version}:projection`,
     events: [],
     bills: [],
+    /*
+      OFFICES are kept because the administration drives capital accrual. PARTIES
+      and SEATS are kept too: a projection that ran against a country with no
+      legislature would diverge from the played-out result at every election.
+    */
     offices: content.offices,
+    parties: content.parties,
+    stateSeats: content.stateSeats,
   };
 }
 

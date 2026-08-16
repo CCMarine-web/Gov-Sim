@@ -31,7 +31,7 @@ import type { TaxBase } from './taxBases';
  * migrated forward or refused cleanly — never crashed, never silently loaded
  * into a broken state. (DESIGN.md Rule 8)
  */
-export const SCHEMA_VERSION = 5;
+export const SCHEMA_VERSION = 6;
 
 // ============================================================================
 // GOVERNMENT AND REGIONS
@@ -536,6 +536,131 @@ export interface PoliticalCapitalState {
 }
 
 // ============================================================================
+// CONGRESS (Phase 2 brief §2.2)
+//
+// The republic's half of the founding choice. A crown decrees; a president has
+// to carry a legislature, and the legislature has its own opinions.
+//
+// A PARTY IS A COALITION OF INTERESTS, not a list of positions. `blocAffinity`
+// says whose side it takes, bills already declare whom they help and harm, and
+// the vote falls out of the two. `docs/DECISIONS.md` D-030 argues why that is a
+// better encoding than issue axes for this period.
+// ============================================================================
+
+export type PartyId =
+  /** The informal interests of the First and Second Congresses. */
+  | 'pro_administration'
+  | 'anti_administration'
+  /** What they hardened into from the Third Congress, in 1793. */
+  | 'federalist'
+  | 'democratic_republican';
+
+export const PARTY_IDS: readonly PartyId[] = [
+  'pro_administration',
+  'anti_administration',
+  'federalist',
+  'democratic_republican',
+] as const;
+
+export interface Party {
+  id: PartyId;
+  name: string;
+  shortName: string;
+  activeFrom: string;
+  activeUntil: string | null;
+  /**
+   * How reliably members vote the line rather than their own state's interest,
+   * 0…1. Low in the first two Congresses, because there was no line to vote.
+   */
+  discipline: number;
+  /** −1…+1 per bloc: whose interests this party takes as its own. */
+  blocAffinity: Record<string, number>;
+  historicalNote: string;
+  sources: string[];
+}
+
+/** A state's House seats, and when that number changed. */
+export interface StateSeats {
+  code: string;
+  name: string;
+  regionId: RegionId;
+  /** ISO date the state ratified or was admitted. */
+  admittedOn: string;
+  /** In date order. The last entry whose date has passed is in force. */
+  house: Array<{ from: string; seats: number }>;
+}
+
+/** One state's representation, and how it is split. */
+export interface Delegation {
+  stateCode: string;
+  regionId: RegionId;
+  houseSeats: number;
+  senateSeats: number;
+  /**
+   * Party shares of this delegation, as fractions summing to 1.
+   *
+   * Fractions rather than whole members, and deliberately: this project has not
+   * sourced a state-by-state party breakdown for every Congress, and inventing
+   * named members would dress a model up as a record. A share is honestly a
+   * model. (ECONOMY.md §7.20, BLOCKERS.md B-006)
+   */
+  share: Record<string, number>;
+  /**
+   * The same, for the Senate — which is NOT the same, and that is the point.
+   *
+   * Article I §3 cl. 2 divided the senators into three classes so that only a
+   * third face election in any cycle. A Senate therefore carries two thirds of
+   * an opinion the country has already moved on from. Modeled by blending the
+   * fresh share into the sitting one at each election rather than replacing it.
+   * (ECONOMY.md §7.20)
+   */
+  senateShare: Record<string, number>;
+}
+
+/**
+ * A promise made to buy votes, which comes due later.
+ *
+ * Log-rolling (brief §2.2). The votes arrive now; the favour is called in on
+ * `dueDay`, and the government pays then — in capital if it has any, in
+ * standing if it does not. A promise with no cost is not a promise.
+ */
+export interface Obligation {
+  id: string;
+  /** Whose support was bought. */
+  party: PartyId;
+  /** The bill it was bought for, for the chronicle. */
+  forBillId: string;
+  incurredDay: number;
+  dueDay: number;
+  /** Political capital owed when it comes due. */
+  cost: number;
+  settledDay: number | null;
+}
+
+export interface CongressState {
+  /** 1st, 2nd, 3rd… Increments every two years on 4 March. */
+  number: number;
+  convenedDay: number;
+  delegations: Delegation[];
+  /**
+   * billId -> the first day it may be introduced again.
+   * A bill voted down does not come straight back. (brief §2.2)
+   */
+  cooldowns: Record<string, number>;
+  obligations: Obligation[];
+  /** How many bills the government has lost. Repeated failure damages standing. */
+  defeats: number;
+  /**
+   * Persuasion bought and not yet spent, by party.
+   *
+   * Political capital spent whipping a particular interest, which lasts until
+   * the next vote. Buying votes is a real action with a real price, and it
+   * should not be permanent.
+   */
+  whipped: Record<string, number>;
+}
+
+// ============================================================================
 // GRIEVANCE AND UNREST (Phase 2 brief §2.1)
 //
 // The price of ruling by decree. A crown can act without asking, and the cost
@@ -684,6 +809,14 @@ export interface GameState {
    * crown can be broadly tolerated and still have made one interest implacable.
    */
   grievance: GrievanceState;
+  /**
+   * The legislature. (brief §2.2)
+   *
+   * Present on both paths and simulated on both — a crown still has a country
+   * with interests in it — but only the republic has to win its votes. A
+   * monarchy decrees, and Congress is a record of who would have objected.
+   */
+  congress: CongressState;
 
   // --- the ledger ---
   activeModifiers: Modifier[];
@@ -726,6 +859,9 @@ export type TickEffectKind =
   | 'billEnacted'
   | 'billAmended'
   | 'billRepealed'
+  | 'billDefeated'
+  | 'congressElected'
+  | 'obligationSettled'
   | 'unrestBegan'
   | 'unrestEnded'
   | 'succession'
@@ -1169,6 +1305,10 @@ export interface ContentPack {
   version: string;
   events: GameEvent[];
   bills: Bill[];
+  /** The parties, and the interests each of them serves. (brief §2.2) */
+  parties: Party[];
+  /** House seats by state, and the dates that changed them. */
+  stateSeats: StateSeats[];
   /**
    * The offices of the federal government and who held them.
    *

@@ -526,3 +526,91 @@ consequence.
 Save a monarchy, note the date the king died, reload the save and replay. Same
 king, same day. Mortality is the first random thing in the simulation and it
 must still replay exactly.
+
+---
+
+## 15. Congress, and the republic's half of the bargain
+
+*Phase 2, queue item 7. Start a **republic** unless a step says otherwise.*
+
+**15.1 — The count is visible before you commit**
+Open Legislation and look at any unlocked bill. Under it should be a projected
+division: House and Senate separately, votes for and against, how many are
+undecided, and whether it would pass. Nothing here should require you to
+introduce the bill first.
+*Problem if:* you have to spend capital to find out whether a bill can pass.
+That turns legislation into a slot machine.
+
+**15.2 — The reasons are inspectable, like every other number**
+Click "Show every delegation". Every state should be listed, grouped by region,
+with its seats, its verdict, and the reasons behind it in words — party line,
+its own state's interest, and grievance where there is any. The reasons should
+add up to the verdict.
+*Problem if:* a delegation votes a way its listed reasons do not support. That is
+the same defect as a stat that does not equal its contributions.
+
+**15.3 — Region beats party, on the right bills**
+Find a bill that divides the sections — a tariff, or anything touching slavery.
+Open the breakdown and compare two states of the same party in different
+regions. They should disagree.
+*Problem if:* every state of a party votes alike. Then party is the only thing
+in the model and the sectional politics the game is building toward cannot
+happen.
+
+**15.4 — The tools have prices on them, before you use them**
+Whip a party, attach a rider, offer a promise. Each should state its cost in
+political capital **on the button**, move the projected count when applied, and
+say plainly that whipping and riders are spent whether the bill carries or not.
+The promise should warn that it comes due later at twice what it cost.
+*Problem if:* a cost appears only after the fact.
+
+**15.5 — A bill can actually be refused**
+Introduce something the projected count says will fail. It should fail. The
+chronicle should name the chamber that refused it and give the division;
+legitimacy should drop; the bill should go on a cooldown and be visibly
+unavailable until it expires.
+*Problem if:* everything you introduce passes. Then Congress is scenery and the
+republic has no half of the bargain.
+
+**15.6 — Losing repeatedly costs more each time**
+Lose three bills. The third should cost more standing than the first, and the
+Congress screen should say so rather than leaving you to notice.
+
+**15.7 — A promise comes due**
+Buy votes with a promise, then keep playing. On the due day the government pays
+— capital if it has any, legitimacy if it does not. The Congress screen should
+list the promise as outstanding, with its cost, the whole time.
+*Problem if:* a promise is never called in. Then it is free votes.
+
+**15.8 — Elections re-seat the country as it now is**
+Play through 4 March of an odd year. A new Congress should convene, the
+chronicle should name the largest party in each chamber, and any whipping you
+paid for should be gone — while cooldowns, promises and your record of defeats
+survive.
+Now do it deliberately: alienate one region badly (decree at it, or tax it
+hard), then play to the next election. That region should return members who
+vote you down.
+*Problem if:* the composition never moves. Then elections are a date on the
+calendar.
+
+**15.9 — The Senate lags the House**
+Right after that election, open Congress and compare the two chambers' party
+splits. They should differ, and the Senate should be closer to where opinion was
+*before* the swing. The note under it should say why — a third at a time,
+Article I §3.
+*Problem if:* the two chambers always match. Then the Senate is a small copy of
+the House and there is no constitutional brake (`DECISIONS.md` D-032).
+
+**15.10 — The screen is honest about what it knows**
+On the Congress screen the seat totals should be presented as history with their
+citation, and the party split should say in plain words that it is a model.
+*Problem if:* the party split is presented as a historical figure. That is the
+one rule in this project with no exceptions (`BLOCKERS.md` B-006).
+
+**15.11 — A monarchy sees none of it**
+Start a monarchy and open Legislation. There should be no whip counts anywhere —
+there is no vote to project. The Congress screen should explain that this is the
+legislature you do not need, and point at the grievance you are accumulating
+instead.
+*Problem if:* a monarchy is shown a projected division. It would be projecting a
+vote that cannot happen.

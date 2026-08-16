@@ -26,6 +26,7 @@
 
 import { advanceDay, resolveDecision } from '@/sim/advanceDay';
 import { amendBill, enactBill, repealBill } from '@/sim/bills';
+import { NO_TACTICS, type BillTactics } from '@/sim/congress';
 import { createGame, type NewGameOptions } from '@/sim/createGame';
 import { enactPolicy } from '@/sim/policy';
 import type { ProposedPolicy } from '@/sim/projection';
@@ -441,9 +442,27 @@ function findBill(billId: string) {
   return bill;
 }
 
-export function enactLegislation(billId: string, sliderValue: number | null): void {
+/**
+ * Introduce a bill.
+ *
+ * On the republican path this is a request, not an instruction: the bill goes to
+ * both chambers and may be voted down, which is an ordinary outcome and returns
+ * a state like any other. On the monarchical path it is a decree and passes.
+ * (brief §2.1, §2.2)
+ */
+export function enactLegislation(
+  billId: string,
+  sliderValue: number | null,
+  tactics: BillTactics = NO_TACTICS,
+): void {
   if (!loop.game || !loop.content) return;
-  const result = enactBill(loop.game, findBill(billId), sliderValue);
+  const result = enactBill(
+    loop.game,
+    findBill(billId),
+    sliderValue,
+    loop.content.parties,
+    tactics,
+  );
   loop.game = result.state;
   loop.pendingEffects.push(...result.effects);
   publish(true);

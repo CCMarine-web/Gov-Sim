@@ -32,10 +32,22 @@ import {
   BLOC_REGION_WEIGHTS,
   DECREE_CAPITAL_FACTOR,
   DECREE_GRIEVANCE_PER_OPPOSITION,
+  FAILED_BILL_COOLDOWN_DAYS,
   LEGISLATION_GRIEVANCE_PER_OPPOSITION,
 } from './calibration';
 import { isoToDay } from './calendar';
 import { describeUnmet, evaluateAll } from './conditions';
+import {
+  NO_TACTICS,
+  addObligation,
+  bothChambers,
+  cooldownRemaining,
+  offCooldown,
+  recordDefeat,
+  tacticsCost,
+  type BillTactics,
+  type WhipCount,
+} from './congress';
 import { accrueGrievance, decreeLegitimacyCost } from './grievance';
 import { makeModifierId, removeModifiersFromSource, upsertModifier } from './modifiers';
 import { repealTax, defundProgram, upsertTax, upsertProgram } from './taxes';
@@ -47,6 +59,7 @@ import type {
   GameState,
   GovernmentType,
   Modifier,
+  Party,
   Region,
   TickEffect,
 } from './types';
@@ -158,6 +171,8 @@ export type BillStatus =
   | { kind: 'notYet'; from: string }
   | { kind: 'expired'; until: string }
   | { kind: 'blocked'; reasons: string[] }
+  /** Voted down, and not yet reintroducible. Republic only. */
+  | { kind: 'onCooldown'; days: number }
   | { kind: 'locked'; because: string };
 
 /**
@@ -195,6 +210,21 @@ export function billStatus(state: GameState, bill: Bill): BillStatus {
 
   if (!evaluateAll(bill.prerequisites, state)) {
     return { kind: 'blocked', reasons: describeUnmet(bill.prerequisites, state) };
+  }
+
+  /*
+    A bill Congress threw out does not come straight back. Only a republic is
+    affected: a crown that decreed something and saw it resisted has no vote to
+    have lost. (brief §2.2)
+  */
+  if (
+    state.governmentType === 'republic' &&
+    !offCooldown(state.congress, bill.id, state.day)
+  ) {
+    return {
+      kind: 'onCooldown',
+      days: cooldownRemaining(state.congress, bill.id, state.day),
+    };
   }
 
   return { kind: 'available' };
@@ -400,6 +430,8 @@ export function enactBill(
   state: GameState,
   bill: Bill,
   sliderValue: number | null = null,
+  parties: readonly Party[] = [],
+  tactics: BillTactics = NO_TACTICS,
 ): BillOutcome {
   const status = billStatus(state, bill);
   if (status.kind !== 'available' && status.kind !== 'repealed') {
@@ -410,16 +442,38 @@ export function enactBill(
   }
 
   const price = priceOf(bill, sliderValue, state.governmentType);
-  if (price.capital > state.politicalCapital.current) {
+  const tacticsPrice = state.governmentType === 'republic' ? tacticsCost(tactics) : 0;
+  const totalCapital = price.capital + tacticsPrice;
+
+  if (totalCapital > state.politicalCapital.current) {
     throw new Error(
-      `enactBill: "${bill.id}" needs ${price.capital.toFixed(1)} political capital ` +
+      `enactBill: "${bill.id}" needs ${totalCapital.toFixed(1)} political capital ` +
         `and the government has ${state.politicalCapital.current.toFixed(1)}.`,
     );
   }
 
+  /*
+    ────────────────────────────────────────────────────────────────────────
+    THE VOTE. This is where the two paths finally diverge in the way the brief
+    describes: a crown enacts what it wants, and a president has to carry both
+    chambers. Everything above this point is identical on both paths; nothing
+    below it is.
+
+    The capital and the tactics are spent WHETHER OR NOT the bill passes. A
+    government that whips hard and loses has still whipped hard — refunding the
+    attempt would make trying free, and make failure costless. (brief §2.2)
+    ────────────────────────────────────────────────────────────────────────
+  */
+  if (state.governmentType === 'republic' && parties.length > 0) {
+    const result = bothChambers(state, bill, parties, tactics);
+    if (!result.passes) {
+      return defeat(state, bill, result, totalCapital);
+    }
+  }
+
   const effects: TickEffect[] = [];
   const day = state.day;
-  const capital = price.capital;
+  const capital = totalCapital;
   const money = price.treasury;
 
   // --- The ledger ----------------------------------------------------------
@@ -526,12 +580,25 @@ export function enactBill(
     state.governmentType,
   );
 
+  /*
+    A log-roll's votes arrive now and its price arrives later. The obligation is
+    recorded here and settled by the tick when it comes due — in capital if the
+    government has any, in standing if it does not.
+  */
+  let congress = state.congress;
+  if (state.governmentType === 'republic' && tactics.logRoll !== null) {
+    congress = addObligation(congress, tactics.logRoll, bill.id, day);
+  }
+  // Whipping is spent on the vote it bought, win or lose.
+  congress = { ...congress, whipped: {} };
+
   return {
     state: {
       ...state,
       policies,
       regions,
       grievance,
+      congress,
       activeModifiers,
       treasury: { ...state.treasury, balance: state.treasury.balance - money },
       politicalCapital: {
@@ -565,6 +632,72 @@ export function enactBill(
 
 function clampSentiment(value: number): number {
   return Math.min(100, Math.max(-100, value));
+}
+
+/**
+ * The bill was voted down.
+ *
+ * The capital is gone, the cooldown starts, and the government's standing takes
+ * a knock that GROWS with the number of defeats — the third bill a government
+ * loses says something the first did not. (brief §2.2)
+ *
+ * A defeat is an ordinary outcome, not an error, so it returns a state like any
+ * other rather than throwing. The chronicle records which chamber refused it and
+ * by how much, because "it failed" is not something a player can act on.
+ */
+function defeat(
+  state: GameState,
+  bill: Bill,
+  result: { house: WhipCount; senate: WhipCount },
+  capitalSpent: number,
+): BillOutcome {
+  const day = state.day;
+  const { congress, legitimacyCost } = recordDefeat(state.congress, bill.id, day);
+
+  const blocking = !result.house.passes ? result.house : result.senate;
+  const chamber = blocking.chamber === 'house' ? 'the House' : 'the Senate';
+
+  return {
+    state: {
+      ...state,
+      congress,
+      politicalCapital: {
+        ...state.politicalCapital,
+        current: state.politicalCapital.current - capitalSpent,
+        totalSpent: state.politicalCapital.totalSpent + capitalSpent,
+      },
+      nation: {
+        ...state.nation,
+        legitimacyBase: Math.max(0, state.nation.legitimacyBase - legitimacyCost),
+      },
+      log: [
+        ...state.log,
+        {
+          id: `${day}:defeated:${bill.id}`,
+          day,
+          tier: 'decision',
+          category: 'legislation',
+          title: `${bill.name} is defeated`,
+          body:
+            `${chamber} divided ${blocking.for.toFixed(0)} for and ` +
+            `${blocking.against.toFixed(0)} against, with ` +
+            `${blocking.undecided.toFixed(0)} abstaining. The measure falls. ` +
+            `It cannot be brought again for ${FAILED_BILL_COOLDOWN_DAYS} days, and ` +
+            `the government has now lost ${congress.defeats} ` +
+            `${congress.defeats === 1 ? 'division' : 'divisions'}.`,
+          relatedEventId: null,
+        },
+      ],
+    },
+    effects: [
+      {
+        kind: 'billDefeated',
+        day,
+        description: `${bill.name} defeated in ${chamber}`,
+        refs: [bill.id],
+      },
+    ],
+  };
 }
 
 function describeEnactment(

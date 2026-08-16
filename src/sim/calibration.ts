@@ -730,6 +730,122 @@ export const SUCCESSION_CRISIS_DURATION_DAYS = 730;
 export const HEIR_SECURITY_THRESHOLD = 42;
 
 // ============================================================================
+// CONGRESS (ECONOMY.md §7.20, brief §2.2)
+//
+// The weights below decide how often a member breaks with their party over a
+// sectional question, and getting the RATIO right matters far more than the
+// absolute values: too much party and the sectional crisis the game is building
+// toward can never emerge; too much region and parties are decoration.
+// ============================================================================
+
+/**
+ * How heavily a delegation weighs the party line.
+ *
+ * Multiplied by the party's own `discipline`, which is low in the first two
+ * Congresses — there was no line to vote, and the Congressional Biographical
+ * Directory records no party for those members for exactly that reason.
+ */
+export const CONGRESS_PARTY_LINE_WEIGHT = 55;
+
+/**
+ * How heavily it weighs its own state's interest.
+ *
+ * Deliberately comparable to the party weight once discipline is applied. A
+ * Virginia Federalist and a Massachusetts Federalist are the same party and do
+ * not vote alike on a tariff, and that divergence is the seed of the sectional
+ * politics the whole game is building toward. (brief §2.2)
+ */
+export const CONGRESS_REGIONAL_WEIGHT = 48;
+
+/**
+ * How much a party cares about what happens to a bloc it is SET AGAINST.
+ *
+ * Opposing an interest politically is not the same as wanting it ruined. Without
+ * this, a negative affinity times a negative reaction reads as a full positive,
+ * and the model had the Federalists enthusiastically supporting federal
+ * emancipation because it damaged an interest they opposed. A party is pleased
+ * by its opponents' discomfort a little; it defends its own people a great deal.
+ * (docs/DECISIONS.md D-031)
+ */
+export const OPPOSED_BLOC_DISCOUNT = 0.3;
+
+/** Inclination lost per point of regional grievance. An aggrieved region obliges nobody. */
+export const CONGRESS_GRIEVANCE_RESISTANCE = 0.35;
+
+/**
+ * How much of the Senate actually turns over at a congressional election.
+ *
+ * Not a design choice — Article I §3 cl. 2: "immediately after they shall be
+ * assembled in Consequence of the first Election, they shall be divided as
+ * equally as may be into three Classes", one class expiring every second year.
+ * A third is therefore the constitutional figure, not a tuned one.
+ *
+ * The consequence is the reason it is modeled at all: the Senate carries two
+ * thirds of an opinion the electorate has already left behind, so a government
+ * that turns the country around still has to argue with the country as it was.
+ */
+export const SENATE_CLASS_TURNOVER = 1 / 3;
+
+/**
+ * Inclination within which a delegation is genuinely undecided and abstains.
+ *
+ * Real, and not a rounding convenience: an undecided member in the 1790s
+ * abstained far more readily than a modern whipped one, and it means a bill can
+ * carry a thin house on a plurality.
+ */
+export const CONGRESS_UNDECIDED_BAND = 6;
+
+/** Inclination bought per point of whipping. */
+export const CONGRESS_WHIP_EFFECT = 1.0;
+
+/** Political capital per point of whipping. Persuasion is not cheap. */
+export const WHIP_CAPITAL_PER_POINT = 0.9;
+
+/**
+ * A rider: a sweetener bundled for one interest.
+ *
+ * Strong, and priced accordingly. It buys one party's support outright and
+ * costs both capital and the embarrassment of having done it.
+ */
+export const RIDER_VOTE_EFFECT = 34;
+export const RIDER_CAPITAL_COST = 22;
+
+/**
+ * A log-roll: a promise of future support, in exchange for votes now.
+ *
+ * Cheapest of the three at the moment of use, and the most expensive later —
+ * the obligation comes due at twice what it cost, and it comes due whether the
+ * government can afford it or not. A promise with no cost is not a promise.
+ */
+export const LOG_ROLL_VOTE_EFFECT = 28;
+export const LOG_ROLL_CAPITAL_COST = 8;
+export const LOG_ROLL_DUE_DAYS = 540;
+
+/** How long a defeated bill must wait before it can be brought again. */
+export const FAILED_BILL_COOLDOWN_DAYS = 240;
+
+/**
+ * Legitimacy lost per defeat, multiplied by the number of defeats so far,
+ * capped at four.
+ *
+ * Rising rather than flat, because the third bill a government loses says
+ * something the first did not. "Repeatedly failing bills should visibly damage
+ * the player's standing." (brief §2.2)
+ */
+export const CONGRESS_DEFEAT_LEGITIMACY_COST = 2.2;
+
+/**
+ * Legitimacy lost when a log-rolled promise comes due and cannot be paid.
+ *
+ * Higher than the capital it would have cost, because a government that cannot
+ * keep its word has lost something a payment would not have bought back.
+ */
+export const UNKEPT_PROMISE_LEGITIMACY_COST = 6;
+
+/** A Congress sits for two years, from 4 March of every odd year. */
+export const CONGRESS_TERM_DAYS = 730;
+
+// ============================================================================
 // LAG TIME CONSTANTS (ECONOMY.md §7.1)
 // ============================================================================
 

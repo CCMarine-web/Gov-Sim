@@ -7,7 +7,7 @@ If you are resuming with no context: read `DESIGN.md` first, then this file,
 then `docs/DECISIONS.md` and `docs/BLOCKERS.md`. Then continue the **Phase 2
 queue** below, which is `gov-sim-phase2-brief.md` §9.
 
-**Last updated:** Phase 2 run of 2026-08-16, after queue item 6.
+**Last updated:** Phase 2 run of 2026-08-16, after queue item 7.
 
 ---
 
@@ -17,8 +17,8 @@ queue** below, which is `gov-sim-phase2-brief.md` §9.
 |---|---|
 | Production URL | <https://gov-sim.vercel.app> |
 | Deploy | auto-deploys from `main` on push |
-| Tests | 526 passing |
-| Save schema | version **5** — v1 to v4 saves migrate forward, all four fixtures committed |
+| Tests | 584 passing |
+| Save schema | version **6** — v1 to v5 saves migrate forward, all five fixtures committed |
 | Gates | tests, lint, typecheck, production build — all green |
 | Database | Supabase, `save_games` table migrated, verified reachable from production |
 | Phase | **2 — in progress.** Phase 1 shipped. |
@@ -35,7 +35,7 @@ queue** below, which is `gov-sim-phase2-brief.md` §9.
 | 4 — Political capital system | **complete** — see below and D-020 to D-022 |
 | 5 — Legislation categories and bill schema (≥25 bills) | **complete** — 32 bills, see below and D-023 to D-026 |
 | 6 — Monarchy decree path | **complete** — see below and D-027 to D-029 |
-| 7 — Congress and the republic path | not started |
+| 7 — Congress and the republic path | **complete** — see below and D-030 to D-032 |
 | 8 — Bloc model | not started |
 | 9 — Map view replacing the Desk | not started |
 | 10 — Remaining map modes and state detail panel | not started |
@@ -340,9 +340,85 @@ one from current sentiment would invent a history the player never made.
 **Tests:** 38 in `grievance.test.ts`, 12 in `monarchy.test.tsx`, 5 more in
 `migrations.test.ts`. Human-eye checks are `docs/MANUAL-QA.md` §14.
 
-**Coupled to item 7.** Today both paths still enact instantly, so the crown's
-speed shows up only as a lower capital price. When Congress lands and bills have
-to survive a vote, the difference becomes the one the brief describes.
+**Coupled to item 7, and now settled by it.** While this shipped alone both paths
+still enacted instantly, so the crown's speed showed up only as a lower capital
+price. Item 7 gave the republic something that can refuse, and the difference is
+now the one the brief describes.
+
+---
+
+### Item 7 — Congress and the republic path: complete
+
+**What it is for.** Item 6 built the monarchy's side of the bargain and left the
+republic's side missing: a bill cost capital and then passed, so "the crown buys
+speed" bought speed over nothing. **Congress is the thing that can say no.**
+
+**The seat record is history; the party split is a model, and the screen says
+so.** 65 House seats under the Constitution's original allocation, 105 from the
+Third Congress under the Apportionment Act of 1792 (1 Stat. 253), two senators
+per state, and the real admission dates for Vermont, Kentucky and Tennessee. What
+is *not* sourced is which way each state's delegation leaned, so that is derived
+and labelled as derived — `BLOCKERS.md` B-006 records what would clear it.
+
+**How a delegation makes up its mind.** Party line, plus its own state's
+interest, minus its grievance. Every term is a named reason the player can read,
+and the reasons sum to the verdict exactly the way a stat's contributions sum to
+the stat. **Sectional interest can override the party line**, which is the point:
+a Federalist delegation from a shipping state does not vote to close its own
+harbour, and no discipline changes that.
+
+**Parties are dated content.** Only Pro-Administration and Anti-Administration
+exist until 4 March 1793, because that is what existed. The Federalists and
+Democratic-Republicans *succeed* them rather than replacing them, so a delegation
+seated under the old name is still counted under the new one — the interests
+became the parties (D-030).
+
+**Three tools, each with a price on the button**, and the projected division
+visible *before* committing: whipping (capital per point), riders (capital, and
+the rider's effect ships with the bill), and promises (capital now, twice as much
+later, or legitimacy if the promise is broken). Whipping and riders are spent
+whether the bill carries or not, and the UI says so.
+
+**Defeat costs something.** Legitimacy, rising with each defeat to a cap, plus a
+240-day cooldown on the bill and a chronicle entry naming the chamber and the
+division. Cooldowns, promises and the defeat count survive an election; whipping
+does not, because the members it bought are gone.
+
+**Elections** seat a new Congress on 4 March of every odd year, drawn from the
+country as it now is. A region the government has alienated returns members who
+vote it down. This is the republic's answer to mortality: the player never
+leaves, but the country they must persuade is not the one they persuaded before.
+
+**The Senate lags, and that is constitutional rather than tuned.** Article I §3
+divides the senators into three classes, so only a third face election in any
+cycle. Found while writing this documentation — the doc said a third, the code
+re-seated the whole chamber, and the code was wrong. Fixed before the commit
+while schema v6 was still free to change (D-032). Without it the Senate held the
+same opinion as the House by construction and could never be the chamber that
+refused a bill.
+
+**Two model bugs the tests found.** Whip counts came back at zero for any date
+after 1793 (delegations keyed to parties that no longer existed — fixed by
+resolving forward, which is also the historically correct reading), and the
+Federalists enthusiastically supported federal emancipation because a negative
+affinity times a negative reaction read as a positive. The second changed the
+model: a party is pleased by its opponents' discomfort only a little, and defends
+its own people a great deal (D-031).
+
+**Schema version 6**, `migrations/v5ToV6.ts`, with a committed v5 fixture. It
+seats a Congress **as of the save's own day** — a save from 1796 loads into the
+Fourth Congress with sixteen states and two parties, not a fresh 1789 one. It
+cannot recover a sitting Senate class, so a migrated Senate starts matching the
+House and the two diverge from the next election.
+
+**Tests:** 37 in `sim/congress.test.ts`, 15 in `components/game/congress.test.tsx`,
+plus migration coverage. Human-eye checks are `docs/MANUAL-QA.md` §15.
+
+**Where the balance now stands.** Both paths cost something real and neither is
+strictly better, which is asserted rather than intended: the crown acts cheaply
+and accumulates grievance it cannot spend away; the republic acts freely of
+grievance and must assemble a majority every single time, paying capital for
+votes and standing for defeats.
 
 ---
 
@@ -388,6 +464,21 @@ component has been deleted.
 - `policy.ts` — enacting a budget, and its legitimacy cost.
 - `projection.ts` — forward simulation for the Treasury screen.
 - `narrative.ts` — state-of-the-union prose and crisis lines.
+
+Added in Phase 2, in queue order:
+
+- `taxBases.ts` / `taxes.ts` — the twelve taxable bases, and pure queries and
+  updates over the tax and spending instance arrays (item 3).
+- `economy/politics.ts` — political capital: accrual, cap, administrative
+  capacity, elite support (item 4).
+- `bills.ts` — validating, pricing, enacting, amending and repealing a bill,
+  and the modifiers it produces (item 5).
+- `grievance.ts` — who resents the government, per bloc and per region, and the
+  unrest it produces (item 6).
+- `succession.ts` — the ruler ages, dies, and is succeeded (item 6).
+- `congress.ts` — delegations, the vote model, whipping, riders, log-rolling,
+  cooldowns and elections (item 7).
+- `offices.ts` — who holds which office on a given day.
 
 **Content** (`src/content/`) — **fourteen events**, six laws, cabinet tenures,
 and region seed data, all with sourced historical context.

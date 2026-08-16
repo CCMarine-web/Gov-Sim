@@ -13,7 +13,7 @@ import {
 } from './gameLoop';
 import { SPEEDS, isUncapped, msPerDayAt } from './speeds';
 
-const EMPTY: ContentPack = { version: 'perf', events: [], bills: [], offices: [] };
+const EMPTY: ContentPack = { version: 'perf', events: [], bills: [], offices: [], parties: [], stateSeats: [] };
 
 /** Play the whole span, answering every decision, as a real session would. */
 function playFullRun(): GameState {

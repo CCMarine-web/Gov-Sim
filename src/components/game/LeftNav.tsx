@@ -15,6 +15,7 @@ import {
   Map,
   Scale,
   ScrollText,
+  Users,
 } from 'lucide-react';
 import type { ComponentType } from 'react';
 
@@ -22,6 +23,7 @@ export type SectionId =
   | 'desk'
   | 'treasury'
   | 'legislation'
+  | 'congress'
   | 'regions'
   | 'government'
   | 'history'
@@ -37,6 +39,7 @@ const ITEMS: NavItem[] = [
   { id: 'desk', label: 'Desk', Icon: LayoutGrid },
   { id: 'treasury', label: 'Treasury', Icon: Coins },
   { id: 'legislation', label: 'Legislation', Icon: Scale },
+  { id: 'congress', label: 'Congress', Icon: Users },
   { id: 'regions', label: 'Regions', Icon: Map },
   { id: 'government', label: 'Government', Icon: Landmark },
   { id: 'history', label: 'History', Icon: BookOpen },

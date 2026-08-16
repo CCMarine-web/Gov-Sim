@@ -84,6 +84,13 @@ for (let i = 0; i < 900; i++) {
 // --- Downgrade to the requested format --------------------------------------
 type Loose = Record<string, unknown>;
 
+/** v6 → v5: there was no Congress. */
+function downgradeToV5(current: Loose): Loose {
+  const out = { ...current, schemaVersion: 5 };
+  delete (out as Loose).congress;
+  return out;
+}
+
 /** v5 → v4: grievance did not exist, and a ruler could not die. */
 function downgradeToV4(current: Loose): Loose {
   const ruler = { ...(current.ruler as Loose) };
@@ -152,6 +159,7 @@ function downgradeToV1(current: Loose, played: GameState): Loose {
 }
 
 let fixture: Loose = JSON.parse(JSON.stringify(state));
+if (version <= 5) fixture = downgradeToV5(fixture);
 if (version <= 4) fixture = downgradeToV4(fixture);
 if (version <= 3) fixture = downgradeToV3(fixture, state);
 if (version <= 2) fixture = downgradeToV2(fixture);

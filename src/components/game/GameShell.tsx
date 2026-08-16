@@ -24,6 +24,7 @@ import { LeftNav, type SectionId } from './LeftNav';
 import { SaveMenu } from './SaveMenu';
 import { Chronicle, Desk, Regions } from './sections';
 import { LegislationPanel } from './LegislationPanel';
+import { CongressPanel } from './CongressPanel';
 import { GovernmentPanel } from './GovernmentPanel';
 import { HistoryPanel } from './HistoryPanel';
 import { TreasuryPanel } from './TreasuryPanel';
@@ -32,6 +33,7 @@ const SECTION_TITLE: Record<SectionId, string> = {
   desk: 'The Desk',
   treasury: 'Treasury',
   legislation: 'Legislation',
+  congress: 'Congress',
   regions: 'Regions',
   government: 'Government',
   history: 'History',
@@ -168,6 +170,7 @@ export function GameShell() {
           {section === 'desk' && <Desk state={snapshot} />}
           {section === 'treasury' && <TreasuryPanel state={snapshot} />}
           {section === 'legislation' && <LegislationPanel state={snapshot} />}
+          {section === 'congress' && <CongressPanel state={snapshot} />}
           {section === 'regions' && <Regions state={snapshot} />}
           {section === 'government' && <GovernmentPanel state={snapshot} />}
           {section === 'history' && <HistoryPanel state={snapshot} />}

@@ -45,7 +45,7 @@ import {
 } from './types';
 
 const BILLS = PHASE_1_CONTENT.bills;
-const EMPTY: ContentPack = { version: 'test', events: [], bills: [], offices: [] };
+const EMPTY: ContentPack = { version: 'test', events: [], bills: [], offices: [], parties: [], stateSeats: [] };
 
 function run(state: GameState, days: number): GameState {
   let current = state;

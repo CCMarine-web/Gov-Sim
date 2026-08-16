@@ -8,6 +8,7 @@ import v1Fixture from './fixtures/v1-republic-day900.json';
 import v2Fixture from './fixtures/v2-republic-day900.json';
 import v3Fixture from './fixtures/v3-republic-day900.json';
 import v4Fixture from './fixtures/v4-republic-day900.json';
+import v5Fixture from './fixtures/v5-republic-day900.json';
 import { MIGRATIONS, migrateToCurrent, parseSave } from './index';
 
 describe('loading a save of the current version', () => {
@@ -252,7 +253,7 @@ describe('the v1 fixture upgrades to the current version without losing anything
 
     let state = outcome.state;
     for (let i = 0; i < 40; i++) {
-      state = advanceDay(state, { version: 't', events: [], bills: [], offices: [] }).state;
+      state = advanceDay(state, { version: 't', events: [], bills: [], offices: [], parties: [], stateSeats: [] }).state;
     }
 
     const before = (raw.treasury as Record<string, Record<string, number>>)
@@ -281,7 +282,7 @@ describe('the v1 fixture upgrades to the current version without losing anything
 
     let state = outcome.state;
     for (let i = 0; i < 40; i++) {
-      state = advanceDay(state, { version: 't', events: [], bills: [], offices: [] }).state;
+      state = advanceDay(state, { version: 't', events: [], bills: [], offices: [], parties: [], stateSeats: [] }).state;
     }
 
     expect(state.treasury.receiptLines).toHaveLength(3);
@@ -613,6 +614,85 @@ describe('the v4 fixture gains grievance without inventing any', () => {
   });
 });
 
+/**
+ * THE v5 FIXTURE
+ *
+ * A real save in the version 5 format, at day 900 — 16 October 1791, inside the
+ * Second Congress. There was no legislature in v5, so the migration has to build
+ * one, and it has to build the RIGHT one: seated for the day the save is on, not
+ * for day zero.
+ */
+describe('the v5 fixture gains a Congress seated for its own date', () => {
+  const raw = JSON.parse(JSON.stringify(v5Fixture)) as Record<string, unknown>;
+
+  it('is genuinely a v5 save, with no Congress in it', () => {
+    expect(raw.schemaVersion).toBe(5);
+    expect(raw.congress).toBeUndefined();
+    // And it carries real state for the migration to preserve.
+    expect((raw.policies as Record<string, unknown[]>).bills.length).toBeGreaterThan(5);
+  });
+
+  it('seats the Congress that was actually sitting on the save’s date', () => {
+    const outcome = migrateToCurrent(JSON.parse(JSON.stringify(raw)));
+    expect(outcome.ok).toBe(true);
+    if (!outcome.ok) return;
+
+    // Day 900 is 16 October 1791: the Second Congress, which convened on
+    // 4 March 1791. Seating the First would put the country back two years.
+    expect(outcome.state.congress.number).toBe(2);
+    expect(outcome.state.congress.delegations.length).toBeGreaterThan(10);
+  });
+
+  it('includes the states admitted by that date, and not the ones after it', () => {
+    const outcome = migrateToCurrent(JSON.parse(JSON.stringify(raw)));
+    expect(outcome.ok).toBe(true);
+    if (!outcome.ok) return;
+
+    const codes = outcome.state.congress.delegations.map((d) => d.stateCode);
+    // Vermont was admitted 4 March 1791, before this save's date.
+    expect(codes).toContain('VT');
+    // Kentucky in June 1792 and Tennessee in 1796 were not.
+    expect(codes).not.toContain('KY');
+    expect(codes).not.toContain('TN');
+  });
+
+  it('seats the interests of 1791, not the parties of 1793', () => {
+    const outcome = migrateToCurrent(JSON.parse(JSON.stringify(raw)));
+    expect(outcome.ok).toBe(true);
+    if (!outcome.ok) return;
+
+    const shares = Object.keys(outcome.state.congress.delegations[0].share);
+    expect(shares).toContain('pro_administration');
+    expect(shares).not.toContain('federalist');
+  });
+
+  it('starts with no votes lost and no promises made', () => {
+    const outcome = migrateToCurrent(JSON.parse(JSON.stringify(raw)));
+    expect(outcome.ok).toBe(true);
+    if (!outcome.ok) return;
+
+    // A v5 save records no votes, because there were none — every bill in it
+    // passed by the player's own hand. Inventing a legislative history would be
+    // inventing defeats the player never suffered.
+    expect(outcome.state.congress.defeats).toBe(0);
+    expect(outcome.state.congress.cooldowns).toEqual({});
+    expect(outcome.state.congress.obligations).toEqual([]);
+  });
+
+  it('keeps everything the migration is not about', () => {
+    const outcome = migrateToCurrent(JSON.parse(JSON.stringify(raw)));
+    expect(outcome.ok).toBe(true);
+    if (!outcome.ok) return;
+
+    expect(outcome.state.day).toBe(raw.day);
+    expect(outcome.state.policies.bills).toEqual(
+      (raw.policies as Record<string, unknown>).bills,
+    );
+    expect(outcome.state.grievance).toEqual(raw.grievance);
+    expect(outcome.state.ruler).toEqual(raw.ruler);
+  });
+});
+
 describe('a migrated save is still a valid game state', () => {
   it('survives a full round trip and remains simulable', async () => {
     const { advanceDay } = await import('../advanceDay');
@@ -624,7 +704,7 @@ describe('a migrated save is still a valid game state', () => {
 
     let resumed = outcome.state;
     for (let i = 0; i < 100; i++) {
-      resumed = advanceDay(resumed, { version: 't', events: [], bills: [], offices: [] }).state;
+      resumed = advanceDay(resumed, { version: 't', events: [], bills: [], offices: [], parties: [], stateSeats: [] }).state;
     }
 
     expect(resumed.day).toBe(100);

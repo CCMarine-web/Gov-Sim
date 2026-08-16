@@ -40,12 +40,14 @@ import {
   type GameState,
 } from './types';
 
-const EMPTY: ContentPack = { version: 'test', events: [], bills: [], offices: [] };
+const EMPTY: ContentPack = { version: 'test', events: [], bills: [], offices: [], parties: [], stateSeats: [] };
 const WITH_OFFICES: ContentPack = {
   version: 'offices',
   events: [],
   bills: [],
   offices: OFFICES,
+  parties: [],
+  stateSeats: [],
 };
 
 function run(state: GameState, days: number, content = EMPTY): GameState {

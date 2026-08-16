@@ -38,6 +38,14 @@ import {
   priceOf,
   type BillStatus,
 } from '@/sim/bills';
+import {
+  NO_TACTICS,
+  bothChambers,
+  partiesOn,
+  tacticsCost,
+  type BillTactics,
+  type WhipCount,
+} from '@/sim/congress';
 import { formatLongDate, isoToDay } from '@/sim/calendar';
 import { amendLegislation, enactLegislation, repealLegislation } from '@/runtime/gameLoop';
 import { formatCurrency, formatRate } from '@/lib/format';
@@ -240,6 +248,10 @@ function BillCard({ bill, state }: { bill: Bill; state: GameState }) {
     () => record?.sliderValue ?? bill.sliderRange?.[0] ?? 0,
   );
 
+  /** What the player has bought for this vote. Reset when the bill is enacted. */
+  const [tactics, setTactics] = useState<BillTactics>(NO_TACTICS);
+  const isRepublic = state.governmentType === 'republic';
+
   const price = priceOf(bill, bill.hasSlider ? draft : null, state.governmentType);
   const capital = inForce
     ? amendCost(bill, record?.sliderValue ?? null, draft)
@@ -340,6 +352,17 @@ function BillCard({ bill, state }: { bill: Bill; state: GameState }) {
             className="mt-1 w-full accent-brass-400"
           />
         </div>
+      )}
+
+      {/* --- Can it pass? --------------------------------------------------- */}
+      {isRepublic && actionable && (
+        <WhipCountPanel
+          bill={bill}
+          state={state}
+          draft={bill.hasSlider ? draft : null}
+          tactics={tactics}
+          onTactics={setTactics}
+        />
       )}
 
       {/* --- Who gains and who loses ---------------------------------------- */}
@@ -509,6 +532,275 @@ function BillCard({ bill, state }: { bill: Bill; state: GameState }) {
         </ul>
       </details>
     </section>
+  );
+}
+
+/**
+ * THE WHIP COUNT.
+ *
+ * Brief §2.2: "Before committing to introduce a bill, the player sees a
+ * projected whip count broken down by party and by region, with each bloc's
+ * reasoning visible. Same modifier-ledger honesty as everything else."
+ *
+ * So this shows the count, then the breakdown by party, then the breakdown by
+ * region, and every delegation's reasons are inspectable — and those reasons SUM
+ * to the inclination that produced its vote, exactly as a stat popover's
+ * contributions sum to the stat. A whip count the player could not interrogate
+ * would be the ledger rule broken in a new place.
+ */
+function WhipCountPanel({
+  bill,
+  state,
+  draft,
+  tactics,
+  onTactics,
+}: {
+  bill: Bill;
+  state: GameState;
+  draft: number | null;
+  tactics: BillTactics;
+  onTactics: (t: BillTactics) => void;
+}) {
+  const [open, setOpen] = useState(false);
+
+  const result = useMemo(
+    () => bothChambers(state, bill, PHASE_1_CONTENT.parties, tactics),
+    [state, bill, tactics],
+  );
+
+  const parties = partiesOn(PHASE_1_CONTENT.parties, state.day);
+  const extraCost = tacticsCost(tactics);
+  void draft;
+
+  return (
+    <div
+      data-whip-count={bill.id}
+      className="mt-3 rounded border border-ink-400 bg-ink-800/50 p-2"
+    >
+      <div className="flex items-baseline justify-between">
+        <span className="text-label uppercase tracking-wider text-content-muted">
+          Projected division
+        </span>
+        <span
+          className={`text-small ${result.passes ? 'text-verdigris-400' : 'text-oxblood-300'}`}
+        >
+          {result.passes ? 'Would pass' : 'Would fail'}
+        </span>
+      </div>
+
+      <div className="mt-1 space-y-1">
+        <ChamberBar label="House" count={result.house} />
+        <ChamberBar label="Senate" count={result.senate} />
+      </div>
+
+      {/* --- What the player can do about it -------------------------------- */}
+      <div className="mt-2 border-t border-ink-400 pt-2">
+        <p className="text-label uppercase tracking-wider text-content-muted">
+          Bring them round
+        </p>
+
+        <div className="mt-1 flex flex-wrap gap-1.5">
+          {parties.map((party) => {
+            const whipped = tactics.whip[party.id] ?? 0;
+            return (
+              <button
+                key={party.id}
+                type="button"
+                onClick={() =>
+                  onTactics({
+                    ...tactics,
+                    whip: { ...tactics.whip, [party.id]: whipped + 10 },
+                  })
+                }
+                className="rounded border border-ink-400 px-2 py-0.5 text-small text-content-secondary hover:bg-ink-500"
+              >
+                Whip {party.shortName}
+                {whipped > 0 && (
+                  <span className="tabular ml-1 text-brass-300">+{whipped}</span>
+                )}
+              </button>
+            );
+          })}
+        </div>
+
+        <div className="mt-1.5 flex flex-wrap gap-1.5">
+          {parties.map((party) => (
+            <button
+              key={`rider-${party.id}`}
+              type="button"
+              aria-pressed={tactics.rider === party.id}
+              onClick={() =>
+                onTactics({
+                  ...tactics,
+                  rider: tactics.rider === party.id ? null : party.id,
+                })
+              }
+              className={`rounded border px-2 py-0.5 text-small ${
+                tactics.rider === party.id
+                  ? 'border-brass-400 bg-brass-400 text-ink-900'
+                  : 'border-ink-400 text-content-secondary hover:bg-ink-500'
+              }`}
+            >
+              Rider for {party.shortName}
+            </button>
+          ))}
+        </div>
+
+        <div className="mt-1.5 flex flex-wrap gap-1.5">
+          {parties.map((party) => (
+            <button
+              key={`roll-${party.id}`}
+              type="button"
+              aria-pressed={tactics.logRoll === party.id}
+              onClick={() =>
+                onTactics({
+                  ...tactics,
+                  logRoll: tactics.logRoll === party.id ? null : party.id,
+                })
+              }
+              className={`rounded border px-2 py-0.5 text-small ${
+                tactics.logRoll === party.id
+                  ? 'border-brass-400 bg-brass-400 text-ink-900'
+                  : 'border-ink-400 text-content-secondary hover:bg-ink-500'
+              }`}
+            >
+              Promise {party.shortName}
+            </button>
+          ))}
+        </div>
+
+        {extraCost > 0 && (
+          <p className="mt-1 text-small text-content-secondary">
+            These tactics add{' '}
+            <span className="tabular">{extraCost.toFixed(1)}</span> political
+            capital, spent whether the bill carries or not.
+            {tactics.logRoll !== null &&
+              ' A promise comes due later, at twice what it cost.'}
+          </p>
+        )}
+
+        {extraCost > 0 && (
+          <button
+            type="button"
+            onClick={() => onTactics(NO_TACTICS)}
+            className="mt-1 text-small text-content-muted underline"
+          >
+            Clear
+          </button>
+        )}
+      </div>
+
+      {/* --- The working ---------------------------------------------------- */}
+      <button
+        type="button"
+        onClick={() => setOpen((v) => !v)}
+        aria-expanded={open}
+        className="mt-2 text-small text-brass-300"
+      >
+        {open ? 'Hide the count' : 'Show every delegation and why'}
+      </button>
+
+      {open && <WhipBreakdown count={result.house} />}
+    </div>
+  );
+}
+
+function ChamberBar({ label, count }: { label: string; count: WhipCount }) {
+  const total = count.for + count.against + count.undecided;
+  const pct = (n: number) => (total > 0 ? (n / total) * 100 : 0);
+
+  return (
+    <div>
+      <div className="flex items-baseline justify-between text-small">
+        <span className="text-content-secondary">{label}</span>
+        <span className="text-content-muted">
+          <span className="tabular text-verdigris-400">{count.for.toFixed(0)}</span>{' '}
+          for ·{' '}
+          <span className="tabular text-oxblood-300">{count.against.toFixed(0)}</span>{' '}
+          against ·{' '}
+          <span className="tabular">{count.undecided.toFixed(0)}</span> undecided
+        </span>
+      </div>
+      {/* Paired with the numerals above, never colour alone. (UI.md §10) */}
+      <div className="mt-0.5 flex h-1 w-full overflow-hidden rounded bg-ink-500" aria-hidden>
+        <div className="h-1 bg-verdigris-400" style={{ width: `${pct(count.for)}%` }} />
+        <div className="h-1 bg-ink-400" style={{ width: `${pct(count.undecided)}%` }} />
+        <div className="h-1 bg-oxblood-400" style={{ width: `${pct(count.against)}%` }} />
+      </div>
+    </div>
+  );
+}
+
+/**
+ * Every delegation, grouped by region, with the reasons that produced its vote.
+ *
+ * By region rather than alphabetically, because the sectional pattern is the
+ * thing worth seeing: a bill that carries New England and loses the South looks
+ * quite different from one that splits every region evenly, and only one of them
+ * is a warning.
+ */
+function WhipBreakdown({ count }: { count: WhipCount }) {
+  const byRegion = new Map<string, typeof count.votes>();
+  for (const vote of count.votes) {
+    const list = byRegion.get(vote.regionId) ?? [];
+    list.push(vote);
+    byRegion.set(vote.regionId, list);
+  }
+
+  return (
+    <div className="mt-2 space-y-2">
+      {[...byRegion.entries()].map(([regionId, votes]) => (
+        <div key={regionId}>
+          <p className="text-label uppercase tracking-wider text-content-muted">
+            {regionId.replace(/_/g, ' ')}
+          </p>
+          <ul className="mt-0.5 space-y-1">
+            {votes
+              .sort((a, b) => b.seats - a.seats)
+              .map((vote) => (
+                <li key={`${vote.stateCode}-${vote.party}`} className="text-small">
+                  <div className="flex items-baseline gap-2">
+                    <span
+                      className={
+                        vote.verdict === 'for'
+                          ? 'text-verdigris-400'
+                          : vote.verdict === 'against'
+                            ? 'text-oxblood-300'
+                            : 'text-content-muted'
+                      }
+                    >
+                      {vote.verdict === 'for'
+                        ? 'For'
+                        : vote.verdict === 'against'
+                          ? 'Against'
+                          : 'Undecided'}
+                    </span>
+                    <span className="text-content-primary">{vote.stateCode}</span>
+                    <span className="tabular text-content-muted">
+                      {vote.seats.toFixed(1)} seats
+                    </span>
+                  </div>
+                  <ul className="ml-4">
+                    {vote.reasons.map((reason, i) => (
+                      <li key={i} className="text-small text-content-muted">
+                        <span
+                          className={`tabular ${
+                            reason.effect >= 0 ? 'text-verdigris-400' : 'text-oxblood-300'
+                          }`}
+                        >
+                          {reason.effect >= 0 ? '+' : ''}
+                          {reason.effect.toFixed(1)}
+                        </span>{' '}
+                        {reason.text}
+                      </li>
+                    ))}
+                  </ul>
+                </li>
+              ))}
+          </ul>
+        </div>
+      ))}
+    </div>
   );
 }
 

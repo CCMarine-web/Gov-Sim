@@ -885,3 +885,136 @@ broken decay term.
 The general lesson worth keeping: when a test that was passing starts failing
 after a feature lands, the first question is whether the test was measuring what
 it claimed to. Twice here it was not.
+
+---
+
+## D-030 — A party is a coalition of interests, not a list of positions
+
+**Context.** Brief §2.2 asks for parties with "positions on issue axes (federal
+power vs states' rights, commercial vs agrarian, pro-British vs pro-French,
+fiscal, slavery)", and for members carrying regional interests that can override
+the party line.
+
+**Decided.** Parties are defined by `blocAffinity` — how strongly they take each
+of the eight blocs' side — rather than by positions on five axes. The vote is
+the dot product of a party's affinities and a bill's bloc reactions.
+
+**Why this is the same idea, better encoded.**
+
+1. **It reuses data every bill already carries.** Bills declare whom they help
+   and harm (D-025), and those reactions have been exercised by the grievance
+   system since item 6. Axis positions would be a second, parallel description
+   of the same thing, authored separately for 32 bills and free to disagree with
+   the first.
+2. **It is what a party in this period actually was.** The Anti-Administration
+   interest was not a programme; it was the planters, the small farmers and the
+   west against the funding system. Encoding it as a coalition says the true
+   thing.
+3. **A new bill needs no new field.** Adding a bill in Phase 3 requires no
+   thought about where it sits on five axes, and cannot be silently
+   mis-positioned by leaving one out.
+4. **The sectional term falls out naturally.** Weighting the same affinities by
+   where each bloc lives gives a Virginia Federalist and a Massachusetts
+   Federalist different votes on the same bill — which is exactly what the brief
+   wants from the axes, obtained without them.
+
+**What is lost.** A party cannot state a position on a question no bill has
+touched. That costs nothing today and would matter if the game ever wanted a
+party manifesto screen; the affinities would generate one.
+
+**Also decided here: shares, not named members.** A delegation holds *fractions*
+of its seats per party rather than a list of members, because this project has
+not sourced a state-by-state party breakdown for every Congress. Inventing named
+members would dress a model up as a record. A share is honestly a model, and the
+Congress screen says so. (`BLOCKERS.md` B-006.)
+
+---
+
+## D-031 — A party is pleased by its opponents' discomfort only a little
+
+**Found by a test, and it changed the model.** The first version of the whip
+count took `affinity × reaction` at face value. A negative affinity times a
+negative reaction is a positive, so a party set against the planters welcomed a
+measure that harmed them **in exact proportion to the damage** — and the model
+duly had the Federalists enthusiastically supporting federal gradual
+emancipation, because it hurt an interest they opposed.
+
+That is wrong in a way worth stating: **opposing an interest politically is not
+the same as wanting it ruined.** The Federalists were more antislavery than the
+Democratic-Republicans, and that is captured by their clergy and artisan
+affinities; it should not additionally arrive as delight at the destruction of
+the plantation economy.
+
+**Decided.** `OPPOSED_BLOC_DISCOUNT = 0.30`. Where a party's affinity for a bloc
+is negative, its whole contribution — harm or benefit — counts at three tenths.
+A party defends its own people a great deal and is pleased by its opponents'
+discomfort a little.
+
+**Why symmetric.** Discounting only harm would mean a party minded its enemy
+being *helped* at full strength while barely noticing its enemy being hurt,
+which is an odd shape. The discount is about how much the party cares about that
+bloc at all.
+
+**What it did not change.** The emancipation bill is still passable — narrowly,
+expensively, and against the whole South. It should be: locking it would say the
+Constitution forbade it, which is false (D-026). What changed is that it is no
+longer a Federalist enthusiasm.
+
+---
+
+## D-032 — The Senate turns over a third at a time
+
+**Date:** 2026-08-16 (Phase 2, queue item 7)
+**Status:** implemented
+
+**The problem, found while writing the documentation for item 7.** The doc I was
+drafting said Congress "re-seats the whole House and a third of the Senate". The
+code re-seated both entirely. One of the two was wrong, and it was the code.
+
+That is not a cosmetic mismatch. A delegation carried **one** party split used
+for both chambers, so the Senate held the same opinion as the House by
+construction. The only thing separating the chambers was the seat arithmetic —
+two per state instead of proportional — which tilts small states but never
+produces genuine disagreement. **A second chamber that agrees with the first is
+decoration.** In a hundred simulated votes it would almost never be the one that
+refused a bill.
+
+**Decision: model Article I §3 clause 2 properly.** The senators are divided
+into three classes and one class expires every second year. A delegation now
+carries `share` for the House and `senateShare` for the Senate, and at each
+election:
+
+```
+senateShare' = fresh × 1/3 + sitting × 2/3
+```
+
+**Why one third is not a tuning knob.** It is what the clause says. It goes in
+`calibration.ts` next to the tuned constants because that is where the engine's
+numbers live, but its provenance is the Constitution, and the comment above it
+says so. If a future session is looking for something to rebalance, this is not
+it.
+
+**What it buys the game.** A real brake with a real shape. A government that
+turns the country around still has to argue with the country as it was up to six
+years ago; a government that has just lost the country keeps a Senate that has
+not caught up. Both directions cost the player something, which is what
+distinguishes an obstacle from a punishment. It also gives the player a reason to
+care *when* they push a bill, not only whether they can afford it.
+
+**Cost of doing it now rather than later.** Almost nothing, and that is why it
+was done immediately rather than logged. Schema v6 was written but not yet
+committed, so changing the shape of `Delegation` was free. After the commit it
+would have needed a v7 and a migration that could not recover the sitting class
+anyway. The five minutes were available exactly once.
+
+**What the migration cannot do.** `v5ToV6` starts the Senate matching the House,
+because a v5 save records no previous election and there is no sitting class to
+recover. The chambers diverge from the next election onward. A one-time loss of
+nuance in a migrated save is the correct trade against inventing a history.
+
+**Asserted, not assumed.** Four tests in `congress.test.ts`: the House moves the
+whole way and the Senate exactly a third of it; the Senate is measurably behind
+the House after opinion swings; a newly admitted state gets its first two
+senators outright; and a class elected as Anti-Administration still counts once
+that interest becomes the Democratic-Republicans, with the shares still summing
+to a whole chamber.

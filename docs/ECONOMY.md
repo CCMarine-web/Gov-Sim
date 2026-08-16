@@ -966,6 +966,95 @@ These are **adult** mortality figures, not life expectancy at birth — the latt
 
 The crown buys **speed** and pays in **consent**. Neither is strictly better, and `src/sim/grievance.test.ts` asserts the specific claim the brief cares about: a measure out of reach for a legislature is within reach for a decree, and the crown is then left holding the grievance the republic avoided.
 
+### 7.20 Congress — the republic's half of the bargain
+
+*Added in Phase 2, queue item 7. Brief §2.2.*
+
+> **Causal claim.** A president cannot enact; he can only propose. Whether a measure passes depends on whose interests it serves, whose it harms, and where those people live — and a member who must face a state that loses by a bill will break with his party over it, which is how a party system becomes a sectional one.
+
+#### What is history here and what is a model
+
+| | |
+|---|---|
+| **History** | Seat counts. The Constitution's original 65 by name, the Apportionment Act of 1792 raising the House to 105 from the Third Congress, two senators per state, and the real admission dates of Vermont (1791), Kentucky (1792) and Tennessee (1796). All cited in `src/content/government/congress.ts`. |
+| **Model** | The party split of those seats. This project has not sourced a state-by-state party breakdown for every Congress, so the split is derived from each region's economic character and its sentiment toward the government. Never presented as a historical figure; `BLOCKERS.md` B-006 records what would improve it. |
+
+The First Congress in this model has **59 House seats, not 65**: North Carolina and Rhode Island had not ratified on 30 April 1789, and their members appear in November 1789 and May 1790 when they did.
+
+#### A party is a coalition of interests
+
+`blocAffinity`, −1…+1 per bloc, says whose side a party takes. Bills already declare whom they help and harm (§7.18), so the vote falls out of the two and a new bill needs no new field. `docs/DECISIONS.md` D-030 argues why this beats issue axes for this period.
+
+There were **no formal parties** in the First and Second Congresses — the Congressional Biographical Directory labels those members only Pro- and Anti-Administration — so those interests carry low `discipline` and their members vote their state far more reliably than a line. From 4 March 1793 they become the Federalists and Democratic-Republicans, with discipline rising accordingly. A delegation seated under an old name still counts under the new one: the Pro-Administration men *became* the Federalists rather than being replaced by strangers.
+
+#### How a delegation makes up its mind
+
+```
+partyLine   = Σ_blocs( affinity[bloc] × reaction[bloc] ) / 100
+              ...with harm to a bloc the party OPPOSES counted at
+              OPPOSED_BLOC_DISCOUNT (0.30) — see below
+            × party.discipline × CONGRESS_PARTY_LINE_WEIGHT
+
+regional    = Σ_blocs( reaction[bloc] × BLOC_REGION_WEIGHTS[bloc][region] ) / 100
+            × CONGRESS_REGIONAL_WEIGHT
+
+grievance   = −regionGrievance × CONGRESS_GRIEVANCE_RESISTANCE
+whipping    = capital the player has spent on this party
+riders      = +34 for one named party
+log-roll    = +28 for one named party, and a bill later
+
+inclination = clamp(−100, +100, sum of the above)
+verdict     = for / against / undecided, within ±6
+```
+
+**The reasons sum to the inclination, visibly.** That is the same contract the modifier ledger has with a stat, and a test asserts it: a number the player cannot interrogate is a number they cannot plan against.
+
+**Schadenfreude is discounted, and this matters.** Taken at face value, a negative affinity times a negative reaction is a positive: a party set against the planters would welcome a measure that destroyed the plantation economy in exact proportion to the damage. That produced a model in which the Federalists enthusiastically supported federal emancipation because it hurt an interest they opposed. Opposing an interest politically is not wanting it ruined, so harm to a disfavoured bloc counts at 0.30. (`docs/DECISIONS.md` D-031.)
+
+**The regional weight is deliberately comparable to the party weight** once discipline is applied. Too much party and the sectional crisis the whole game is building toward can never emerge; too much region and parties are decoration. A Virginia Federalist and a Massachusetts Federalist are the same party and do not vote alike on a tariff, and a test asserts exactly that.
+
+**The undecided abstain.** Real, not a rounding convenience: an undecided member in the 1790s abstained far more readily than a modern whipped one, and it means a bill can carry a thin house on a plurality.
+
+#### The player's three tools, and their prices
+
+| Tool | Effect | Cost now | Cost later |
+|---|---|---|---|
+| Whip a party | +1.0 inclination per point | 0.9 capital per point | — |
+| Attach a rider | +34 for one party | 22 capital | — |
+| Log-roll | +28 for one party | 8 capital | **16 capital in 540 days** |
+
+**Everything is spent whether the bill carries or not.** A government that whips hard and loses has still whipped hard; refunding the attempt would make trying free and failure costless.
+
+**A promise that cannot be kept costs standing instead** — `UNKEPT_PROMISE_LEGITIMACY_COST`, higher than the capital would have been, because a government that cannot keep its word has lost something a payment would not have bought back.
+
+#### Defeat
+
+A defeated bill goes on a **240-day cooldown** and costs legitimacy that **rises with the number of defeats**, capped at four: the third bill a government loses says something the first did not. The chronicle records which chamber refused it and the division, because "it failed" is not something a player can act on.
+
+#### Elections
+
+A new Congress convenes on **4 March of every odd year** — where the Confederation Congress fixed the start of the new government, and where every congressional term began until the Twentieth Amendment moved it to 3 January in 1935.
+
+At each election the seats are re-drawn **from the country as it now is**. A region the government has alienated returns members who will not vote for it: sentiment becomes seats. That is the whole point of holding elections in a game where the player never leaves office — the player persists, and the legislature they must carry does not.
+
+Cooldowns, obligations and the count of defeats survive an election; whipping does not, because the members it bought are gone.
+
+#### The Senate lags, on purpose
+
+The House is elected entire. The Senate is not: Article I §3 cl. 2 divided the senators into three classes so that **only a third face election in any cycle**, and that is modeled rather than waved away.
+
+Each delegation therefore carries **two** party splits — `share` for the House, `senateShare` for the Senate. At an election the House takes the new result outright, and the Senate blends it in at `SENATE_CLASS_TURNOVER` = 1/3, keeping two thirds of the class already sitting:
+
+```
+senateShare' = fresh × 1/3  +  sitting × 2/3
+```
+
+A state admitted since the last election has no sitting class and takes the fresh result whole, which is what happened when Vermont and Kentucky arrived. A class elected as Anti-Administration is resolved forward before blending, so it still counts once that interest has become the Democratic-Republicans — the members did not change, only the name did.
+
+**Why it earns its keep.** Without it the Senate is the House with different arithmetic: two seats a state instead of proportional ones, but the same opinion, so it almost never disagrees and the second chamber is decoration. With it, a government that turns the country around still has to argue with the country **as it was up to six years ago** — and, symmetrically, a government that has just lost the country keeps a Senate that has not finished hearing about it. That asymmetry is the constitutional brake the framers were describing, and it is a real obstacle the player has to time policy around rather than a flavour note.
+
+It is not a tuned number. One third is what the clause says.
+
 ---
 
 ## 8. Government type differences

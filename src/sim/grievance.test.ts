@@ -50,7 +50,7 @@ import { annualMortality, checkSuccession, heirFor, rulerAge } from './successio
 import { PHASE_1_END_DAY } from './calendar';
 import type { Bill, BlocReaction, ContentPack, GameState } from './types';
 
-const EMPTY: ContentPack = { version: 'test', events: [], bills: [], offices: [] };
+const EMPTY: ContentPack = { version: 'test', events: [], bills: [], offices: [], parties: [], stateSeats: [] };
 
 function run(state: GameState, days: number, content = EMPTY): GameState {
   let current = state;

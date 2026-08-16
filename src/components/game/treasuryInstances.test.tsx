@@ -24,7 +24,7 @@ import type { ContentPack, GameState } from '@/sim/types';
 import { FOUNDING_TAX_IDS } from '@/sim/types';
 import { TreasuryPanel } from './TreasuryPanel';
 
-const EMPTY: ContentPack = { version: 'test', events: [], bills: [], offices: [] };
+const EMPTY: ContentPack = { version: 'test', events: [], bills: [], offices: [], parties: [], stateSeats: [] };
 
 afterEach(cleanup);
 
