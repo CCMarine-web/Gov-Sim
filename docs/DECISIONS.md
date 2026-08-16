@@ -776,3 +776,112 @@ carry it.
 more than an enacted bill does, because the player has to know what they are
 departing from. `validateBill` enforces a 120-character minimum and at least one
 source on all four tiers.
+
+---
+
+## D-027 — What the monarchy buys, and what it pays: the balance stated in advance
+
+**Context.** Brief §2.1 asks for the decree path, and brief §10.6 requires the
+tradeoff each path embodies to be **written down and checked against**: "If
+monarchy is strictly better than republic, or a single bill trivially wins the
+game, that's a defect."
+
+**The tradeoff, stated before the numbers were chosen.**
+
+> The crown buys SPEED and pays in CONSENT. It can act when a legislature could
+> not afford to, and the country remembers every time it does.
+
+**How that becomes mechanics:**
+
+| | Monarchy | Republic |
+|---|---|---|
+| Capital to act | **×0.35** — no votes to whip | full |
+| Legitimacy to act | floor + power-weighted opposition | **none** |
+| Grievance created | **×4** | ×1 |
+| Legitimacy decay | none | continuous |
+| Ruler mortality | yes, −9 legitimacy each time, −26 if disputed | no |
+| Capital ceiling | ×0.75 | full |
+
+**The two decisions inside this that were not obvious:**
+
+1. **The republic pays NO legitimacy for legislating.** Not because passing a
+   bill is free, but because its cost is already charged in political capital,
+   which is dear precisely because a coalition has to be assembled. Charging
+   both would make the republic strictly worse — the exact defect the brief
+   names.
+2. **The 4:1 grievance ratio is the load-bearing number.** Set the two rates
+   equal and the republic's slowness buys nothing at all. A decree is imposed
+   and the losers had no opportunity to be heard, so the whole of their
+   opposition becomes resentment at the government; a bill argued through is one
+   the losers were part of losing.
+
+**How it is checked rather than asserted.** `src/sim/grievance.test.ts` has a
+section titled "the two paths trade against each other" which proves the
+specific claim: a measure out of reach for a legislature is within reach for a
+decree, and the crown is then left holding several times the grievance the
+republic avoided. A final test decrees five measures in succession and asserts
+the country stops paying.
+
+**Still to come.** Item 7 adds Congress, and the crown's advantage becomes far
+more visible: today both paths enact instantly, so the monarchy's speed shows up
+only as a lower capital price. When bills have to survive a vote, the difference
+becomes the difference the brief describes.
+
+---
+
+## D-028 — Whether a succession is disputed is the player's doing, not a die roll
+
+**Context.** Brief §2.1: "Succession crises when no clear heir exists." The
+straightforward implementation gives a new ruler no heir, so the second death in
+any dynasty is a crisis. That is what was built first, and running the tests
+showed what was wrong with it: **every monarchy is guaranteed a crisis, whatever
+the player does.** A punishment with no cause is not a mechanic.
+
+**Decided.** A new ruler is credited with an heir if and only if
+`legitimacyBase ≥ HEIR_SECURITY_THRESHOLD` (42), and the founding monarch always
+has one.
+
+**Why.** A dynasty with standing to spare has an obvious successor and nobody
+troubles to dispute it. One that has spent its standing — on decrees, on
+unpopular measures, on crises mishandled — finds that the question of who comes
+next is suddenly worth arguing about. That gives the monarchy's worst outcome a
+cause the player controls, and it closes the loop: decree freely, lose
+legitimacy, and the succession you were relying on stops being safe.
+
+**Deliberately not random.** Mortality is rolled; the *character* of the
+succession is derived. Whether a dynasty's next step is settled ought to be a
+consequence of how it has governed, and rolling for it would take that back out
+of the player's hands.
+
+**Surfaced on the Government screen**, in both states and in words, so a player
+can see which one they are currently in before it matters.
+
+---
+
+## D-029 — Two bugs the tests found, recorded because the shape of them recurs
+
+Both were caught by tests written before the code was believed finished, and
+both are the same kind of mistake — comparing things by identity when the
+question was about ORDER.
+
+**1. Unrest could not survive the smallest dip.** `reconcileUnrest` closed a
+running episode whenever the warranted severity differed from the running one —
+including when the warranted severity was *lower*. A region at 53 with a
+defiance episode running would see a wanted `resistance`, read "different", and
+close. With the hysteresis margin that should have held it open, the effect was
+an episode that ended and restarted every month and a chronicle full of a
+rebellion that kept changing its mind. Fixed by comparing severities by **rank**
+rather than by name.
+
+**2. The decay tests were measuring the succession cost.** Two long-standing
+tests asserted the monarchy loses almost no legitimacy over two years. They
+began failing at 26 points — which was the new succession mechanic working
+correctly: the default seed's second RNG draw is 0.0034, which kills even a
+young king. The tests now use a seed whose early draws are all well clear of any
+mortality rate, and **assert that no succession happened**, so a future seed
+change fails with "the seed produced a succession" rather than looking like a
+broken decay term.
+
+The general lesson worth keeping: when a test that was passing starts failing
+after a feature lands, the first question is whether the test was measuring what
+it claimed to. Twice here it was not.

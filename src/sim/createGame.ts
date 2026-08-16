@@ -30,6 +30,7 @@ import {
   computeRegionOutput,
   computeTradeVolume,
 } from './economy/production';
+import { emptyGrievance } from './grievance';
 import { createRng } from './rng';
 import {
   FOUNDING_PROGRAM_IDS,
@@ -322,7 +323,16 @@ export function createGame(options: NewGameOptions): GameState {
       houseName,
       title: titleFor(governmentType),
       birthYear: rulerBirthYear,
-      heirName: null,
+      /*
+        A monarchy founded today has an obvious successor; a republic does not
+        have heirs at all. Without this every succession would be a crisis
+        regardless of how the country had been governed, which is a punishment
+        rather than a mechanic. (docs/DECISIONS.md D-028)
+      */
+      heirName:
+        governmentType === 'monarchy' ? `The heir of ${rulerName}` : null,
+      reignNumber: 0,
+      accededDay: 0,
       portraitId: null,
     },
 
@@ -418,6 +428,12 @@ export function createGame(options: NewGameOptions): GameState {
       totalSpent: 0,
       totalWasted: 0,
     },
+
+    /*
+      A country with nothing yet held against it. Every grievance in a run is
+      something the player did. (brief §2.1)
+    */
+    grievance: emptyGrievance(),
 
     activeModifiers: [],
 

@@ -7,7 +7,7 @@ If you are resuming with no context: read `DESIGN.md` first, then this file,
 then `docs/DECISIONS.md` and `docs/BLOCKERS.md`. Then continue the **Phase 2
 queue** below, which is `gov-sim-phase2-brief.md` §9.
 
-**Last updated:** Phase 2 run of 2026-08-16, after queue item 5.
+**Last updated:** Phase 2 run of 2026-08-16, after queue item 6.
 
 ---
 
@@ -17,8 +17,8 @@ queue** below, which is `gov-sim-phase2-brief.md` §9.
 |---|---|
 | Production URL | <https://gov-sim.vercel.app> |
 | Deploy | auto-deploys from `main` on push |
-| Tests | 470 passing |
-| Save schema | version **4** — v1, v2 and v3 saves migrate forward, all three fixtures committed |
+| Tests | 526 passing |
+| Save schema | version **5** — v1 to v4 saves migrate forward, all four fixtures committed |
 | Gates | tests, lint, typecheck, production build — all green |
 | Database | Supabase, `save_games` table migrated, verified reachable from production |
 | Phase | **2 — in progress.** Phase 1 shipped. |
@@ -34,7 +34,7 @@ queue** below, which is `gov-sim-phase2-brief.md` §9.
 | 3 — Dynamic tax and spending instances | **complete** — see below and D-018, D-019 |
 | 4 — Political capital system | **complete** — see below and D-020 to D-022 |
 | 5 — Legislation categories and bill schema (≥25 bills) | **complete** — 32 bills, see below and D-023 to D-026 |
-| 6 — Monarchy decree path | not started |
+| 6 — Monarchy decree path | **complete** — see below and D-027 to D-029 |
 | 7 — Congress and the republic path | not started |
 | 8 — Bloc model | not started |
 | 9 — Map view replacing the Desk | not started |
@@ -285,6 +285,64 @@ carrying twelve enacted bills and 35 modifiers.
 
 **Tests:** 38 in `bills.test.ts`, 15 in `legislation.test.tsx`, 7 more in
 `migrations.test.ts`. Human-eye checks are `docs/MANUAL-QA.md` §13.
+
+### Item 6 — the monarchy decree path: complete
+
+The bargain, stated before the numbers were chosen and then asserted by tests:
+**the crown buys speed and pays in consent.**
+
+| | Republic | Monarchy |
+|---|---|---|
+| Capital to pass a bill | full | **×0.35** — no votes to whip |
+| Legitimacy to pass a bill | **none** | floor + power-weighted opposition |
+| Grievance created | ×1 | **×4** |
+| Ruler mortality | none | annual, −9 legitimacy each time |
+| Capital ceiling | full | ×0.75 |
+
+**Grievance is per bloc**, which is the whole design — "decreeing against the
+planters repeatedly builds planter grievance specifically, not generic
+unhappiness". Regional grievance is *derived* from bloc grievance through the
+same weighting bills use, so a bloc's anger lands where that bloc actually is.
+Support banks nothing: a government cannot decree something popular and spend the
+credit on something hated.
+
+**`BLOC_POWER` is not size.** The small farmers are the most numerous bloc and
+carry the least weight; the financiers are a few hundred men and carry a great
+deal. A crown answers to whoever can obstruct it. Power weights the *cost to the
+government*, not the anger of the bloc.
+
+**Three stages of consequence**, with the warning first: sentiment falls at any
+level of grievance, compliance only above 35 (resistance), stability only above
+55 (defiance) and 78 (revolt). It should be impossible to be surprised by a
+rising — `src/sim/grievance.ts`, `MANUAL-QA.md` §14.5.
+
+**Succession is real.** The ruler ages and dies, rolled annually against an age
+band using the seeded PRNG — so a save replays identically and the same king dies
+on the same day. The RNG advances whether or not he dies. An orderly succession
+costs 9 legitimacy; a disputed one 26 plus 15 stability for two years. **Which
+one it is, is the player's doing**: a new ruler gets an heir only if the dynasty's
+legitimacy is above 42, so a crown that has spent its standing on decrees finds
+the succession it was relying on has stopped being safe. The Government screen
+states which state you are currently in.
+
+**The player never leaves.** DESIGN.md pillar 2 holds: the name at the top of the
+screen changes and the player carries on.
+
+**Two bugs the tests found**, both recorded in D-029 because the shape recurs:
+unrest could not survive the smallest dip (severities compared by name rather
+than rank), and two long-standing decay tests turned out to be measuring the new
+succession cost.
+
+**Schema version 5**, `migrations/v4ToV5.ts`, with a committed v4 fixture.
+Grievance seeds **empty** — a v4 save contains no record of decrees, and deriving
+one from current sentiment would invent a history the player never made.
+
+**Tests:** 38 in `grievance.test.ts`, 12 in `monarchy.test.tsx`, 5 more in
+`migrations.test.ts`. Human-eye checks are `docs/MANUAL-QA.md` §14.
+
+**Coupled to item 7.** Today both paths still enact instantly, so the crown's
+speed shows up only as a lower capital price. When Congress lands and bills have
+to survive a vote, the difference becomes the one the brief describes.
 
 ---
 

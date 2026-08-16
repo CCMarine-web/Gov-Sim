@@ -558,17 +558,33 @@ Elections and succession are out of scope for Phase 1, and 1789–1800 contains 
 | Cost of unilateral action | Higher — unpopular laws cost more political capital | Lower — the crown acts more cheaply |
 | Crisis mishandling | Absorbed more gracefully | Sharper legitimacy penalties |
 | Event options | Some options available only to a republic | Some options available only to a monarchy |
-| Succession (Phase 2) | Elections | Bloodline |
+| Succession | Elections (queue item 7) | Bloodline — implemented, §9.3 |
 
-The intent is two genuinely different failure modes rather than one being strictly better: the republic must keep earning consent; the monarchy has a freer hand but a harder floor and a worse fall.
+**Phase 2 gave this real teeth (brief §2.1).** The rows above were the whole of it while every path enacted instantly. They now sit on top of a concrete bargain:
+
+| | Republic | Monarchy |
+|---|---|---|
+| Capital to pass a bill | full | **×0.35** — no votes to whip |
+| Legitimacy to pass a bill | **none** | floor plus power-weighted opposition |
+| Grievance created | ×1 | **×4** |
+| Ruler mortality | none | annual, with a legitimacy cost each time |
+| Capital ceiling | full | ×0.75 |
+
+**The crown buys speed and pays in consent.** It can act when a legislature could not afford to, and the country remembers every time it does — specifically, by bloc, accumulating into unrest that takes the revenue away. The full model is `docs/ECONOMY.md` §7.19; the balance is argued in `docs/DECISIONS.md` D-027 and asserted by tests, because "neither path is strictly better" is a claim that has to be checkable rather than merely intended.
 
 Exact starting values and the legitimacy decay/renewal formulas are in `docs/ECONOMY.md`.
 
-### 9.3 The ruler in Phase 1
+### 9.3 The ruler, and succession
 
-The ruler ages and their age is displayed, but **there is no death and no succession in Phase 1.** Succession is a Phase 2 system, and half-building it now would create exactly the kind of drift this project is trying to avoid.
+*Implemented in Phase 2, queue item 6. This section previously said succession was deferred; it no longer is.*
 
-`Ruler` nonetheless carries `birthYear` and `heirName` from day one so that Phase 2 requires no schema migration.
+On the **monarchical** path the ruler ages and dies. Mortality is rolled once a year against an age band, using the seeded PRNG whose state lives in `GameState` — so a save replays identically and two runs from one seed produce the same king dying on the same day. The RNG advances whether or not the ruler dies; advancing it only on death would make the sequence depend on the outcome it produced.
+
+An orderly succession costs 9 legitimacy; a disputed one costs 26 and takes 15 stability with it for two years. **Which it is, is the player's doing**: a new ruler is credited with an heir only if the dynasty's legitimacy is above a threshold. A crown that has spent its standing on decrees finds the question of who comes next is suddenly worth arguing about (`docs/DECISIONS.md` D-028).
+
+On the **republican** path there is no mortality: a president is replaced by election, which arrives with queue item 7.
+
+**The player does not leave, on either path.** Pillar 2. A succession is a change in the circumstances the player governs under, not a handover — the name at the top of the screen changes, the standing the office carries drops, and the player carries on.
 
 ---
 
@@ -627,7 +643,8 @@ See Rule 8 (§5). Migrations are pure `vN → vN+1` functions in `/src/sim/migra
 | 1 | The Phase 1 schema | — | `fixtures/v1-republic-day900.json` |
 | 2 | Three tax rates and three spending lines become `TaxInstance[]` and `SpendingProgram[]` (§13, brief §4.3) | `v1ToV2.ts` | `fixtures/v2-republic-day900.json` |
 | 3 | Political capital and administrative capacity (brief §3) | `v2ToV3.ts` | `fixtures/v3-republic-day900.json` |
-| 4 | Bills replace laws; modifiers gain a phase-in ramp (§7.4, brief §4) | `v3ToV4.ts` | — (current) |
+| 4 | Bills replace laws; modifiers gain a phase-in ramp (§7.4, brief §4) | `v3ToV4.ts` | `fixtures/v4-republic-day900.json` |
+| 5 | Grievance, unrest, and a ruler who can die (brief §2.1) | `v4ToV5.ts` | — (current) |
 
 A fixture is **generated once and never regenerated**, by `scripts/make-fixture.mts <version>` — which *refuses* to overwrite one that already exists. A fixture rebuilt from current code stops recording the old format and becomes a restatement of the new one, which would make its migration test pass by construction and prove nothing. That rule used to be a comment; it is now behaviour.
 
@@ -636,6 +653,7 @@ Every migration must state whether it is **behaviour-preserving** or a deliberat
 - `v1ToV2` is behaviour-preserving. The three founding instances reproduce the three old formulas arithmetically, and the test asserts a migrated save's revenue is unchanged.
 - `v2ToV3` **adds** a mechanic that did not exist, so there is no prior behaviour to preserve. It seeds the new reserve generously rather than at zero: the mechanic is new, so its absence in the old save was not the player's choice, and charging them for it would be the wrong way round.
 - `v3ToV4` is behaviour-preserving where it can be and honest where it cannot. Carried-forward bills get `enactedDay: 0`, because no enactment day was ever recorded and there is no way to recover one — the founding is the honest answer, and the day the player happened to upgrade would be a fabrication in the game's own record of itself. Existing modifiers get `rampDays: 0`, because they were applied under a build with no phase-in and were therefore fully in force; retro-fitting a ramp would weaken effects the player has already been living with.
+- `v4ToV5` seeds grievance **empty**, and that is the only defensible answer. Grievance is a record of things the government did to particular blocs, and a v4 save contains no such record. Deriving a starting grievance from, say, current regional sentiment would invent a history of decrees the player never issued and then hold them to it.
 
 ---
 
@@ -695,7 +713,7 @@ A refined version of the initial sketch. Full field-level definitions live in `/
 ```ts
 interface GameState {
   // --- identity & versioning ---
-  schemaVersion: number;         // current: 4 (v1-v3 migrate; see §11.4)
+  schemaVersion: number;         // current: 5 (v1-v4 migrate; see §11.4)
   gameId: string;
   createdAtISO: string;          // wall-clock, set once; never read by the sim
   contentVersion: string;
@@ -717,6 +735,10 @@ interface GameState {
   // which is its standing. Accrues daily, caps, and is raised temporarily by
   // emergency powers. Full model in docs/ECONOMY.md §7.17.
   politicalCapital: PoliticalCapitalState;
+  // Phase 2 §2.1. The price of ruling by decree: who resents the government,
+  // tracked per BLOC and per region, plus the unrest it has produced. Full
+  // model in docs/ECONOMY.md §7.19.
+  grievance: GrievanceState;
 
   // --- the ledger ---
   activeModifiers: Modifier[];

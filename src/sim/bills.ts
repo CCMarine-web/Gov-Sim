@@ -27,9 +27,16 @@
  * Everything here is pure. No time, no randomness, no mutation of the input.
  */
 
-import { BLOC_REGION_WEIGHTS, BLOC_REACTION_TO_SENTIMENT } from './calibration';
+import {
+  BLOC_REACTION_TO_SENTIMENT,
+  BLOC_REGION_WEIGHTS,
+  DECREE_CAPITAL_FACTOR,
+  DECREE_GRIEVANCE_PER_OPPOSITION,
+  LEGISLATION_GRIEVANCE_PER_OPPOSITION,
+} from './calibration';
 import { isoToDay } from './calendar';
 import { describeUnmet, evaluateAll } from './conditions';
+import { accrueGrievance, decreeLegitimacyCost } from './grievance';
 import { makeModifierId, removeModifiersFromSource, upsertModifier } from './modifiers';
 import { repealTax, defundProgram, upsertTax, upsertProgram } from './taxes';
 import { TAX_BASES } from './taxBases';
@@ -38,6 +45,7 @@ import type {
   BlocReaction,
   EnactedBill,
   GameState,
+  GovernmentType,
   Modifier,
   Region,
   TickEffect,
@@ -211,12 +219,75 @@ export function sliderFraction(bill: Bill, sliderValue: number | null): number {
  * proportion to how far up the range it starts. A bill introduced at the bottom
  * of its range is a smaller act than the same bill introduced at the top, and
  * should cost less.
+ *
+ * A CROWN PAYS A FRACTION. A decree needs no votes whipped and no coalition
+ * assembled, so it costs `DECREE_CAPITAL_FACTOR` of what carrying the same
+ * measure through a legislature costs. That is the monarchy's advantage made
+ * concrete (brief §2.1), and its price is `decreeLegitimacyCost` and the
+ * grievance below — speed against consent. (docs/DECISIONS.md D-027)
  */
-export function introduceCost(bill: Bill, sliderValue: number | null): number {
-  return (
+export function introduceCost(
+  bill: Bill,
+  sliderValue: number | null,
+  governmentType: GovernmentType = 'republic',
+): number {
+  const base =
     bill.capitalCost.introduce +
-    bill.capitalCost.raise * sliderFraction(bill, sliderValue)
+    bill.capitalCost.raise * sliderFraction(bill, sliderValue);
+
+  return governmentType === 'monarchy' ? base * DECREE_CAPITAL_FACTOR : base;
+}
+
+/**
+ * Everything passing this bill costs, on this path.
+ *
+ * Returned together rather than as three separate calls, because the whole
+ * point of the two paths is that they trade one cost against another, and a
+ * screen showing only one of them would misrepresent the choice.
+ */
+export interface BillPrice {
+  capital: number;
+  treasury: number;
+  /** Legitimacy spent. Zero on the republican path — a bill is not a decree. */
+  legitimacy: number;
+  /** Total grievance this will create, across every bloc that loses by it. */
+  grievance: number;
+  /** True when this is a decree rather than a bill. */
+  byDecree: boolean;
+}
+
+export function priceOf(
+  bill: Bill,
+  sliderValue: number | null,
+  governmentType: GovernmentType,
+): BillPrice {
+  const byDecree = governmentType === 'monarchy';
+
+  /*
+    A crown spends LEGITIMACY where a legislature spends TIME AND VOTES. The
+    republic's legitimacy cost for legislation is zero here — not because
+    passing a bill is free, but because its cost is already charged in political
+    capital, which is dear precisely because a coalition has to be assembled.
+    Charging both would make the republic strictly worse, which the brief calls
+    a defect.
+  */
+  const legitimacy = byDecree ? decreeLegitimacyCost(bill.blocReactions) : 0;
+
+  const rate = byDecree
+    ? DECREE_GRIEVANCE_PER_OPPOSITION
+    : LEGISLATION_GRIEVANCE_PER_OPPOSITION;
+  const grievance = bill.blocReactions.reduce(
+    (sum, r) => sum + (r.strength < 0 ? -r.strength * rate : 0),
+    0,
   );
+
+  return {
+    capital: introduceCost(bill, sliderValue, governmentType),
+    treasury: treasuryCost(bill, sliderValue),
+    legitimacy,
+    grievance,
+    byDecree,
+  };
 }
 
 /** The treasury cost, interpolated across the slider range. */
@@ -338,17 +409,18 @@ export function enactBill(
     );
   }
 
-  const capital = introduceCost(bill, sliderValue);
-  if (capital > state.politicalCapital.current) {
+  const price = priceOf(bill, sliderValue, state.governmentType);
+  if (price.capital > state.politicalCapital.current) {
     throw new Error(
-      `enactBill: "${bill.id}" needs ${capital.toFixed(1)} political capital ` +
+      `enactBill: "${bill.id}" needs ${price.capital.toFixed(1)} political capital ` +
         `and the government has ${state.politicalCapital.current.toFixed(1)}.`,
     );
   }
 
   const effects: TickEffect[] = [];
   const day = state.day;
-  const money = treasuryCost(bill, sliderValue);
+  const capital = price.capital;
+  const money = price.treasury;
 
   // --- The ledger ----------------------------------------------------------
   let activeModifiers = state.activeModifiers;
@@ -437,21 +509,42 @@ export function enactBill(
   effects.push({
     kind: 'billEnacted',
     day,
-    description: `${bill.name} passes`,
+    description: price.byDecree ? `${bill.name} decreed` : `${bill.name} passes`,
     refs: [bill.id],
   });
+
+  /*
+    GRIEVANCE. The bloc reactions are recorded as resentment as well as as a
+    sentiment shift, and the RATE depends on the path: a decree is imposed and
+    the losers had no opportunity to be heard, so the whole of their opposition
+    becomes resentment. A bill argued through and voted on is a bill the losers
+    were part of losing. (brief §2.1, ECONOMY.md §7.19)
+  */
+  const grievance = accrueGrievance(
+    state.grievance,
+    bill.blocReactions,
+    state.governmentType,
+  );
 
   return {
     state: {
       ...state,
       policies,
       regions,
+      grievance,
       activeModifiers,
       treasury: { ...state.treasury, balance: state.treasury.balance - money },
       politicalCapital: {
         ...state.politicalCapital,
         current: state.politicalCapital.current - capital,
         totalSpent: state.politicalCapital.totalSpent + capital,
+      },
+      nation: {
+        ...state.nation,
+        // Charged against the BASE: legitimacy is cumulative rather than
+        // target-seeking (ECONOMY.md §7.15), so charging the resolved value
+        // would be undone by the next monthly recompute.
+        legitimacyBase: Math.max(0, state.nation.legitimacyBase - price.legitimacy),
       },
       log: [
         ...state.log,
@@ -460,8 +553,8 @@ export function enactBill(
           day,
           tier: 'enactment',
           category: 'legislation',
-          title: bill.name,
-          body: describeEnactment(bill, sliderValue, capital, money),
+          title: price.byDecree ? `${bill.name}, by decree` : bill.name,
+          body: describeEnactment(bill, sliderValue, price),
           relatedEventId: null,
         },
       ],
@@ -477,8 +570,7 @@ function clampSentiment(value: number): number {
 function describeEnactment(
   bill: Bill,
   sliderValue: number | null,
-  capital: number,
-  money: number,
+  price: BillPrice,
 ): string {
   const parts: string[] = [];
 
@@ -490,9 +582,16 @@ function describeEnactment(
     );
   }
 
-  parts.push(`Cost ${capital.toFixed(1)} political capital`);
-  if (money > 0) {
-    parts.push(`and $${Math.round(money).toLocaleString('en-US')}`);
+  if (price.byDecree) {
+    parts.push('Enacted by the crown alone, without a vote');
+  }
+
+  parts.push(`Cost ${price.capital.toFixed(1)} political capital`);
+  if (price.legitimacy > 0) {
+    parts.push(`and ${price.legitimacy.toFixed(1)} legitimacy`);
+  }
+  if (price.treasury > 0) {
+    parts.push(`and $${Math.round(price.treasury).toLocaleString('en-US')}`);
   }
   if (bill.phaseInDays > 0) {
     parts.push(`Effects phase in over ${bill.phaseInDays} days`);

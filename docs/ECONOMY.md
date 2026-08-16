@@ -864,6 +864,108 @@ The weightings follow the economic geography the regions already encode. Each bl
 
 **Why declare reactions now rather than with item 8.** An unused field rots: nobody can tell whether the numbers in it are calibrated, because nothing depends on them. Wiring it to something real means the slate's reactions were written against observable consequences. When item 8 lands it replaces this table and **nothing in `src/content/` changes** — which is the whole reason the reactions live in the content rather than being derived. `docs/DECISIONS.md` D-025.
 
+### 7.19 Grievance, unrest and succession — the price of the crown
+
+*Added in Phase 2, queue item 6. Brief §2.1.*
+
+> **Causal claim.** A government that acts without asking is obeyed until it is not. Every measure imposed rather than argued for is remembered by the people it was imposed on — specifically, by name — and enough of that accumulated resentment in one place stops the revenue arriving, then stops the law running, and finally puts men in arms.
+
+#### Grievance is per bloc, and that is the whole design
+
+> "Decreeing against the planters repeatedly builds planter grievance specifically, not just generic unhappiness." — the brief
+
+A government can be broadly tolerated and still have made one interest implacable, and **which** interest determines where the trouble comes from. Regional grievance is **derived** from bloc grievance through the same `BLOC_REGION_WEIGHTS` bills use (§7.18), so the two cannot disagree and a bloc's anger lands where that bloc actually is.
+
+```
+Δgrievance[bloc] = −reaction.strength × rate        (only for reaction.strength < 0)
+
+  rate = DECREE_GRIEVANCE_PER_OPPOSITION       (0.28)  when decreed
+       = LEGISLATION_GRIEVANCE_PER_OPPOSITION  (0.07)  when legislated
+
+grievance[region] = Σ_blocs( grievance[bloc] × BLOC_REGION_WEIGHTS[bloc][region] )
+```
+
+**Support banks nothing.** Only opposition accumulates. A government does not get to decree something popular and spend the credit on something hated — that asymmetry is what stops "pass a sweetener first" being a general-purpose answer to every unpopular decree.
+
+**Decay is proportional**, 3% a month: a small grievance fades quickly, a large one lingers. A bloc at 80 is still at 55 two years later.
+
+#### The four-to-one ratio is the balance of the two paths
+
+`DECREE_GRIEVANCE_PER_OPPOSITION / LEGISLATION_GRIEVANCE_PER_OPPOSITION` is four. **Set them equal and the republic's slowness buys nothing**, which the brief calls a defect and would be right to. A decree is imposed and the losers had no opportunity to be heard, so the whole of their opposition becomes resentment at the government. A bill argued through and voted on is a bill the losers were part of losing: they dislike the outcome, they do not resent the process.
+
+#### What a decree costs a crown
+
+```
+opposition  = Σ_blocs( −strength × BLOC_POWER[bloc] )     for strength < 0
+legitimacy  = DECREE_LEGITIMACY_FLOOR + opposition × DECREE_LEGITIMACY_PER_OPPOSITION
+capital     = ordinary bill cost × DECREE_CAPITAL_FACTOR  (0.35)
+```
+
+`BLOC_POWER` is **not** the same as size, and that separation matters. The small farmers are by far the most numerous bloc and carry the least weight; the financiers are a few hundred men in three cities and carry a great deal. A crown answers to whoever can actually obstruct it, and in 1790 that is credit, commerce, the pulpit and the men who own the land — not the majority.
+
+| Bloc | Power |
+|---|---:|
+| Planters | 1.00 |
+| Financiers | 0.95 |
+| Merchants | 0.85 |
+| Clergy | 0.60 |
+| Frontier settlers | 0.50 |
+| Artisans | 0.45 |
+| Small farmers | 0.40 |
+| Seamen | 0.35 |
+
+Power weights the **cost to the government**, not the anger of the bloc. The seamen resent a measure that harms them exactly as much as the planters resent one that harms them; the difference is what they can do about it.
+
+#### Consequences, in three stages
+
+| Regional grievance | Severity | Effect |
+|---:|---|---|
+| < 35 | — | Sentiment only. Ordinary discontent is not rebellion. |
+| ≥ 35 | resistance | Compliance falls; revenue stops arriving. No stability cost — it is already costing money. |
+| ≥ 55 | defiance | Collectors turned back. −4 stability while it runs. |
+| ≥ 78 | revolt | In arms. −14 stability while it runs. |
+
+Sentiment is hit at **any** level, unlike compliance. That is deliberate: it is the channel the player sees first, which is what makes the Regions screen a warning rather than a post-mortem.
+
+**Escalation is one step at a time and de-escalation closes outright**, so the chronicle reads as a story rather than as overlapping states. A `UNREST_RESOLUTION_MARGIN` of 6 provides hysteresis — without it an episode sitting on its threshold would start and stop every month, filling the chronicle with a rebellion that kept changing its mind.
+
+#### Succession
+
+The ruler ages and dies. **This is the first genuinely random thing in the simulation**, and it uses the seeded PRNG whose state lives in `GameState` (Rule 2) — so a save replays identically and two runs from one seed produce the same king dying on the same day. The roll is annual, on 1 January, and the RNG advances **whether or not the ruler dies**: advancing only on death would make the sequence depend on the outcome it produced, which is the classic way to break replay.
+
+| Age | Annual mortality |
+|---|---:|
+| under 45 | 0.4% |
+| 45–54 | 1.2% |
+| 55–64 | 2.5% |
+| 65–74 | 5.5% |
+| 75–84 | 12% |
+| 85+ | 25% |
+
+These are **adult** mortality figures, not life expectancy at birth — the latter was around 35 in 1790 and is dominated by infant deaths, which say nothing about the survival of a man who has already reached fifty-seven. They are calibration constants informed by that, never shown as historical fact.
+
+| Outcome | Legitimacy | Stability |
+|---|---:|---|
+| Orderly succession | −9 | — |
+| Disputed succession | −26 | −15 for two years |
+
+**Which one it is, is the player's doing.** A new ruler is credited with an heir only if `legitimacyBase ≥ HEIR_SECURITY_THRESHOLD` (42). A dynasty with standing to spare has an obvious successor and nobody troubles to dispute it; one that has spent its standing on decrees finds the question of who comes next is suddenly worth arguing about. Making it conditional rather than automatic is the difference between a mechanic and a punishment (`docs/DECISIONS.md` D-028).
+
+**The player does not leave.** DESIGN.md pillar 2. A succession is a change in the circumstances the player governs under, not a handover: the name at the top of the screen changes, the standing the office carries drops, and the player carries on.
+
+#### The shape of the two paths, stated so it can be checked
+
+| | Monarchy | Republic |
+|---|---|---|
+| Capital to act | ×0.35 | full |
+| Legitimacy to act | floor + power-weighted opposition | none |
+| Grievance created | ×4 | ×1 |
+| Legitimacy decay | none | continuous (§7.15) |
+| Ruler mortality | yes, with a legitimacy cost each time | no |
+| Capital ceiling | ×0.75 (§7.17) | full |
+
+The crown buys **speed** and pays in **consent**. Neither is strictly better, and `src/sim/grievance.test.ts` asserts the specific claim the brief cares about: a measure out of reach for a legislature is within reach for a decree, and the crown is then left holding the grievance the republic avoided.
+
 ---
 
 ## 8. Government type differences

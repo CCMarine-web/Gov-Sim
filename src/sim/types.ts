@@ -31,7 +31,7 @@ import type { TaxBase } from './taxBases';
  * migrated forward or refused cleanly — never crashed, never silently loaded
  * into a broken state. (DESIGN.md Rule 8)
  */
-export const SCHEMA_VERSION = 4;
+export const SCHEMA_VERSION = 5;
 
 // ============================================================================
 // GOVERNMENT AND REGIONS
@@ -105,9 +105,26 @@ export interface Ruler {
   /** "King" or "President". Derived at creation from government type. */
   title: string;
   birthYear: number;
-  /** Inert in Phase 1; present so Phase 2 succession needs no migration. */
+  /**
+   * Named successor, or null if none is clear.
+   *
+   * A monarchy with no heir on the day the ruler dies has a succession crisis
+   * (§ succession, ECONOMY.md §7.19). Inert on the republican path, where the
+   * player persists through elections rather than through blood.
+   */
   heirName: string | null;
   portraitId: string | null;
+  /**
+   * How many rulers have preceded this one. Zero for the founder.
+   *
+   * Legitimacy carries across a succession at a penalty, and the penalty is
+   * about the *transfer*, not about the number — but the count is what lets the
+   * chronicle say "the third of his house" and what a later phase will hang
+   * dynastic effects on.
+   */
+  reignNumber: number;
+  /** The day this ruler took power. Day 0 for the founder. */
+  accededDay: number;
 }
 
 export interface NationStats {
@@ -519,6 +536,49 @@ export interface PoliticalCapitalState {
 }
 
 // ============================================================================
+// GRIEVANCE AND UNREST (Phase 2 brief §2.1)
+//
+// The price of ruling by decree. A crown can act without asking, and the cost
+// is that the people it acts against remember — specifically, and by name.
+//
+// "Decreeing against the planters repeatedly builds planter grievance
+// specifically, not just generic unhappiness." That sentence is the whole
+// design: grievance is tracked per BLOC and per REGION, so a government can be
+// broadly popular and still have made one interest implacable.
+// ============================================================================
+
+export type UnrestSeverity =
+  /** Quiet non-payment. Revenue falls; nothing else happens. */
+  | 'resistance'
+  /** Open refusal. Collectors are turned back; stability suffers. */
+  | 'defiance'
+  /** Armed rising. The government must answer it. */
+  | 'revolt';
+
+export interface UnrestEpisode {
+  id: string;
+  regionId: RegionId;
+  severity: UnrestSeverity;
+  /** The bloc whose grievance carried it over the threshold. */
+  drivenBy: BlocId;
+  startedDay: number;
+  /** null while it is still running. */
+  endedDay: number | null;
+}
+
+export interface GrievanceState {
+  /**
+   * 0–100 per bloc. Accumulates when the government acts against a bloc's
+   * interest, and decays slowly — a grievance is forgotten, but not quickly.
+   */
+  byBloc: Record<string, number>;
+  /** 0–100 per region, derived from bloc grievance and the bloc weighting. */
+  byRegion: Record<string, number>;
+  /** Every episode this run, including resolved ones. The record survives. */
+  episodes: UnrestEpisode[];
+}
+
+// ============================================================================
 // EVENTS AND LOGGING
 // ============================================================================
 
@@ -617,6 +677,13 @@ export interface GameState {
   treasury: TreasuryState;
   policies: PolicyState;
   politicalCapital: PoliticalCapitalState;
+  /**
+   * Who resents the government, and how much. (brief §2.1)
+   *
+   * The price of ruling by decree, tracked per bloc and per region so that a
+   * crown can be broadly tolerated and still have made one interest implacable.
+   */
+  grievance: GrievanceState;
 
   // --- the ledger ---
   activeModifiers: Modifier[];
@@ -658,7 +725,11 @@ export type TickEffectKind =
   | 'emergencyPowersLapsed'
   | 'billEnacted'
   | 'billAmended'
-  | 'billRepealed';
+  | 'billRepealed'
+  | 'unrestBegan'
+  | 'unrestEnded'
+  | 'succession'
+  | 'successionDisputed';
 
 export interface TickEffect {
   kind: TickEffectKind;

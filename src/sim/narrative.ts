@@ -142,5 +142,30 @@ export function currentCrises(state: GameState): string[] {
     crises.push(`Legitimacy at ${state.nation.legitimacy.toFixed(0)} — authority is failing`);
   }
 
+  /*
+    Unrest is listed by name and by cause, because a player who can see only
+    that "the South is unhappy" cannot tell whether to conciliate the planters
+    or the small farmers. Ordinary grievance is not listed here — it belongs on
+    the Regions screen as a warning, and a crisis list that included every
+    complaint would stop being a crisis list. (brief §2.1)
+  */
+  for (const episode of state.grievance.episodes) {
+    if (episode.endedDay !== null) continue;
+    const region = state.regions.find((r) => r.id === episode.regionId);
+    const bloc = episode.drivenBy.replace(/_/g, ' ');
+
+    crises.push(
+      episode.severity === 'revolt'
+        ? `${region?.name ?? episode.regionId} in arms — the ${bloc} at the head of it`
+        : episode.severity === 'defiance'
+          ? `${region?.name ?? episode.regionId} openly defiant — the ${bloc} will not pay`
+          : `${region?.name ?? episode.regionId} quietly withholding — the ${bloc} are behind it`,
+    );
+  }
+
+  if (state.flags.succession_disputed === true) {
+    crises.push('The succession is disputed — the crown is claimed and contested');
+  }
+
   return crises;
 }

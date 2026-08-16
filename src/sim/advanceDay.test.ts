@@ -243,14 +243,40 @@ describe('the founding choice diverges over time (ECONOMY.md §7.15)', () => {
    * legitimacy — which is correct, and is the behaviour we want. The design
    * claim is comparative, so the test is comparative.
    */
+  /*
+    A REIGN THAT DOES NOT END, DELIBERATELY.
+
+    These two tests isolate the DECAY TERM. A ruler who dies mid-run brings in
+    the succession cost (queue item 6) and the test would be measuring something
+    else entirely — the default test seed does exactly that, because its second
+    draw is 0.0034 and kills even a young king.
+
+    So they use a seed whose early draws are all well above any mortality rate,
+    and then ASSERT that no succession happened. If the seed is ever changed and
+    a ruler dies, the precondition fails and says why, rather than the
+    comparison failing and looking like a broken decay term.
+  */
+  const NO_SUCCESSION = { seed: 42, rulerBirthYear: 1760 };
+
   it('a monarchy loses far less legitimacy than a republic over the same span', () => {
-    const republicStart = createTestGame({ governmentType: 'republic' });
-    const monarchyStart = createTestGame({ governmentType: 'monarchy' });
+    const republicStart = createTestGame({
+      governmentType: 'republic',
+      ...NO_SUCCESSION,
+    });
+    const monarchyStart = createTestGame({
+      governmentType: 'monarchy',
+      ...NO_SUCCESSION,
+    });
+
+    const republicEnd = run(republicStart, 730);
+    const monarchyEnd = run(monarchyStart, 730);
+
+    expect(monarchyEnd.ruler.reignNumber, 'the seed produced a succession').toBe(0);
 
     const republicLoss =
-      republicStart.nation.legitimacy - run(republicStart, 730).nation.legitimacy;
+      republicStart.nation.legitimacy - republicEnd.nation.legitimacy;
     const monarchyLoss =
-      monarchyStart.nation.legitimacy - run(monarchyStart, 730).nation.legitimacy;
+      monarchyStart.nation.legitimacy - monarchyEnd.nation.legitimacy;
 
     expect(republicLoss).toBeGreaterThan(1);
     expect(monarchyLoss).toBeLessThan(1);
@@ -258,10 +284,35 @@ describe('the founding choice diverges over time (ECONOMY.md §7.15)', () => {
   });
 
   it('a monarchy suffers no decay term, so any drift is outcome-driven only', () => {
-    const start = createTestGame({ governmentType: 'monarchy' });
+    const start = createTestGame({ governmentType: 'monarchy', ...NO_SUCCESSION });
     const after = run(start, 730);
+
+    expect(after.ruler.reignNumber, 'the seed produced a succession').toBe(0);
     // Bounded well below the republic's ~4.3 point decay over two years.
     expect(start.nation.legitimacy - after.nation.legitimacy).toBeLessThan(0.5);
+  });
+
+  /**
+   * THE COUNTERWEIGHT, added with queue item 6.
+   *
+   * "A monarchy suffers no decay" was the whole of the story while rulers could
+   * not die. They can now, and each succession costs legitimacy — an heir
+   * inherits the crown, not the standing. Over a long enough run the crown's
+   * exemption from decay is paid for in lumps at each transfer rather than
+   * continuously, which is a different shape of cost, not an absence of one.
+   */
+  it('but pays for it in lumps at each succession over a long run', () => {
+    const start = createTestGame({ governmentType: 'monarchy' });
+    const after = run(start, PHASE_1_END_DAY);
+
+    const successions = after.log.filter((l) => l.title.includes('dies'));
+    expect(successions.length).toBeGreaterThan(0);
+    expect(after.ruler.reignNumber).toBe(successions.length);
+
+    // The founder's name is no longer at the top of the screen, and the player
+    // is still governing. (DESIGN.md pillar 2 — there is no game over.)
+    expect(after.ruler.name).not.toBe(start.ruler.name);
+    expect(after.ruler.accededDay).toBeGreaterThan(0);
   });
 });
 

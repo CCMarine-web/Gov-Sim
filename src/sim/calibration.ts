@@ -561,6 +561,174 @@ export const BLOC_REGION_WEIGHTS: Record<string, Record<string, number>> = {
  */
 export const BLOC_REACTION_TO_SENTIMENT = 0.06;
 
+/**
+ * How much a bloc's displeasure costs a government that ignores it.
+ *
+ * NOT the same as size. The small farmers are by far the most numerous bloc and
+ * carry the least weight here; the financiers are a few hundred men in three
+ * cities and carry a great deal. That asymmetry is the point of having a
+ * separate number: a crown answers to whoever can actually obstruct it, and in
+ * 1790 that is credit, commerce, the pulpit and the men who own the land — not
+ * the majority.
+ *
+ * It is what makes decreeing against the planters a different act from
+ * decreeing against the artisans, and it is the mechanism by which the
+ * monarchy's freedom of action turns into its instability. (ECONOMY.md §7.19)
+ */
+export const BLOC_POWER: Record<string, number> = {
+  planters: 1.0,
+  financiers: 0.95,
+  merchants: 0.85,
+  clergy: 0.6,
+  frontier_settlers: 0.5,
+  artisans: 0.45,
+  seamen: 0.35,
+  small_farmers: 0.4,
+};
+
+// ============================================================================
+// GRIEVANCE AND UNREST (ECONOMY.md §7.19, brief §2.1)
+// ============================================================================
+
+/**
+ * Grievance points per unit of bloc opposition when a measure is DECREED.
+ *
+ * A decree is imposed. Nobody was persuaded, nobody consented, and the losers
+ * had no opportunity to be heard — so the whole of their opposition becomes
+ * resentment at the government rather than disappointment at an argument lost.
+ */
+export const DECREE_GRIEVANCE_PER_OPPOSITION = 0.28;
+
+/**
+ * The same, when a measure is LEGISLATED.
+ *
+ * Much lower, and this ratio is the central balance of the two paths. A bill
+ * argued through, amended, and voted on is a bill the losers were part of
+ * losing. They dislike the outcome; they do not resent the process. Set the two
+ * equal and the republic's slowness buys nothing, which the brief calls a
+ * defect and would be right to.
+ */
+export const LEGISLATION_GRIEVANCE_PER_OPPOSITION = 0.07;
+
+/**
+ * Monthly decay of bloc grievance, as a fraction of the current level.
+ *
+ * Proportional rather than flat, so a small grievance fades quickly and a large
+ * one lingers: 3% a month is roughly a third gone in a year from a low base,
+ * but a bloc at 80 is still at 55 two years later. Grievances are forgotten,
+ * but not quickly, and never while the thing that caused them is still in force.
+ */
+export const GRIEVANCE_DECAY_PER_MONTH = 0.03;
+
+/**
+ * Legitimacy a crown spends per unit of power-weighted opposition to a decree.
+ *
+ * The brief: "Every decree spends legitimacy, and spends more when it runs
+ * against the interests of powerful blocs." A decree the planters hate at full
+ * strength costs about 2.4 legitimacy; one nobody minds costs the floor.
+ */
+export const DECREE_LEGITIMACY_PER_OPPOSITION = 0.024;
+
+/** No decree is free, however uncontroversial. Acting alone always costs. */
+export const DECREE_LEGITIMACY_FLOOR = 0.8;
+
+/**
+ * The crown's discount on the political capital cost of legislating.
+ *
+ * A decree needs no votes whipped and no coalition assembled, so it costs a
+ * fraction of what carrying the same measure through a legislature costs. This
+ * is the monarchy's advantage made concrete, and its price is the grievance and
+ * legitimacy above. Speed against consent. (docs/DECISIONS.md D-027)
+ */
+export const DECREE_CAPITAL_FACTOR = 0.35;
+
+/** Regional grievance above this begins to bite. Below it, nothing happens. */
+export const UNREST_THRESHOLD = {
+  resistance: 35,
+  defiance: 55,
+  revolt: 78,
+} as const;
+
+/** Compliance points lost per point of regional grievance above the threshold. */
+export const GRIEVANCE_TO_COMPLIANCE = 0.55;
+
+/** Sentiment points lost per point of regional grievance. */
+export const GRIEVANCE_TO_SENTIMENT = 0.25;
+
+/** Stability points lost while an episode of each severity is running. */
+export const UNREST_STABILITY_COST: Record<string, number> = {
+  resistance: 0,
+  defiance: 4,
+  revolt: 14,
+};
+
+/**
+ * How far regional grievance must fall below the threshold that started an
+ * episode before it ends.
+ *
+ * Hysteresis, and necessary: without it an episode sitting exactly on its
+ * threshold would start and stop every month, filling the chronicle with a
+ * rebellion that keeps changing its mind.
+ */
+export const UNREST_RESOLUTION_MARGIN = 6;
+
+// ============================================================================
+// SUCCESSION (ECONOMY.md §7.19)
+// ============================================================================
+
+/**
+ * Annual probability of death, by age band, for a man of the governing class in
+ * this period.
+ *
+ * Adult life expectancy is the relevant figure, not life expectancy at birth —
+ * the latter was around 35 in 1790 and is dominated by infant mortality, which
+ * says nothing about the survival of a fifty-seven-year-old who has already
+ * cleared it. A man reaching adulthood in this period could expect his sixties.
+ *
+ * These are game-design parameters informed by that, not a life table. They are
+ * never shown to the player as historical fact. (DESIGN.md §12.2)
+ */
+export const MORTALITY_BY_AGE: ReadonlyArray<{ from: number; annual: number }> = [
+  { from: 0, annual: 0.004 },
+  { from: 45, annual: 0.012 },
+  { from: 55, annual: 0.025 },
+  { from: 65, annual: 0.055 },
+  { from: 75, annual: 0.12 },
+  { from: 85, annual: 0.25 },
+];
+
+/**
+ * Legitimacy a monarchy loses at a succession, even an orderly one.
+ *
+ * An heir inherits the crown, not the standing. Every transfer is a moment at
+ * which the question "why this family?" can be asked out loud, and the answer
+ * has to be re-established rather than assumed.
+ */
+export const SUCCESSION_LEGITIMACY_COST = 9;
+
+/** The same, when no heir was named and the succession is disputed. */
+export const SUCCESSION_CRISIS_LEGITIMACY_COST = 26;
+
+/** Stability lost by a disputed succession. */
+export const SUCCESSION_CRISIS_STABILITY_COST = 15;
+
+/** How long a succession crisis weighs on the country. */
+export const SUCCESSION_CRISIS_DURATION_DAYS = 730;
+
+/**
+ * The legitimacy a dynasty needs for its succession to be beyond argument.
+ *
+ * Above this, a new ruler's heir is obvious and uncontested and the next
+ * transfer will be orderly. Below it, the claim is weak enough that nobody
+ * settles the question in advance, and the next death is a crisis.
+ *
+ * This is what gives the monarchy's worst outcome a CAUSE THE PLAYER CONTROLS.
+ * Without it every second succession would be disputed regardless of how the
+ * country had been governed, which is a punishment rather than a mechanic.
+ * (docs/DECISIONS.md D-028)
+ */
+export const HEIR_SECURITY_THRESHOLD = 42;
+
 // ============================================================================
 // LAG TIME CONSTANTS (ECONOMY.md §7.1)
 // ============================================================================

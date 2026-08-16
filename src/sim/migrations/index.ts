@@ -21,6 +21,7 @@ import { SCHEMA_VERSION, type GameState } from '../types';
 import { v1ToV2 } from './v1ToV2';
 import { v2ToV3 } from './v2ToV3';
 import { v3ToV4 } from './v3ToV4';
+import { v4ToV5 } from './v4ToV5';
 
 /** A single forward step. Receives and returns loosely-typed state by design:
  *  the shape it migrates FROM no longer has a TypeScript type in this build. */
@@ -39,6 +40,8 @@ export const MIGRATIONS: Record<number, Migration> = {
   2: v2ToV3,
   /** Bills replace laws; modifiers gain a phase-in ramp. (brief §4) */
   3: v3ToV4,
+  /** Grievance, unrest, and a ruler who can die. (brief §2.1) */
+  4: v4ToV5,
 };
 
 export type LoadOutcome =

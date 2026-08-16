@@ -61,7 +61,15 @@ import {
   eliteSupport,
 } from './economy/politics';
 import { MAX_CAPITAL_ACCRUAL } from './calibration';
+import {
+  decayGrievance,
+  grievanceCompliancePenalty,
+  grievanceSentimentPenalty,
+  reconcileUnrest,
+  unrestStabilityCost,
+} from './grievance';
 import { censusOfOffices } from './offices';
+import { checkSuccession } from './succession';
 import { TAX_BASES } from './taxBases';
 import {
   burdenLevies,
@@ -93,6 +101,33 @@ import type {
   TickEffect,
   TickResult,
 } from './types';
+
+/**
+ * How an episode of unrest is announced.
+ *
+ * Written as prose rather than assembled from fields, because "the collectors
+ * are turned back" says something "defiance: 62" does not. The chronicle is an
+ * account of the player's run, not a system log. (UI.md §4.3)
+ */
+const UNREST_TITLE: Record<string, (region: string) => string> = {
+  resistance: (region) => `Quiet non-payment in ${region}`,
+  defiance: (region) => `Open defiance in ${region}`,
+  revolt: (region) => `Armed rising in ${region}`,
+};
+
+const UNREST_BODY: Record<string, (region: string, bloc: string) => string> = {
+  resistance: (region, bloc) =>
+    `Assessments in ${region} are going unanswered. Nothing is said openly, and ` +
+    `the money simply does not arrive. The ${bloc} are at the bottom of it.`,
+  defiance: (region, bloc) =>
+    `Collectors in ${region} are being turned back at the door, and the local ` +
+    `magistrates will not compel them. The ${bloc} are at the head of it, and ` +
+    'the question is no longer revenue but whether federal law runs here.',
+  revolt: (region, bloc) =>
+    `${region} is in arms. The ${bloc} have carried the country with them, and ` +
+    'the government must either answer this with force or concede it. Either ' +
+    'answer will be remembered.',
+};
 
 /** Read a numeric flag, defaulting to 0. Content sets these; the engine reads them. */
 function numericFlag(state: GameState, key: string): number {
@@ -172,15 +207,21 @@ export function recomputeEconomy(
 
     // Sentiment: lags six months, and is pulled by the modifier ledger as well
     // as by the model.
-    const sentimentModelTarget = sentimentTarget({
-      baseSentiment: region.baseSentiment,
-      taxBurden: burden,
-      baselineTaxBurden: region.baselineTaxBurden,
-      prosperity,
-      baseProsperity: region.baseProsperity,
-      prosperityTrend,
-      governmentAffinity: 0,
-    });
+    const sentimentModelTarget =
+      sentimentTarget({
+        baseSentiment: region.baseSentiment,
+        taxBurden: burden,
+        baselineTaxBurden: region.baselineTaxBurden,
+        prosperity,
+        baseProsperity: region.baseProsperity,
+        prosperityTrend,
+        governmentAffinity: 0,
+      }) -
+      // Grievance bites sentiment at any level, unlike compliance, which has a
+      // threshold. People can be sullen without refusing to pay, and this is
+      // the channel the player sees FIRST — which is what makes the Regions
+      // screen a warning rather than a post-mortem. (ECONOMY.md §7.19)
+      grievanceSentimentPenalty(state.grievance.byRegion[region.id] ?? 0);
 
     const sentimentGoal = resolveStat(
       `region.${region.id}.sentiment`,
@@ -192,11 +233,17 @@ export function recomputeEconomy(
 
     const sentiment = lagToward(region.sentiment, sentimentGoal, TAU_MONTHS.sentiment);
 
-    // Compliance: the loop that makes a tax worth only what people pay.
-    const complianceModelTarget = complianceTarget({
-      sentiment,
-      legitimacy: state.nation.legitimacy,
-    });
+    // Compliance: the loop that makes a tax worth only what people pay, less
+    // whatever a standing grievance against the government takes off it. Below
+    // the resistance threshold the penalty is zero — ordinary discontent is not
+    // rebellion. (ECONOMY.md §7.19)
+    const complianceModelTarget = Math.max(
+      0,
+      complianceTarget({
+        sentiment,
+        legitimacy: state.nation.legitimacy,
+      }) - grievanceCompliancePenalty(state.grievance.byRegion[region.id] ?? 0),
+    );
 
     const compliance = lagToward(
       region.compliance,
@@ -369,11 +416,17 @@ export function recomputeEconomy(
   const meanSentiment =
     regions.reduce((s, r) => s + r.sentiment, 0) / (regions.length || 1);
 
-  const stabilityModelTarget = stabilityTarget({
-    meanSentiment,
-    sectionalTension,
-    legitimacy: state.nation.legitimacy,
-  });
+  const stabilityModelTarget =
+    stabilityTarget({
+      meanSentiment,
+      sectionalTension,
+      legitimacy: state.nation.legitimacy,
+    }) -
+    // Open defiance and armed rising cost stability directly, for as long as
+    // they run. Quiet non-payment costs nothing here: it is already costing
+    // revenue, and charging it twice would make the mildest tier of unrest the
+    // most punishing per point of grievance. (ECONOMY.md §7.19)
+    unrestStabilityCost(state.grievance);
 
   const stability = lagToward(
     state.nation.stability,
@@ -892,6 +945,75 @@ export function advanceDay(state: GameState, content: ContentPack): TickResult {
       description: `Fiscal year ${yearOf(day) - 1} closed`,
       refs: [],
     });
+  }
+
+  // --- Annual succession check ---------------------------------------------
+  /*
+    Once a year, not daily: the mortality figures are annual, and rolling them
+    daily would need a conversion that adds nothing a player can perceive.
+    1 January is also when the age on screen changes.
+
+    Runs BEFORE the monthly recompute so a succession's legitimacy cost is in
+    place when the economy is recomputed on the same day, rather than lagging a
+    month behind the event that caused it.
+  */
+  if (isFirstOfYear(day)) {
+    const succession = checkSuccession(next);
+    next = succession.state;
+    effects.push(...succession.effects);
+  }
+
+  // --- Monthly grievance and unrest ----------------------------------------
+  /*
+    Monthly, with the other slow-moving aggregates. Grievance decays a little,
+    regional grievance is re-derived from it, and episodes of unrest open and
+    close to match. (brief §2.1, ECONOMY.md §7.19)
+
+    Before the economy recompute, so that this month's compliance and sentiment
+    already reflect this month's grievance.
+  */
+  if (isFirstOfMonth(day)) {
+    const decayed = decayGrievance(next.grievance);
+    const reconciled = reconcileUnrest(decayed, day);
+    next = { ...next, grievance: reconciled.grievance };
+
+    for (const episode of reconciled.started) {
+      const region = next.regions.find((r) => r.id === episode.regionId);
+      next = {
+        ...next,
+        log: [
+          ...next.log,
+          {
+            id: `${day}:unrest:${episode.id}`,
+            day,
+            tier: episode.severity === 'resistance' ? 'info' : 'crisis',
+            category: 'region',
+            title: UNREST_TITLE[episode.severity](region?.name ?? episode.regionId),
+            body: UNREST_BODY[episode.severity](
+              region?.name ?? episode.regionId,
+              episode.drivenBy.replace(/_/g, ' '),
+            ),
+            relatedEventId: null,
+          },
+        ],
+      };
+
+      effects.push({
+        kind: 'unrestBegan',
+        day,
+        description: `${episode.severity} in ${region?.name ?? episode.regionId}`,
+        refs: [episode.id],
+      });
+    }
+
+    for (const episode of reconciled.ended) {
+      effects.push({
+        kind: 'unrestEnded',
+        day,
+        description: `${episode.severity} in ${episode.regionId} ended`,
+        refs: [episode.id],
+      });
+    }
   }
 
   // --- Monthly economy -----------------------------------------------------

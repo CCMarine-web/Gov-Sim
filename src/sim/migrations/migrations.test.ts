@@ -7,6 +7,7 @@ import { PHASE_1_CONTENT } from '@/content';
 import v1Fixture from './fixtures/v1-republic-day900.json';
 import v2Fixture from './fixtures/v2-republic-day900.json';
 import v3Fixture from './fixtures/v3-republic-day900.json';
+import v4Fixture from './fixtures/v4-republic-day900.json';
 import { MIGRATIONS, migrateToCurrent, parseSave } from './index';
 
 describe('loading a save of the current version', () => {
@@ -524,6 +525,91 @@ describe('the v3 fixture gains bill records without losing anything', () => {
     expect(state.day).toBe((raw.day as number) + 60);
     expect(Number.isFinite(state.nation.gdp)).toBe(true);
     expect(Number.isFinite(state.politicalCapital.current)).toBe(true);
+  });
+});
+
+/**
+ * THE v4 FIXTURE
+ *
+ * A real save in the version 4 format: no grievance, and a ruler who could not
+ * die. Twelve bills passed, so the migration has real state to carry forward.
+ */
+describe('the v4 fixture gains grievance without inventing any', () => {
+  const raw = JSON.parse(JSON.stringify(v4Fixture)) as Record<string, unknown>;
+
+  it('is genuinely a v4 save, with none of the v5 fields', () => {
+    expect(raw.schemaVersion).toBe(4);
+    expect(raw.grievance).toBeUndefined();
+    expect((raw.ruler as Record<string, unknown>).reignNumber).toBeUndefined();
+  });
+
+  it('starts the country with nothing held against it', () => {
+    const outcome = migrateToCurrent(JSON.parse(JSON.stringify(raw)));
+    expect(outcome.ok).toBe(true);
+    if (!outcome.ok) return;
+
+    /*
+      Grievance is a record of things the government did to particular blocs,
+      and a v4 save contains no such record. Deriving a starting grievance from,
+      say, current regional sentiment would invent a history of decrees the
+      player never issued and then hold them to it. (v4ToV5.ts)
+    */
+    for (const level of Object.values(outcome.state.grievance.byBloc)) {
+      expect(level).toBe(0);
+    }
+    for (const level of Object.values(outcome.state.grievance.byRegion)) {
+      expect(level).toBe(0);
+    }
+    expect(outcome.state.grievance.episodes).toEqual([]);
+  });
+
+  it('records the ruler as the founder, which is the only thing they can be', () => {
+    const outcome = migrateToCurrent(JSON.parse(JSON.stringify(raw)));
+    expect(outcome.ok).toBe(true);
+    if (!outcome.ok) return;
+
+    // Every v4 save is still under its founder: there was no way for a ruler to
+    // die. Not an assumption — the only thing that could have happened.
+    expect(outcome.state.ruler.reignNumber).toBe(0);
+    expect(outcome.state.ruler.accededDay).toBe(0);
+    expect(outcome.state.ruler.name).toBe(
+      (raw.ruler as Record<string, string>).name,
+    );
+  });
+
+  it('keeps the bills, taxes and ledger the v4 save left', () => {
+    const outcome = migrateToCurrent(JSON.parse(JSON.stringify(raw)));
+    expect(outcome.ok).toBe(true);
+    if (!outcome.ok) return;
+
+    const old = raw.policies as Record<string, unknown>;
+    expect(outcome.state.policies.bills).toEqual(old.bills);
+    expect(outcome.state.policies.taxes).toEqual(old.taxes);
+    expect(outcome.state.activeModifiers).toEqual(raw.activeModifiers);
+  });
+
+  it('runs on without breaking', () => {
+    const outcome = migrateToCurrent(JSON.parse(JSON.stringify(raw)));
+    expect(outcome.ok).toBe(true);
+    if (!outcome.ok) return;
+
+    let state = outcome.state;
+    for (let i = 0; i < 60; i++) {
+      state = advanceDay(state, PHASE_1_CONTENT).state;
+      while (state.eventState.pendingDecisions.length > 0) {
+        const pending = state.eventState.pendingDecisions[0];
+        const event = PHASE_1_CONTENT.events.find((e) => e.id === pending.eventId)!;
+        state = resolveDecision(
+          state,
+          PHASE_1_CONTENT,
+          pending.eventId,
+          event.options[0].id,
+        ).state;
+      }
+    }
+
+    expect(state.day).toBe((raw.day as number) + 60);
+    expect(Number.isFinite(state.nation.gdp)).toBe(true);
   });
 });
 

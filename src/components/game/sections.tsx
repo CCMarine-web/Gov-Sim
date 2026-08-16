@@ -12,12 +12,18 @@
 
 import { PHASE_1_CONTENT } from '@/content';
 import { formatLongDate } from '@/sim/calendar';
-import { RANGES, TAU_MONTHS } from '@/sim/calibration';
+import { BLOC_REGION_WEIGHTS, RANGES, TAU_MONTHS } from '@/sim/calibration';
 import { explainStat, type StatBreakdown } from '@/sim/modifiers';
 import { currentCrises, stateOfTheUnion } from '@/sim/narrative';
 import { taxesInForce } from '@/sim/taxes';
 import { useMemo, useState } from 'react';
-import type { GameState, LogCategory, LogTier, Region } from '@/sim/types';
+import {
+  BLOC_IDS,
+  type GameState,
+  type LogCategory,
+  type LogTier,
+  type Region,
+} from '@/sim/types';
 import {
   complianceWord,
   direction,
@@ -329,6 +335,14 @@ function RegionCard({ region, state }: { region: Region; state: GameState }) {
         />
       </div>
 
+      {/*
+        GRIEVANCE. The warning the player gets before the revenue stops. Shown
+        alongside the region's stats rather than on a separate screen, because
+        the point of tracking it is that it should be impossible to be surprised
+        by a rising. (brief §2.1)
+      */}
+      <RegionGrievance region={region} state={state} />
+
       <div className="mt-2 border-t border-ink-400 pt-2">
         <p className="text-label uppercase tracking-wider text-content-muted">
           Tax exposure
@@ -350,6 +364,77 @@ function RegionCard({ region, state }: { region: Region; state: GameState }) {
     </section>
   );
 }
+
+/**
+ * WHO RESENTS THE GOVERNMENT HERE, AND HOW BADLY.
+ *
+ * Grievance is per bloc; this shows the region's total and names the blocs
+ * behind it, because "the South is aggrieved" is much less useful than "the
+ * planters are, and they are most of the South".
+ *
+ * Shown only when there is something to show. A country nobody resents does not
+ * need a panel saying so, and an always-present zero would train the player to
+ * stop looking at it. (brief §2.1)
+ */
+function RegionGrievance({ region, state }: { region: Region; state: GameState }) {
+  const level = state.grievance.byRegion[region.id] ?? 0;
+  const episode = state.grievance.episodes.find(
+    (e) => e.regionId === region.id && e.endedDay === null,
+  );
+
+  if (level < 1 && !episode) return null;
+
+  // The blocs actually behind it, by how much of this region they account for.
+  const contributors = BLOC_IDS.map((bloc) => ({
+    bloc,
+    share: (state.grievance.byBloc[bloc] ?? 0) * (BLOC_REGION_WEIGHTS[bloc]?.[region.id] ?? 0),
+  }))
+    .filter((c) => c.share >= 0.5)
+    .sort((a, b) => b.share - a.share)
+    .slice(0, 3);
+
+  return (
+    <div
+      data-region-grievance={region.id}
+      className={`mt-2 rounded border-l-2 p-2 ${
+        episode ? 'border-oxblood-400 bg-ink-900/40' : 'border-ink-400 bg-ink-800/40'
+      }`}
+    >
+      <div className="flex items-baseline justify-between">
+        <span className="text-label uppercase tracking-wider text-content-muted">
+          Grievance
+        </span>
+        <span
+          className={`tabular text-data-sm ${
+            episode ? 'text-oxblood-300' : 'text-content-secondary'
+          }`}
+        >
+          {level.toFixed(0)}
+        </span>
+      </div>
+
+      {episode && (
+        <p className="mt-0.5 text-small text-oxblood-300">
+          {UNREST_WORD[episode.severity]} since {formatLongDate(episode.startedDay)}
+        </p>
+      )}
+
+      {contributors.length > 0 && (
+        <p className="mt-0.5 text-small text-content-muted">
+          Chiefly the{' '}
+          {contributors.map((c) => c.bloc.replace(/_/g, ' ')).join(', the ')}.
+        </p>
+      )}
+    </div>
+  );
+}
+
+/** Plain words, so severity is never carried by colour alone. (UI.md §10) */
+const UNREST_WORD: Record<string, string> = {
+  resistance: 'Quiet non-payment',
+  defiance: 'Open defiance — collectors turned back',
+  revolt: 'In arms',
+};
 
 /**
  * A bar always paired with its numeral and a word, never colour alone.

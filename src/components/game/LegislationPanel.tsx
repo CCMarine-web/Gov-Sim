@@ -35,8 +35,7 @@ import {
   amendCost,
   billStatus,
   enactedRecord,
-  introduceCost,
-  treasuryCost,
+  priceOf,
   type BillStatus,
 } from '@/sim/bills';
 import { formatLongDate, isoToDay } from '@/sim/calendar';
@@ -241,10 +240,11 @@ function BillCard({ bill, state }: { bill: Bill; state: GameState }) {
     () => record?.sliderValue ?? bill.sliderRange?.[0] ?? 0,
   );
 
+  const price = priceOf(bill, bill.hasSlider ? draft : null, state.governmentType);
   const capital = inForce
     ? amendCost(bill, record?.sliderValue ?? null, draft)
-    : introduceCost(bill, bill.hasSlider ? draft : null);
-  const money = inForce ? 0 : treasuryCost(bill, bill.hasSlider ? draft : null);
+    : price.capital;
+  const money = inForce ? 0 : price.treasury;
 
   const affordable = capital <= state.politicalCapital.current;
   const actionable = status.kind === 'available' || status.kind === 'repealed';
@@ -390,6 +390,24 @@ function BillCard({ bill, state }: { bill: Bill; state: GameState }) {
                 Treasury <span className="tabular">{formatCurrency(money)}</span>
               </span>
             )}
+            {/*
+              THE CROWN'S SIDE OF THE BARGAIN, stated before the player commits.
+              A decree is cheap in capital and dear in legitimacy and grievance,
+              and showing only the capital would misrepresent the choice
+              entirely. (brief §2.1)
+            */}
+            {price.byDecree && !inForce && (
+              <>
+                <span className="text-oxblood-300">
+                  Legitimacy{' '}
+                  <span className="tabular">−{price.legitimacy.toFixed(1)}</span>
+                </span>
+                <span className="text-oxblood-300">
+                  Grievance{' '}
+                  <span className="tabular">+{price.grievance.toFixed(0)}</span>
+                </span>
+              </>
+            )}
             {bill.phaseInDays > 0 && (
               <span className="text-content-muted">
                 Phases in over{' '}
@@ -397,6 +415,14 @@ function BillCard({ bill, state }: { bill: Bill; state: GameState }) {
               </span>
             )}
           </div>
+
+          {price.byDecree && !inForce && (
+            <p className="mt-1 text-small text-content-muted">
+              By decree. No vote is required, and none is sought — which is why
+              it costs a fraction of the capital and rather more of everything
+              else.
+            </p>
+          )}
 
           {inForce && record && (
             <p className="mt-1 text-small text-content-muted">

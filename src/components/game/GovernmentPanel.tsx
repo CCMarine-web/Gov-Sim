@@ -49,22 +49,63 @@ export function GovernmentPanel({ state }: { state: GameState }) {
           </p>
           <p className="mt-1 text-small text-content-muted">
             Age <span className="tabular">{age}</span> · in office since{' '}
-            <span className="tabular">{formatLongDate(0)}</span>
+            <span className="tabular">{formatLongDate(state.ruler.accededDay)}</span>
+            {state.ruler.reignNumber > 0 && (
+              <>
+                {' · '}
+                <span className="tabular">{state.ruler.reignNumber}</span>
+                {state.ruler.reignNumber === 1 ? ' predecessor' : ' predecessors'}
+              </>
+            )}
           </p>
 
           <div className="mt-3 border-t border-ink-400 pt-2">
             <h4 className="text-label uppercase tracking-wider text-content-muted">
               Succession
             </h4>
-            <p className="mt-1 text-body text-content-secondary">
-              {isMonarchy
-                ? 'The crown passes to your heir. Your bloodline continues the office.'
-                : 'Elections are held, and the administration changes hands.'}
-            </p>
-            <p className="mt-1 text-small text-content-muted">
-              Not simulated in Phase 1 — nobody leaves office before 1801.
-              Arrives in Phase 2.
-            </p>
+
+            {isMonarchy ? (
+              <>
+                <p className="mt-1 text-body text-content-secondary">
+                  The crown passes on your death. An heir inherits the crown, not
+                  the standing — every transfer costs legitimacy.
+                </p>
+
+                {/*
+                  Whether the next succession is orderly is a consequence of how
+                  the country has been governed, so the screen says which it
+                  currently is. That is the whole reason the mechanic is
+                  conditional. (DECISIONS.md D-028)
+                */}
+                <p
+                  data-testid="succession-outlook"
+                  className={`mt-1.5 rounded border-l-2 px-2 py-1.5 text-small ${
+                    state.ruler.heirName
+                      ? 'border-ink-400 text-content-secondary'
+                      : 'border-oxblood-400 text-oxblood-300'
+                  }`}
+                >
+                  {state.ruler.heirName
+                    ? `The succession is settled: ${state.ruler.heirName}. ` +
+                      'Should you die, the crown passes without argument.'
+                    : 'No successor is beyond argument. Your standing has fallen ' +
+                      'far enough that the question of who comes next is worth ' +
+                      'disputing, and your death would be a crisis rather than a ' +
+                      'transfer.'}
+                </p>
+              </>
+            ) : (
+              <>
+                <p className="mt-1 text-body text-content-secondary">
+                  Elections are held, and the administration changes hands.
+                </p>
+                <p className="mt-1 text-small text-content-muted">
+                  Congress and elections arrive with queue item 7. A president
+                  does not die in office in this model — that is the crown&rsquo;s
+                  risk, and its price.
+                </p>
+              </>
+            )}
 
             {/*
               The core of pillar 2, stated where it is most likely to be

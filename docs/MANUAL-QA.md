@@ -465,3 +465,64 @@ Expand "Historical context" on an enacted bill, a proposed one and a
 counterfactual one. All three should carry a factual note and at least one
 citation. The counterfactual needs it most: it tells the player what they are
 departing from.
+
+---
+
+## 14. The monarchy path — Phase 2 brief §2.1
+
+Asserted in `src/sim/grievance.test.ts` (38 tests) and
+`src/components/game/monarchy.test.tsx` (12). These are the parts to feel.
+
+**14.1 — A decree states its whole price**
+Found a monarchy. Open Legislation and look at any bill with strong opposition —
+the Direct Tax of 1798 is the clearest. The card should show three costs:
+political capital (a fraction of what a republic pays), legitimacy, and
+grievance, with a line explaining that no vote is required.
+*Problem if:* only the capital cost appears. Showing one side of the bargain
+misrepresents the choice entirely.
+
+**14.2 — The same bill costs a republic differently**
+Start a republic and compare the same card. The capital price should be
+roughly three times higher, and there should be no legitimacy or grievance line.
+*Why:* the republic's cost is already charged in capital, which is dear because
+a coalition has to be assembled. Charging both would make it strictly worse.
+
+**14.3 — Grievance is specific, and it names names**
+As a monarch, decree three or four measures the planters hate. Open Regions. The
+South should grow a Grievance panel reading "Chiefly the planters", and the
+other regions should stay clear.
+*Problem if:* every region gains grievance equally. The whole design is that
+decreeing against the planters builds planter grievance, not generic unhappiness.
+
+**14.4 — The warning comes before the bill**
+Keep going. Sentiment in the aggrieved region should fall first, then — past 35
+— compliance, and the chronicle should record "Quiet non-payment in the South"
+naming the bloc behind it. Past 55 it becomes "Open defiance"; past 78, "Armed
+rising".
+*This is the Whiskey Rebellion as a warning shot rather than a one-off, which is
+what the brief asked for.*
+
+**14.5 — It should be impossible to be surprised**
+At no point should a revolt arrive without the Regions screen having shown the
+grievance climbing for months beforehand.
+*Problem if:* it does. Then the warning channel is not working, and the mechanic
+is a punishment rather than a system.
+
+**14.6 — The crown dies**
+Play a monarchy for a decade at 4x. The ruler should die at some point — the
+chronicle records it, the name in the command bar changes, legitimacy drops by
+9, and **you carry on governing**. There is no game over.
+*Problem if:* the game ends, or the ruler never ages past his starting year.
+
+**14.7 — The succession outlook is stated, and you control it**
+Open Government. While legitimacy is healthy it should read that the succession
+is settled and would pass without argument. Decree recklessly until legitimacy
+falls below about 42, then look again: it should warn that no successor is
+beyond argument and that your death would be a crisis.
+*Problem if:* the outlook never changes. Then the crisis is a die roll, not a
+consequence.
+
+**14.8 — Determinism survives all of it**
+Save a monarchy, note the date the king died, reload the save and replay. Same
+king, same day. Mortality is the first random thing in the simulation and it
+must still replay exactly.
