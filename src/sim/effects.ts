@@ -12,6 +12,7 @@
  * the one it is given.
  */
 
+import { EMERGENCY_POWERS_MULTIPLIER } from './calibration';
 import { removeModifiersFromSource, upsertModifier } from './modifiers';
 import { TAX_BASES, TAX_BASE_IDS, isBaseAvailable } from './taxBases';
 import {
@@ -358,6 +359,74 @@ export function applyEffect(
       };
     }
 
+    case 'grantEmergencyPowers': {
+      const multiplier = effect.multiplier ?? EMERGENCY_POWERS_MULTIPLIER;
+
+      return {
+        state: {
+          ...state,
+          politicalCapital: {
+            ...state.politicalCapital,
+            emergency: {
+              reason: effect.reason,
+              grantedDay: context.day,
+              endsDay: context.day + effect.durationDays,
+              multiplier,
+            },
+            /*
+              Applied to the live rate and cap immediately rather than waiting
+              for the next monthly recompute. Emergency powers granted in
+              response to a rebellion that then do nothing for three weeks would
+              be worthless exactly when they are needed.
+            */
+            accrualPerDay: state.politicalCapital.modelTargets.accrual * multiplier,
+            cap: state.politicalCapital.modelTargets.cap * multiplier,
+          },
+        },
+        tickEffects: [
+          ...tickEffects,
+          {
+            kind: 'emergencyPowersGranted',
+            day: context.day,
+            description:
+              `Emergency powers granted for ${effect.reason}, ` +
+              `for ${effect.durationDays} days`,
+            refs: [context.sourceId],
+          },
+        ],
+      };
+    }
+
+    case 'politicalCapitalDelta': {
+      const pc = state.politicalCapital;
+      // Clamped at both ends: never negative, never above the cap. A player
+      // cannot be pushed into debt they can only wait out, and a grant cannot
+      // route around the ceiling.
+      const next = Math.min(pc.cap, Math.max(0, pc.current + effect.amount));
+      const actual = next - pc.current;
+
+      return {
+        state: {
+          ...state,
+          politicalCapital: {
+            ...pc,
+            current: next,
+            totalSpent: pc.totalSpent + Math.max(0, -actual),
+            totalAccrued: pc.totalAccrued + Math.max(0, actual),
+          },
+        },
+        tickEffects: [
+          ...tickEffects,
+          {
+            kind: 'capitalSpent',
+            day: context.day,
+            description: `${effect.reason}: ${actual >= 0 ? '+' : ''}${actual.toFixed(1)} political capital`,
+            refs: [context.sourceId],
+          },
+        ],
+      };
+    }
+
     case 'log': {
       return {
         state: appendLog(state, {
@@ -410,6 +479,8 @@ const KNOWN_EFFECT_KINDS = new Set([
   'repealTax',
   'fundProgram',
   'defundProgram',
+  'grantEmergencyPowers',
+  'politicalCapitalDelta',
   'log',
 ]);
 
@@ -522,6 +593,37 @@ export function validateEffect(effect: EffectSpec, path = 'root'): string[] {
 
     case 'defundProgram':
       if (!effect.programId) problems.push(`${path}: defundProgram has no programId`);
+      break;
+
+    case 'grantEmergencyPowers':
+      if (!effect.reason) {
+        problems.push(
+          `${path}: grantEmergencyPowers has no reason — the chronicle would ` +
+            'have to tell the player their government has extraordinary powers ' +
+            'for no stated cause',
+        );
+      }
+      if (!Number.isInteger(effect.durationDays) || effect.durationDays <= 0) {
+        problems.push(
+          `${path}: grantEmergencyPowers durationDays must be a positive integer. ` +
+            'Powers with no end are not emergency powers.',
+        );
+      }
+      if (effect.multiplier !== undefined && effect.multiplier <= 1) {
+        problems.push(
+          `${path}: grantEmergencyPowers multiplier must exceed 1 ` +
+            `(received ${effect.multiplier})`,
+        );
+      }
+      break;
+
+    case 'politicalCapitalDelta':
+      if (!Number.isFinite(effect.amount)) {
+        problems.push(`${path}: politicalCapitalDelta amount must be finite`);
+      }
+      if (!effect.reason) {
+        problems.push(`${path}: politicalCapitalDelta has no reason`);
+      }
       break;
   }
 

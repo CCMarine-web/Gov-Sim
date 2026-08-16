@@ -31,7 +31,7 @@ import type { TaxBase } from './taxBases';
  * migrated forward or refused cleanly — never crashed, never silently loaded
  * into a broken state. (DESIGN.md Rule 8)
  */
-export const SCHEMA_VERSION = 2;
+export const SCHEMA_VERSION = 3;
 
 // ============================================================================
 // GOVERNMENT AND REGIONS
@@ -136,6 +136,22 @@ export interface NationStats {
   legitimacyBase: number;
   /** 0–100. */
   sectionalTension: number;
+  /**
+   * 0–100. How much of the federal administration actually exists and is
+   * staffed, from the historical office record in the content pack.
+   *
+   * A government cannot execute what it has no one to execute. On day 0 this is
+   * near zero and correctly so: the Department of State was created on 27 July
+   * 1789, War on 7 August, and the Treasury not until 2 September — the player
+   * begins with a constitution and almost no machinery. It is a driver of
+   * political capital accrual (§7.17).
+   *
+   * Phase 2 item 13 replaces "how many offices are filled" with "how competent
+   * and loyal the people filling them are". The term is here now so the
+   * currency has a real administrative component from the start rather than an
+   * inert placeholder.
+   */
+  administrativeCapacity: number;
   /**
    * The model's targets BEFORE the modifier ledger is applied.
    *
@@ -424,6 +440,67 @@ export const FOUNDING_PROGRAM_IDS = {
 } as const;
 
 // ============================================================================
+// POLITICAL CAPITAL (Phase 2 brief §3)
+//
+// One currency, accruing daily, gating what the government can actually get
+// done. Drawn from Democracy 4's political capital and HOI4's political power:
+// D4 for what it is spent on, HOI4 for daily accrual, which fits a real-time
+// clock far better than D4's quarterly turns.
+//
+// The distinction that makes it worth having alongside legitimacy: capital is
+// the CAPACITY to act, legitimacy is the STANDING you spend by acting. A
+// government can be widely thought legitimate and still unable to get anything
+// through; it can also burn its standing acting decisively. Both are true of
+// real governments, and modelling only one of them collapses the difference.
+// (docs/DECISIONS.md D-020)
+// ============================================================================
+
+/**
+ * Temporary emergency powers.
+ *
+ * Democracy 4's mechanic, and a good fit for this period: a severe enough
+ * crisis lets a government push through what it otherwise could not. Raises
+ * both the accrual rate and the cap, and expires on a fixed day — the powers
+ * are temporary, and the game should never quietly forget to end them.
+ */
+export interface EmergencyPowers {
+  /** What justified them, in the words the chronicle uses. */
+  reason: string;
+  grantedDay: number;
+  endsDay: number;
+  /** Multiplier applied to accrual and to the cap while active. */
+  multiplier: number;
+}
+
+export interface PoliticalCapitalState {
+  /** The stock on hand. Never negative, never above the resolved cap. */
+  current: number;
+  /**
+   * The model's pre-ledger targets for daily accrual and for the cap.
+   *
+   * Stored for the same reason `NationStats.modelTargets` is: the stat popover
+   * shows what the model computed, then what the ledger did to it, then the
+   * total. Without the unmodified figure the popover could not reconcile.
+   */
+  modelTargets: { accrual: number; cap: number };
+  /** The resolved figures actually in force, after the ledger. */
+  accrualPerDay: number;
+  cap: number;
+  emergency: EmergencyPowers | null;
+  /** Lifetime totals. Not spent by anything; they exist so balance is checkable. */
+  totalAccrued: number;
+  totalSpent: number;
+  /**
+   * Capital that accrued into a full reserve and was therefore lost.
+   *
+   * Tracked rather than silently discarded, because "hoarding is not a
+   * strategy" (brief §3) is a design claim, and this is the number that says
+   * whether it is true in play.
+   */
+  totalWasted: number;
+}
+
+// ============================================================================
 // EVENTS AND LOGGING
 // ============================================================================
 
@@ -521,6 +598,7 @@ export interface GameState {
   regions: Region[];
   treasury: TreasuryState;
   policies: PolicyState;
+  politicalCapital: PoliticalCapitalState;
 
   // --- the ledger ---
   activeModifiers: Modifier[];
@@ -556,7 +634,10 @@ export type TickEffectKind =
   | 'taxChanged'
   | 'taxRepealed'
   | 'programFunded'
-  | 'programDefunded';
+  | 'programDefunded'
+  | 'capitalSpent'
+  | 'emergencyPowersGranted'
+  | 'emergencyPowersLapsed';
 
 export interface TickEffect {
   kind: TickEffectKind;
@@ -657,6 +738,24 @@ export type EffectSpec =
       annualAmount: number;
     }
   | { kind: 'defundProgram'; programId: string }
+  /**
+   * Grant temporary emergency powers — Democracy 4's mechanic (brief §3).
+   *
+   * A severe enough crisis lets a government push through what it otherwise
+   * could not, at a raised accrual rate and a raised cap, for a fixed number of
+   * days. Content-declared rather than engine-inferred, so a designer decides
+   * which crises qualify and the player can be told why.
+   */
+  | {
+      kind: 'grantEmergencyPowers';
+      /** As the chronicle will phrase it: "the rebellion in the west". */
+      reason: string;
+      durationDays: number;
+      /** Omitted means EMERGENCY_POWERS_MULTIPLIER. */
+      multiplier?: number;
+    }
+  /** Spend or grant political capital directly. Negative amounts spend. */
+  | { kind: 'politicalCapitalDelta'; amount: number; reason: string }
   | { kind: 'log'; tier: LogTier; category: LogCategory; title: string; body: string };
 
 // ============================================================================
@@ -724,6 +823,33 @@ export interface Law {
 }
 
 // ============================================================================
+// CONTENT — OFFICES
+//
+// Defined here rather than in src/content/ because the ENGINE reads them: how
+// much of the administration exists and is staffed drives political capital
+// accrual (§7.17). Content declares the tenures; the engine interprets them,
+// which is Rule 4 working normally.
+// ============================================================================
+
+export interface Tenure {
+  name: string;
+  /** ISO date the holder took office. */
+  from: string;
+  /** ISO date they left, or null if still in office at the end of the period. */
+  to: string | null;
+  note?: string;
+}
+
+export interface Office {
+  id: string;
+  title: string;
+  /** ISO date the office itself was created. Before this it does not exist. */
+  createdOn: string;
+  tenures: Tenure[];
+  sources: string[];
+}
+
+// ============================================================================
 // CONTENT PACK
 // ============================================================================
 
@@ -735,4 +861,13 @@ export interface ContentPack {
   version: string;
   events: GameEvent[];
   laws: Law[];
+  /**
+   * The offices of the federal government and who held them.
+   *
+   * Required rather than optional, because a content pack without them is a
+   * country with no administration, and the engine should not have to guess
+   * whether that is intended. Tests that want no administration pass `[]`
+   * explicitly and get exactly that.
+   */
+  offices: Office[];
 }

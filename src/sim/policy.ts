@@ -35,6 +35,9 @@
  */
 
 import {
+  BUDGET_CAPITAL_COST_FLOOR,
+  BUDGET_CAPITAL_COST_PER_DOLLAR,
+  BUDGET_CAPITAL_COST_PER_RATE,
   MONARCHY_ACTION_COST,
   POLICY_COST_DURATION_DAYS,
   POLICY_LEGITIMACY_COST,
@@ -113,6 +116,83 @@ export function taxIncrease(state: GameState, proposed: ProposedPolicy): number 
   return increase;
 }
 
+/**
+ * The POLITICAL CAPITAL a proposed budget would cost.
+ *
+ * Charged on the ABSOLUTE movement of every rate and every programme, unlike
+ * the legitimacy cost, which falls only on rises (D-001). Lowering a tax still
+ * takes a bill through, still consumes the government's attention, and still
+ * has to be argued for — and charging both directions closes the last door on
+ * rate-oscillation as a way to farm the model.
+ *
+ * There is a floor, because a bill is a bill: adjusting a rate by a hundredth
+ * of a point is not a free action.
+ */
+export function policyCapitalCost(
+  state: GameState,
+  proposed: ProposedPolicy,
+): number {
+  let rateMovement = 0;
+  let dollarMovement = 0;
+
+  for (const tax of taxesInForce(state.policies, state.day)) {
+    const rate = proposed.rates[tax.id];
+    if (rate === undefined) continue;
+    rateMovement += Math.abs(rate - tax.rate);
+  }
+
+  for (const program of programsInForce(state.policies, state.day)) {
+    const amount = proposed.amounts[program.id];
+    if (amount === undefined) continue;
+    dollarMovement += Math.abs(amount - program.annualAmount);
+  }
+
+  if (rateMovement === 0 && dollarMovement === 0) return 0;
+
+  const cost =
+    rateMovement * BUDGET_CAPITAL_COST_PER_RATE +
+    dollarMovement * BUDGET_CAPITAL_COST_PER_DOLLAR;
+
+  return Math.max(BUDGET_CAPITAL_COST_FLOOR, cost);
+}
+
+/**
+ * Can the government afford to enact this?
+ *
+ * Returns a reason rather than a bare boolean, because the interface has to
+ * explain a disabled button. "You cannot do this" without saying why is the
+ * failure mode the whole modifier-ledger design exists to avoid, and it applies
+ * to actions as much as to numbers. (brief §2.2, on showing which precondition
+ * is blocking.)
+ */
+export function canAffordPolicy(
+  state: GameState,
+  proposed: ProposedPolicy,
+): { ok: boolean; cost: number; available: number; reason: string | null } {
+  const cost = policyCapitalCost(state, proposed);
+  const available = state.politicalCapital.current;
+
+  if (cost <= available) {
+    return { ok: true, cost, available, reason: null };
+  }
+
+  const shortfall = cost - available;
+  const perDay = state.politicalCapital.accrualPerDay;
+  const days = perDay > 0 ? Math.ceil(shortfall / perDay) : null;
+
+  return {
+    ok: false,
+    cost,
+    available,
+    reason:
+      `This needs ${cost.toFixed(1)} political capital and you have ` +
+      `${available.toFixed(1)}. ` +
+      (days === null
+        ? 'Nothing is accruing — the government has no capacity to spare at all.'
+        : `About ${days} day${days === 1 ? '' : 's'} of accrual short.`),
+  };
+}
+
 /** The legitimacy a proposed policy would cost, for preview before enacting. */
 export function policyLegitimacyCost(
   state: GameState,
@@ -156,6 +236,15 @@ function describeChange(state: GameState, proposed: ProposedPolicy): string {
   return parts.length > 0 ? parts.join('. ') + '.' : 'No changes.';
 }
 
+/**
+ * Enact a budget.
+ *
+ * Throws if the government cannot afford it, rather than enacting a partial
+ * change or silently doing nothing. The interface is expected to have checked
+ * `canAffordPolicy` and disabled the control with its reason shown; reaching
+ * here unaffordable means a caller skipped the gate, which is a bug worth
+ * surfacing immediately.
+ */
 export function enactPolicy(
   state: GameState,
   proposed: ProposedPolicy,
@@ -163,6 +252,11 @@ export function enactPolicy(
   const effects: TickEffect[] = [];
   const cost = policyLegitimacyCost(state, proposed);
   const description = describeChange(state, proposed);
+
+  const affordability = canAffordPolicy(state, proposed);
+  if (!affordability.ok) {
+    throw new Error(`enactPolicy: ${affordability.reason}`);
+  }
 
   let activeModifiers = state.activeModifiers;
 
@@ -200,9 +294,23 @@ export function enactPolicy(
     policies = setProgramAmount(policies, programId, amount);
   }
 
+  if (affordability.cost > 0) {
+    effects.push({
+      kind: 'capitalSpent',
+      day: state.day,
+      description: `The budget cost ${affordability.cost.toFixed(1)} political capital`,
+      refs: [],
+    });
+  }
+
   const next: GameState = {
     ...state,
     policies,
+    politicalCapital: {
+      ...state.politicalCapital,
+      current: state.politicalCapital.current - affordability.cost,
+      totalSpent: state.politicalCapital.totalSpent + affordability.cost,
+    },
     activeModifiers,
     log: [
       ...state.log,

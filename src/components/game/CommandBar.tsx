@@ -24,13 +24,30 @@ import {
 } from '@/lib/format';
 import { Stat } from '@/components/primitives/Stat';
 
+/**
+ * Capital as a stock against its ceiling: "42 / 90".
+ *
+ * The ceiling is shown rather than hidden because it is the mechanic — capital
+ * cannot be hoarded indefinitely, and a player who cannot see the ceiling
+ * cannot see that they are wasting accrual by sitting against it. (brief §3)
+ */
+function formatCapital(pc: {
+  current: number;
+  cap: number;
+  emergency: { reason: string } | null;
+}): string {
+  const base = `${pc.current.toFixed(0)} / ${pc.cap.toFixed(0)}`;
+  return pc.emergency ? `${base} ⚡` : base;
+}
+
 export function CommandBar() {
   const snapshot = useGameStore((s) => s.snapshot);
   const clock = useGameStore(selectClock);
 
   if (!snapshot) return null;
 
-  const { nation, treasury, ruler, series, day, activeModifiers } = snapshot;
+  const { nation, treasury, ruler, series, day, activeModifiers, politicalCapital } =
+    snapshot;
 
   // Compare against the previous monthly sample for direction arrows.
   const prev = <T,>(arr: T[]): T => arr[Math.max(0, arr.length - 2)];
@@ -94,6 +111,34 @@ export function CommandBar() {
           direction={direction(treasury.debtPrincipal, prev(series.debt), 1000)}
           favourableWhenRising={false}
           size="md"
+        />
+        {/*
+          POLITICAL CAPITAL. Sits beside the money because it is the other
+          currency: one buys things, the other buys agreement. Its breakdown
+          explains the ACCRUAL RATE rather than the stock, because the stock is
+          just an accumulation and the rate is the thing the player's decisions
+          actually move. (brief §3)
+        */}
+        <Stat
+          className="stat-slot"
+          label="Capital"
+          value={formatCapital(politicalCapital)}
+          direction={direction(
+            politicalCapital.accrualPerDay,
+            0,
+            0.01,
+          )}
+          size="md"
+          breakdown={explainStat(
+            'nation.politicalCapitalAccrual',
+            politicalCapital.modelTargets.accrual,
+            activeModifiers,
+            day,
+            { min: 0, max: 6 },
+          )}
+          formatContribution={(v) =>
+            v >= 0 ? `+${v.toFixed(2)}/day` : `${v.toFixed(2)}/day`
+          }
         />
         <Stat
           className="stat-slot"

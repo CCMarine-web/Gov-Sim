@@ -7,7 +7,7 @@ If you are resuming with no context: read `DESIGN.md` first, then this file,
 then `docs/DECISIONS.md` and `docs/BLOCKERS.md`. Then continue the **Phase 2
 queue** below, which is `gov-sim-phase2-brief.md` §9.
 
-**Last updated:** Phase 2 run of 2026-08-16, after queue item 3.
+**Last updated:** Phase 2 run of 2026-08-16, after queue item 4.
 
 ---
 
@@ -17,8 +17,8 @@ queue** below, which is `gov-sim-phase2-brief.md` §9.
 |---|---|
 | Production URL | <https://gov-sim.vercel.app> |
 | Deploy | auto-deploys from `main` on push |
-| Tests | 370 passing |
-| Save schema | version **2** — v1 saves migrate forward, fixture committed |
+| Tests | 409 passing |
+| Save schema | version **3** — v1 and v2 saves migrate forward, both fixtures committed |
 | Gates | tests, lint, typecheck, production build — all green |
 | Database | Supabase, `save_games` table migrated, verified reachable from production |
 | Phase | **2 — in progress.** Phase 1 shipped. |
@@ -32,7 +32,7 @@ queue** below, which is `gov-sim-phase2-brief.md` §9.
 | 1 — Numbers flicker fix + regression test | **complete** — see below and DECISIONS.md D-010…D-014 |
 | 2 — Speed rebalance with config table | **complete** — see below and D-015, D-016 |
 | 3 — Dynamic tax and spending instances | **complete** — see below and D-018, D-019 |
-| 4 — Political capital system | not started |
+| 4 — Political capital system | **complete** — see below and D-020 to D-022 |
 | 5 — Legislation categories and bill schema (≥25 bills) | not started |
 | 6 — Monarchy decree path | not started |
 | 7 — Congress and the republic path | not started |
@@ -177,6 +177,58 @@ screen follows the array with no component edit), and the migration file grew to
 21 including seven against the v1 fixture.
 
 Human-eye checks are `docs/MANUAL-QA.md` §11.
+
+### Item 4 — political capital: complete
+
+One currency, accruing daily, gating what the government can get done. It sits
+**beside** legitimacy rather than replacing it, because they answer different
+questions: legitimacy is whether the country accepts your right to govern,
+capital is whether you can get this particular thing done. Legitimacy feeds
+capital accrual; spending capital does not spend legitimacy. (D-020)
+
+- **`src/sim/economy/politics.ts`** — accrual, cap, elite support and the
+  accrual-with-cap step, each with its causal claim.
+- **`src/sim/offices.ts`** — reads the historical office record: which
+  departments exist on a day, and which are staffed.
+- **`GameState.politicalCapital`** — stock, model targets, resolved rate and
+  cap, emergency powers, and lifetime accrued/spent/**wasted**.
+- **Accrual is daily** (HOI4's cadence, not D4's quarterly turns); the *rate* is
+  recomputed monthly with the other slow aggregates.
+- **The cap is real**, and capital accruing into a full reserve is counted as
+  wasted — so "hoarding is not a strategy" is falsifiable rather than asserted.
+- **Emergency powers**, D4's mechanic, raise both rate and cap immediately and
+  **end on a fixed day**, clawing the stock back to the ordinary ceiling.
+- **Spending**: budget changes cost capital on the *absolute* movement, and the
+  Enact button disables with a sentence saying how many days short you are.
+
+**Administrative capacity is real, not a placeholder.** Brief §3 lists cabinet
+quality as an accrual driver, and item 13 owns competence and loyalty — but the
+historical office record already exists and is cited, so capacity is "how much of
+the government exists × how much of it is staffed". That makes day 0 genuinely
+**zero**: State was created 27 July 1789, War 7 August, the Treasury 2 September.
+The player starts holding an office in a government that does not yet exist.
+(D-021)
+
+**Two things that fell out of it.**
+
+1. The engine now reads offices, so `ContentPack` gained `offices` and
+   `Office`/`Tenure` moved into `src/sim/types.ts`. That meant threading content
+   into `projectPolicy`, which is an improvement on its own terms — the
+   projection is now a pure function of state, proposal *and* content.
+2. Clamping the office census at the end of the record exposed that the cabinet
+   data was **missing two real officers**: John Marshall (State, from 6 June
+   1800) and Samuel Dexter (War, from 12 June 1800). Both are now in the record
+   with citations.
+
+**Schema version 3**, `migrations/v2ToV3.ts`, with a committed v2 fixture. The
+fixture script is now `scripts/make-fixture.mts <version>` and **refuses to
+overwrite an existing fixture** — the never-regenerate rule is behaviour rather
+than a comment. (D-022)
+
+**Tests:** 30 in `politicalCapital.test.ts`, 4 more in
+`treasuryInstances.test.tsx` for the affordability gate, 5 more in
+`migrations.test.ts` against the v2 fixture. Human-eye checks are
+`docs/MANUAL-QA.md` §12.
 
 ---
 

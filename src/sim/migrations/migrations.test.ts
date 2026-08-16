@@ -3,7 +3,9 @@ import { advanceDay } from '../advanceDay';
 import { createTestGame } from '../createGame';
 import { aggregateRate, spendingFor } from '../taxes';
 import { SCHEMA_VERSION } from '../types';
+import { PHASE_1_CONTENT } from '@/content';
 import v1Fixture from './fixtures/v1-republic-day900.json';
+import v2Fixture from './fixtures/v2-republic-day900.json';
 import { MIGRATIONS, migrateToCurrent, parseSave } from './index';
 
 describe('loading a save of the current version', () => {
@@ -111,6 +113,7 @@ describe('the migration walk', () => {
       calls.push(1);
       return { ...s, schemaVersion: 2, addedInV2: true };
     };
+    const realTwo = MIGRATIONS[2];
     MIGRATIONS[2] = (s) => {
       calls.push(2);
       return { ...s, schemaVersion: 3, addedInV3: true };
@@ -132,7 +135,7 @@ describe('the migration walk', () => {
       expect(working.schemaVersion).toBe(3);
     } finally {
       MIGRATIONS[1] = realOne;
-      delete MIGRATIONS[2];
+      MIGRATIONS[2] = realTwo;
     }
   });
 
@@ -159,7 +162,7 @@ describe('the migration walk', () => {
  * of March 1791 has already been enacted and the fixture carries a non-zero
  * excise rate. A fixture with three zero rates would have proved almost nothing.
  */
-describe('the v1 fixture upgrades to v2 without losing anything', () => {
+describe('the v1 fixture upgrades to the current version without losing anything', () => {
   const raw = JSON.parse(JSON.stringify(v1Fixture)) as Record<string, unknown>;
 
   it('loads, and reports the version it came from', () => {
@@ -247,7 +250,7 @@ describe('the v1 fixture upgrades to v2 without losing anything', () => {
 
     let state = outcome.state;
     for (let i = 0; i < 40; i++) {
-      state = advanceDay(state, { version: 't', events: [], laws: [] }).state;
+      state = advanceDay(state, { version: 't', events: [], laws: [], offices: [] }).state;
     }
 
     const before = (raw.treasury as Record<string, Record<string, number>>)
@@ -276,7 +279,7 @@ describe('the v1 fixture upgrades to v2 without losing anything', () => {
 
     let state = outcome.state;
     for (let i = 0; i < 40; i++) {
-      state = advanceDay(state, { version: 't', events: [], laws: [] }).state;
+      state = advanceDay(state, { version: 't', events: [], laws: [], offices: [] }).state;
     }
 
     expect(state.treasury.receiptLines).toHaveLength(3);
@@ -338,6 +341,77 @@ describe('the v1 fixture upgrades to v2 without losing anything', () => {
   });
 });
 
+/**
+ * THE v2 FIXTURE
+ *
+ * A real save in the version 2 format — taxes already instances, political
+ * capital not yet invented. Generated once by `scripts/make-fixture.mts`, which
+ * refuses to overwrite an existing fixture for exactly the reason above.
+ */
+describe('the v2 fixture gains political capital without losing anything', () => {
+  const raw = JSON.parse(JSON.stringify(v2Fixture)) as Record<string, unknown>;
+
+  it('is genuinely a v2 save, with none of the v3 fields', () => {
+    // If this ever fails the fixture has been regenerated from current code and
+    // stopped testing anything.
+    expect(raw.schemaVersion).toBe(2);
+    expect(raw.politicalCapital).toBeUndefined();
+    expect((raw.nation as Record<string, unknown>).administrativeCapacity).toBeUndefined();
+  });
+
+  it('loads, reporting that it came from v2', () => {
+    const outcome = migrateToCurrent(JSON.parse(JSON.stringify(raw)));
+    expect(outcome.ok).toBe(true);
+    if (!outcome.ok) return;
+    expect(outcome.migratedFrom).toBe(2);
+    expect(outcome.state.schemaVersion).toBe(SCHEMA_VERSION);
+  });
+
+  it('seeds a usable reserve rather than punishing the player for saving early', () => {
+    const outcome = migrateToCurrent(JSON.parse(JSON.stringify(raw)));
+    expect(outcome.ok).toBe(true);
+    if (!outcome.ok) return;
+
+    // The mechanic is new, so its absence in the old save was not the player's
+    // choice. Seeding at zero would charge them for that. (v2ToV3.ts)
+    expect(outcome.state.politicalCapital.current).toBeGreaterThan(0);
+    expect(outcome.state.politicalCapital.emergency).toBeNull();
+    expect(outcome.state.politicalCapital.totalSpent).toBe(0);
+  });
+
+  it('lets the next monthly recompute set the real rate and ceiling', () => {
+    const outcome = migrateToCurrent(JSON.parse(JSON.stringify(raw)));
+    expect(outcome.ok).toBe(true);
+    if (!outcome.ok) return;
+
+    let state = outcome.state;
+    expect(state.politicalCapital.accrualPerDay).toBe(0);
+
+    for (let i = 0; i < 40; i++) {
+      state = advanceDay(state, PHASE_1_CONTENT).state;
+    }
+
+    expect(state.politicalCapital.accrualPerDay).toBeGreaterThan(0);
+    expect(state.nation.administrativeCapacity).toBeGreaterThan(0);
+  });
+
+  it('keeps the taxes and the economy exactly as the v2 save left them', () => {
+    const outcome = migrateToCurrent(JSON.parse(JSON.stringify(raw)));
+    expect(outcome.ok).toBe(true);
+    if (!outcome.ok) return;
+
+    const state = outcome.state;
+    expect(state.day).toBe(raw.day);
+    expect(state.policies.taxes).toEqual(
+      (raw.policies as Record<string, unknown>).taxes,
+    );
+    expect(state.nation.gdp).toBe((raw.nation as Record<string, number>).gdp);
+    expect(state.treasury.debtPrincipal).toBe(
+      (raw.treasury as Record<string, number>).debtPrincipal,
+    );
+  });
+});
+
 describe('a migrated save is still a valid game state', () => {
   it('survives a full round trip and remains simulable', async () => {
     const { advanceDay } = await import('../advanceDay');
@@ -349,7 +423,7 @@ describe('a migrated save is still a valid game state', () => {
 
     let resumed = outcome.state;
     for (let i = 0; i < 100; i++) {
-      resumed = advanceDay(resumed, { version: 't', events: [], laws: [] }).state;
+      resumed = advanceDay(resumed, { version: 't', events: [], laws: [], offices: [] }).state;
     }
 
     expect(resumed.day).toBe(100);

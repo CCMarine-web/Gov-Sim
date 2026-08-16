@@ -19,6 +19,7 @@
 
 import { SCHEMA_VERSION, type GameState } from '../types';
 import { v1ToV2 } from './v1ToV2';
+import { v2ToV3 } from './v2ToV3';
 
 /** A single forward step. Receives and returns loosely-typed state by design:
  *  the shape it migrates FROM no longer has a TypeScript type in this build. */
@@ -33,6 +34,8 @@ export type Migration = (state: Record<string, unknown>) => Record<string, unkno
 export const MIGRATIONS: Record<number, Migration> = {
   /** Three tax rates and three spending lines become instances. (brief §4.3) */
   1: v1ToV2,
+  /** Political capital and administrative capacity arrive. (brief §3) */
+  2: v2ToV3,
 };
 
 export type LoadOutcome =

@@ -53,6 +53,15 @@ import {
   computeTradeVolume,
   infrastructureBonus,
 } from './economy/production';
+import {
+  accrueCapital,
+  administrativeCapacityTarget,
+  capitalAccrualTarget,
+  capitalCapTarget,
+  eliteSupport,
+} from './economy/politics';
+import { MAX_CAPITAL_ACCRUAL } from './calibration';
+import { censusOfOffices } from './offices';
 import { TAX_BASES } from './taxBases';
 import {
   burdenLevies,
@@ -101,7 +110,10 @@ function numericFlag(state: GameState, key: string): number {
  * Exported so tests can drive it directly rather than having to advance thirty
  * days to observe one recompute.
  */
-export function recomputeEconomy(state: GameState): {
+export function recomputeEconomy(
+  state: GameState,
+  content: ContentPack,
+): {
   state: GameState;
   effects: TickEffect[];
 } {
@@ -401,6 +413,58 @@ export function recomputeEconomy(state: GameState): {
     RANGES.percent,
   );
 
+  // --- Political capital: the accrual rate and the cap ---------------------
+  /*
+    Recomputed monthly like every other slow-moving aggregate, then accrued
+    DAILY from the stored rate (see the tick below). Two cadences for one
+    quantity, and deliberately so: the rate is a function of legitimacy,
+    support, stability and administration, none of which change day to day, but
+    the capital itself should tick up with the calendar the way HOI4's political
+    power does. (ECONOMY.md §7.17)
+  */
+  const census = censusOfOffices(content.offices, day);
+  const administrativeCapacity = administrativeCapacityTarget({
+    officesCreated: census.created,
+    officesFilled: census.filled,
+    officesTotal: census.total,
+  });
+
+  const accrualModelTarget = capitalAccrualTarget({
+    governmentType: state.governmentType,
+    legitimacy,
+    stability,
+    popularSupport: meanSentiment,
+    eliteSupport: eliteSupport(regions),
+    administrativeCapacity,
+  });
+
+  const capModelTarget = capitalCapTarget({
+    governmentType: state.governmentType,
+    legitimacy,
+  });
+
+  // Emergency powers multiply BOTH, which is what makes them worth having: a
+  // crisis government can generate faster and hold more at once.
+  const emergencyFactor = state.politicalCapital.emergency?.multiplier ?? 1;
+
+  const accrualPerDay =
+    resolveStat(
+      'nation.politicalCapitalAccrual',
+      accrualModelTarget,
+      state.activeModifiers,
+      day,
+      { min: 0, max: MAX_CAPITAL_ACCRUAL },
+    ) * emergencyFactor;
+
+  const capitalCap =
+    resolveStat(
+      'nation.politicalCapitalCap',
+      capModelTarget,
+      state.activeModifiers,
+      day,
+      { min: 1, max: 1_000 },
+    ) * emergencyFactor;
+
   // --- Population ----------------------------------------------------------
   const grownRegions = regions.map((region) => {
     const rate = annualGrowthRate(region.prosperity, stability);
@@ -451,10 +515,21 @@ export function recomputeEconomy(state: GameState): {
         legitimacy,
         legitimacyBase,
         sectionalTension,
+        administrativeCapacity,
         modelTargets: {
           stability: stabilityModelTarget,
           sectionalTension: tensionModelTarget,
         },
+      },
+      politicalCapital: {
+        ...state.politicalCapital,
+        // The stock is NOT touched here — accrual is daily, in the tick. This
+        // sets the rate and the ceiling the tick then works within, and clamps
+        // the stock if the ceiling just fell beneath it.
+        current: Math.min(state.politicalCapital.current, capitalCap),
+        modelTargets: { accrual: accrualModelTarget, cap: capModelTarget },
+        accrualPerDay,
+        cap: capitalCap,
       },
       treasury: {
         ...state.treasury,
@@ -650,6 +725,74 @@ export function advanceDay(state: GameState, content: ContentPack): TickResult {
     }
   }
 
+  // --- Emergency powers expiry --------------------------------------------
+  // Checked before accrual, so the day they lapse is the first day at the
+  // ordinary rate rather than a free extra day at the crisis one. Temporary
+  // powers that the game forgets to end are not temporary.
+  if (next.politicalCapital.emergency !== null &&
+      day >= next.politicalCapital.emergency.endsDay) {
+    const lapsed = next.politicalCapital.emergency;
+
+    next = {
+      ...next,
+      politicalCapital: {
+        ...next.politicalCapital,
+        emergency: null,
+        // The rate and cap revert at the next monthly recompute; the stock is
+        // clamped immediately, because holding crisis-sized reserves after the
+        // crisis has passed is exactly the hoarding the cap exists to prevent.
+        accrualPerDay: next.politicalCapital.modelTargets.accrual,
+        cap: next.politicalCapital.modelTargets.cap,
+        current: Math.min(
+          next.politicalCapital.current,
+          next.politicalCapital.modelTargets.cap,
+        ),
+      },
+      log: [
+        ...next.log,
+        {
+          id: `${day}:emergency-lapsed`,
+          day,
+          tier: 'info',
+          category: 'system',
+          title: 'Emergency powers lapse',
+          body: `The extraordinary authority granted for ${lapsed.reason} expires. The government returns to ordinary means.`,
+          relatedEventId: null,
+        },
+      ],
+    };
+
+    effects.push({
+      kind: 'emergencyPowersLapsed',
+      day,
+      description: `Emergency powers for ${lapsed.reason} expired`,
+      refs: [],
+    });
+  }
+
+  // --- Daily political capital accrual -------------------------------------
+  // Daily, following HOI4 rather than Democracy 4's quarterly turns: a
+  // real-time clock wants a currency that moves with it. The rate itself was
+  // set at the last monthly recompute. (ECONOMY.md §7.17)
+  {
+    const pc = next.politicalCapital;
+    const accrual = accrueCapital({
+      current: pc.current,
+      accrualPerDay: pc.accrualPerDay,
+      cap: pc.cap,
+    });
+
+    next = {
+      ...next,
+      politicalCapital: {
+        ...pc,
+        current: accrual.current,
+        totalAccrued: pc.totalAccrued + accrual.accrued,
+        totalWasted: pc.totalWasted + accrual.wasted,
+      },
+    };
+  }
+
   // --- Daily treasury accrual ---------------------------------------------
   // Annual figures accrue at 1/daysInYear per day, using the ACTUAL length of
   // the current year. 1800 is not a leap year (see calendar.ts).
@@ -753,7 +896,7 @@ export function advanceDay(state: GameState, content: ContentPack): TickResult {
 
   // --- Monthly economy -----------------------------------------------------
   if (isFirstOfMonth(day)) {
-    const recomputed = recomputeEconomy(next);
+    const recomputed = recomputeEconomy(next, content);
     next = recomputed.state;
     effects.push(...recomputed.effects);
   }

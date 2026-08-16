@@ -15,7 +15,7 @@
  */
 
 import { afterEach, describe, expect, it } from 'vitest';
-import { cleanup, render } from '@testing-library/react';
+import { cleanup, fireEvent, render } from '@testing-library/react';
 import { createTestGame } from '@/sim/createGame';
 import { advanceDay } from '@/sim/advanceDay';
 import { TAX_BASES } from '@/sim/taxBases';
@@ -24,7 +24,7 @@ import type { ContentPack, GameState } from '@/sim/types';
 import { FOUNDING_TAX_IDS } from '@/sim/types';
 import { TreasuryPanel } from './TreasuryPanel';
 
-const EMPTY: ContentPack = { version: 'test', events: [], laws: [] };
+const EMPTY: ContentPack = { version: 'test', events: [], laws: [], offices: [] };
 
 afterEach(cleanup);
 
@@ -134,6 +134,71 @@ describe('the Treasury screen is driven by the tax array', () => {
     // regardless of tier.)
     expect(container.textContent).toContain('Tariff Act of 4 July 1789');
     expect(container.textContent).toContain('1 Stat. 24');
+  });
+});
+
+/**
+ * THE POLITICAL CAPITAL GATE (brief §3)
+ *
+ * Capital is what makes an action possible. The screen has to show the price
+ * before the player commits, and when it refuses it has to say why — a control
+ * that declines without explanation is the same failure the modifier ledger
+ * exists to prevent, applied to actions instead of numbers.
+ */
+describe('the political capital gate on enacting a budget', () => {
+  function withCapital(state: GameState, current: number): GameState {
+    return {
+      ...state,
+      politicalCapital: { ...state.politicalCapital, current, cap: 500 },
+    };
+  }
+
+  /** Drag a tax slider to a new rate. */
+  function setFirstTaxRate(container: HTMLElement, value: number) {
+    const slider = container.querySelector('input[type="range"]') as HTMLInputElement;
+    fireEvent.change(slider, { target: { value: String(value) } });
+  }
+
+  it('shows no price until something has actually changed', () => {
+    const state = createTestGame();
+    const { container } = render(<TreasuryPanel state={state} />);
+    expect(container.querySelector('[data-testid="capital-cost"]')).toBeNull();
+  });
+
+  it('states the price and the reserve once a change is drafted', () => {
+    const state = withCapital(createTestGame(), 200);
+    const { container } = render(<TreasuryPanel state={state} />);
+
+    setFirstTaxRate(container, 0.2);
+
+    const cost = container.querySelector('[data-testid="capital-cost"]');
+    expect(cost).not.toBeNull();
+    expect(cost!.textContent).toContain('Political capital');
+    expect(cost!.textContent).toContain('200.0');
+  });
+
+  it('disables Enact when the government cannot afford it, and says why', () => {
+    const state = withCapital(createTestGame(), 1);
+    const { container, getByText } = render(<TreasuryPanel state={state} />);
+
+    setFirstTaxRate(container, 0.35);
+
+    const enact = getByText('Enact') as HTMLButtonElement;
+    expect(enact.disabled).toBe(true);
+
+    // Actionable, not just a refusal.
+    const cost = container.querySelector('[data-testid="capital-cost"]')!;
+    expect(cost.textContent).toContain('political capital');
+    expect(cost.textContent).toMatch(/day/);
+  });
+
+  it('enables Enact once the reserve covers it', () => {
+    const state = withCapital(createTestGame(), 400);
+    const { container, getByText } = render(<TreasuryPanel state={state} />);
+
+    setFirstTaxRate(container, 0.35);
+
+    expect((getByText('Enact') as HTMLButtonElement).disabled).toBe(false);
   });
 });
 

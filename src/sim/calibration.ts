@@ -435,6 +435,85 @@ export const REPUBLIC_ACTION_COST = 1.0;
 export const MONARCHY_ACTION_COST = 0.55;
 
 // ============================================================================
+// POLITICAL CAPITAL (ECONOMY.md §7.17)
+//
+// The scale is chosen so that a well-run republic accrues roughly 1.5 a day —
+// about 45 a month, 550 a year — against a cap near 100. That makes a major
+// legislative push a matter of a few months of husbanding rather than of years,
+// which is the right pace for a game whose clock runs at several days a second.
+// ============================================================================
+
+/** Accrual with everything neutral: legitimacy 50, stability 50, no support. */
+export const BASE_CAPITAL_ACCRUAL = 0.9;
+
+/** Accrual per point of legitimacy above 50. */
+export const LEGITIMACY_TO_CAPITAL = 0.014;
+
+/** Accrual per point of mean regional sentiment. The republic's base. */
+export const POPULAR_SUPPORT_TO_CAPITAL = 0.009;
+
+/**
+ * Accrual per point of prosperity-weighted sentiment. The crown's base.
+ *
+ * Larger than the republic's coefficient because the base is narrower: a crown
+ * needs the acquiescence of fewer people, so each point of their satisfaction
+ * is worth more. The flip side is that it responds to a smaller constituency,
+ * which is what makes a monarchy fail suddenly rather than gradually.
+ */
+export const ELITE_SUPPORT_TO_CAPITAL = 0.013;
+
+/** Accrual per point of stability above 50. A crisis consumes attention. */
+export const STABILITY_TO_CAPITAL = 0.006;
+
+/** Accrual per point of administrative capacity. */
+export const ADMIN_TO_CAPITAL = 0.006;
+
+/** Nothing accrues faster than this, whatever the circumstances. */
+export const MAX_CAPITAL_ACCRUAL = 6;
+
+/** The cap at neutral legitimacy. */
+export const BASE_CAPITAL_CAP = 90;
+
+/** Cap points per point of legitimacy above 50. */
+export const CAPITAL_CAP_FROM_LEGITIMACY = 0.9;
+
+/**
+ * A crown's cap, relative to a republic's.
+ *
+ * The counterweight to cheaper action (DESIGN.md §9.2). A crown may act more
+ * freely at any moment but cannot husband capacity for a large reform the way a
+ * republic can: speed against reach. If this were 1.0 the monarchy would be
+ * strictly better, which the brief calls a defect and it would be right to.
+ */
+export const MONARCHY_CAPITAL_CAP_FACTOR = 0.75;
+
+/**
+ * Capital cost of a budget change, per unit of aggregate rate movement.
+ *
+ * Charged on the ABSOLUTE change, unlike the legitimacy cost, which falls only
+ * on rises (D-001). Lowering a tax still takes a bill through, still consumes
+ * the government's attention, and still has to be argued for. Charging both
+ * directions also closes the last door on rate-oscillation as a strategy.
+ */
+export const BUDGET_CAPITAL_COST_PER_RATE = 200;
+
+/**
+ * Capital cost per dollar of change to a spending programme.
+ *
+ * Cheaper per unit of disruption than a tax change, and deliberately: an
+ * appropriation is politically easier than a levy. Doubling the military
+ * establishment costs about five capital; a thirty-point swing in the tariff
+ * costs sixty. That ordering is the point.
+ */
+export const BUDGET_CAPITAL_COST_PER_DOLLAR = 0.000008;
+
+/** No budget change is free, however small — a bill is a bill. */
+export const BUDGET_CAPITAL_COST_FLOOR = 1.5;
+
+/** Default multiplier on accrual and cap while emergency powers are in force. */
+export const EMERGENCY_POWERS_MULTIPLIER = 2.5;
+
+// ============================================================================
 // LAG TIME CONSTANTS (ECONOMY.md §7.1)
 // ============================================================================
 
@@ -511,6 +590,20 @@ export const START = {
     civil: 310_000,
     infrastructure: 130_000,
   },
+
+  /**
+   * Political capital on inauguration day.
+   *
+   * An inauguration is a moment of maximum goodwill, and a government that
+   * could do nothing at all for its first month would be both unplayable and
+   * wrong. Set so the founding administration can pass one substantial budget
+   * immediately and then has to earn the next — roughly a third of the base
+   * cap.
+   *
+   * Not the full cap: the founding choice should not be free, and a player who
+   * begins at the ceiling never sees the accrual mechanic at all.
+   */
+  politicalCapital: 32,
 } as const;
 
 /** Stat ranges used when clamping resolved values. */

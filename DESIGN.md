@@ -591,11 +591,15 @@ See Rule 8 (§5). Migrations are pure `vN → vN+1` functions in `/src/sim/migra
 | Version | Change | Migration | Fixture |
 |---|---|---|---|
 | 1 | The Phase 1 schema | — | `fixtures/v1-republic-day900.json` |
-| 2 | Three tax rates and three spending lines become `TaxInstance[]` and `SpendingProgram[]` (§13, brief §4.3) | `v1ToV2.ts` | — (current) |
+| 2 | Three tax rates and three spending lines become `TaxInstance[]` and `SpendingProgram[]` (§13, brief §4.3) | `v1ToV2.ts` | `fixtures/v2-republic-day900.json` |
+| 3 | Political capital and administrative capacity (brief §3) | `v2ToV3.ts` | — (current) |
 
-A fixture is **generated once and never regenerated** — `scripts/make-v1-fixture.mts` produced the v1 one. A fixture rebuilt from current code stops recording the old format and becomes a restatement of the new one, which would make its migration test pass by construction and prove nothing.
+A fixture is **generated once and never regenerated**, by `scripts/make-fixture.mts <version>` — which *refuses* to overwrite one that already exists. A fixture rebuilt from current code stops recording the old format and becomes a restatement of the new one, which would make its migration test pass by construction and prove nothing. That rule used to be a comment; it is now behaviour.
 
-Every migration must be **behaviour-preserving unless the change is deliberately a balance change**, and must say which it is. `v1ToV2` is behaviour-preserving: the three founding instances reproduce the three old formulas arithmetically, and the test asserts a migrated save's revenue is unchanged.
+Every migration must state whether it is **behaviour-preserving** or a deliberate change:
+
+- `v1ToV2` is behaviour-preserving. The three founding instances reproduce the three old formulas arithmetically, and the test asserts a migrated save's revenue is unchanged.
+- `v2ToV3` **adds** a mechanic that did not exist, so there is no prior behaviour to preserve. It seeds the new reserve generously rather than at zero: the mechanic is new, so its absence in the old save was not the player's choice, and charging them for it would be the wrong way round.
 
 ---
 
@@ -655,7 +659,7 @@ A refined version of the initial sketch. Full field-level definitions live in `/
 ```ts
 interface GameState {
   // --- identity & versioning ---
-  schemaVersion: number;         // current: 2 (v1 → v2 migrates; see §11.4)
+  schemaVersion: number;         // current: 3 (v1 and v2 migrate; see §11.4)
   gameId: string;
   createdAtISO: string;          // wall-clock, set once; never read by the sim
   contentVersion: string;
@@ -673,6 +677,10 @@ interface GameState {
   regions: Region[];
   treasury: TreasuryState;
   policies: PolicyState;
+  // Phase 2 §3. The government's capacity to ACT, as distinct from legitimacy,
+  // which is its standing. Accrues daily, caps, and is raised temporarily by
+  // emergency powers. Full model in docs/ECONOMY.md §7.17.
+  politicalCapital: PoliticalCapitalState;
 
   // --- the ledger ---
   activeModifiers: Modifier[];

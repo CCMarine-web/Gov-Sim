@@ -729,6 +729,105 @@ Mechanically:
 
 **Presentation requirement.** These figures appear in the Regions view as demographic and economic fact with historical context attached. The UI must never present enslaved population as a resource to be optimized — no "increase output" affordance operates on it, and the number is displayed alongside its human context, not as a bare production input. This is a constraint on `UI.md`, recorded here because it arises from the model.
 
+### 7.17 Political capital
+
+*Added in Phase 2, queue item 4. Brief §3.*
+
+> **Causal claim.** The ability to get things done is drawn from four places: the belief that you have the right to govern, the support of whoever it is that keeps you in office, the absence of a crisis consuming your attention, and having an administration capable of carrying out an instruction.
+
+#### Why a second currency
+
+Legitimacy and political capital answer different questions, and collapsing them would lose the difference between being respected and being effective.
+
+| | Question |
+|---|---|
+| **Legitimacy** | Does the country accept your right to govern? |
+| **Political capital** | Can you actually get *this particular thing* done? |
+
+The relationship runs one way: legitimacy **feeds** capital accrual, and spending capital does not spend legitimacy. Acting unpopularly costs both, through two separate mechanisms with two separate reasons — capital because the act consumed the government's capacity, legitimacy because the country minded (§7.15, D-001).
+
+#### Daily accrual
+
+```
+support     = republic  → meanRegionalSentiment × POPULAR_SUPPORT_TO_CAPITAL
+              monarchy  → eliteSupport          × ELITE_SUPPORT_TO_CAPITAL
+
+accrual     = BASE_CAPITAL_ACCRUAL
+            + (legitimacy − 50)          × LEGITIMACY_TO_CAPITAL
+            + support
+            + (stability − 50)           × STABILITY_TO_CAPITAL
+            + administrativeCapacity     × ADMIN_TO_CAPITAL
+
+            clamped to [0, MAX_CAPITAL_ACCRUAL], then × emergency multiplier
+```
+
+**Floored at zero, never negative.** A government in collapse gains nothing; it does not *owe* capital. Negative accrual would make the cap meaningless and could trap a player permanently, which is the wrong shape for a game with no game-over (`DESIGN.md` §10).
+
+**Daily, not monthly.** Following HOI4 rather than Democracy 4's quarterly turns: a real-time clock wants a currency that moves with it. The *rate* is recomputed monthly with every other slow aggregate; the *stock* ticks daily.
+
+#### The cap
+
+```
+cap = (BASE_CAPITAL_CAP + (legitimacy − 50) × CAPITAL_CAP_FROM_LEGITIMACY)
+      × (monarchy ? MONARCHY_CAPITAL_CAP_FACTOR : 1)
+      × emergency multiplier
+```
+
+> **Causal claim.** Political capital is a standing, not a bank balance — the goodwill and attention available to a government at one moment. It cannot be saved indefinitely and spent all at once, because the willingness of others to go along with you does not accumulate that way.
+
+Capital that accrues into a full reserve is **lost, and counted**: `totalWasted` exists so that "hoarding is not a strategy" is a falsifiable claim rather than an assertion.
+
+#### Where the two paths diverge
+
+| | Republic | Monarchy |
+|---|---|---|
+| Support base | Broad popular sentiment | Prosperity-weighted sentiment — the propertied interest |
+| Coefficient | Lower per point | Higher per point, narrower base |
+| Cap | Full | × `MONARCHY_CAPITAL_CAP_FACTOR` (0.75) |
+| Cost of action | Full (§7.15) | × `MONARCHY_ACTION_COST` (0.55) |
+
+**Neither is strictly better, and that is checked.** The crown acts more cheaply but cannot husband capacity for a large reform; the republic acts dearly but can save for one. Speed against reach. `src/sim/politicalCapital.test.ts` asserts the monarchy's ceiling is genuinely lower — if it were ever both cheaper *and* deeper, the monarchy would dominate, which the brief calls a defect and would be right to.
+
+Weighting the crown's base by prosperity rather than population is the whole content of "elite": a monarchy hears from the regions with money in them and can survive a great deal of discontent among people who have none. That is both the source of its stability and the reason it falls over suddenly.
+
+#### Administrative capacity
+
+```
+administrativeCapacity = (officesCreated / officesTotal)
+                       × (officesFilled  / officesCreated) × 100
+```
+
+Read from the historical office record in the content pack (`src/content/government/cabinet.ts`, interpreted by `src/sim/offices.ts`). Two factors multiplied: how much of the government exists, and how much of what exists is staffed. A vacancy in a department that was never created is not a vacancy.
+
+**Zero on day 0, and correctly so.** The Department of State was created on 27 July 1789, War on 7 August, the Treasury not until 2 September. A player beginning on inauguration day holds an office in a government that does not yet exist.
+
+**Past the end of the office record** the census is clamped to the last day the content describes. Reading a day beyond every recorded tenure would find every office vacant and collapse capacity to zero on 1 January 1801 — the content running out is a gap in the content, not an event in the game (`BLOCKERS.md` B-005).
+
+**Item 13 will replace this.** "How many offices are filled" becomes "how competent and loyal the people filling them are". The term is here now so the currency has a real administrative component from the start rather than an inert placeholder.
+
+#### Spending
+
+```
+cost = max(BUDGET_CAPITAL_COST_FLOOR,
+             Σ|Δrate|   × BUDGET_CAPITAL_COST_PER_RATE
+           + Σ|Δdollars| × BUDGET_CAPITAL_COST_PER_DOLLAR)
+```
+
+Charged on the **absolute** movement, unlike the legitimacy cost which falls only on rises. Lowering a tax still takes a bill through, still consumes attention, and still has to be argued for — and charging both directions closes the last door on rate-oscillation as a way to farm the model.
+
+An appropriation is politically easier than a levy, and the constants say so: doubling the military establishment costs about five capital, a thirty-point swing in the tariff sixty.
+
+**Unaffordable is refused with a reason, not a bare no.** `canAffordPolicy` returns the shortfall and how many days of accrual it represents, and the engine throws if a caller skips the gate. A control that declines without explanation is the same failure the modifier ledger exists to prevent, applied to actions rather than numbers.
+
+#### Emergency powers
+
+Democracy 4's mechanic. A severe enough crisis lets a government push through what it otherwise could not: both the accrual rate and the cap are multiplied, immediately rather than at the next recompute, and they **end on a fixed day**. When they lapse the stock is clawed back to the ordinary ceiling — holding crisis-sized reserves after the crisis has passed is exactly the hoarding the cap exists to prevent.
+
+Content-declared rather than engine-inferred, so a designer decides which crises qualify and the player can be told why. Wired into two real ones:
+
+- **The Whiskey Rebellion (1794)**, on calling out the militia. Not a game abstraction: the Militia Act of 1792 required a Supreme Court justice to certify that ordinary judicial proceedings were obstructed before the President could call out the militia against citizens, and Justice James Wilson so certified on 4 August 1794. That certification *is* the historical emergency-powers mechanism.
+- **The Quasi-War (1798)**, on arming or on declaring war. Under the pressure of an undeclared naval war Congress created the Navy Department, raised a provisional army, laid the direct tax, passed the stamp duties and passed the Alien and Sedition Acts — an extraordinary volume of legislation in a few months.
+
 ---
 
 ## 8. Government type differences

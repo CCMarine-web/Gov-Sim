@@ -8,7 +8,7 @@ import { explainStat } from './modifiers';
 import { setTaxRate } from './taxes';
 import { FOUNDING_TAX_IDS, type ContentPack, type GameState } from './types';
 
-const EMPTY_CONTENT: ContentPack = { version: 'test', events: [], laws: [] };
+const EMPTY_CONTENT: ContentPack = { version: 'test', events: [], laws: [], offices: [] };
 
 /** Run the simulation forward `days` days. */
 function run(state: GameState, days: number, content = EMPTY_CONTENT): GameState {

@@ -533,8 +533,8 @@ visibly to its total. That guarantee is honoured exactly, in the structure that
 fits — and a test asserts the lines reconcile both to the headline receipts and,
 line by line, gross minus losses to net.
 
-**The one addition worth arguing for.** The losses are reported as two figures,
-not one:
+**The one addition worth arguing for (see D-020 for a related judgement).** The
+losses are reported as two figures, not one:
 
 - **not remitted** — a region assessed but did not pay. A question of *consent*.
 - **uncollected** — the administration could not reach it. A question of
@@ -544,3 +544,105 @@ They have different causes and different remedies, and a government whose
 problem is administrative capacity needs a different answer from one whose
 problem is that a region has stopped obeying it. Collapsing them into a single
 "losses" column would show a number the player could not act on.
+
+---
+
+## D-020 — Political capital sits beside legitimacy rather than replacing it
+
+**Context.** Brief §3 asks for one currency, accruing daily, gating what the
+government can do. The project already has legitimacy, which also falls when the
+player acts unpopularly (D-001). The obvious question is whether the new
+currency should absorb the old one.
+
+**Decided.** They coexist and answer different questions:
+
+| | Question |
+|---|---|
+| **Legitimacy** | Does the country accept your right to govern? |
+| **Political capital** | Can you actually get *this particular thing* done? |
+
+The relationship runs one way: legitimacy **feeds** capital accrual, and
+spending capital does not spend legitimacy. Acting unpopularly costs both,
+through two separate mechanisms — capital because the act consumed the
+government's capacity, legitimacy because the country minded.
+
+**Why not merge them.** A government can be widely thought legitimate and still
+unable to move; it can also burn its standing acting decisively. Both are true
+of real governments, and one number cannot express both. It also matters
+mechanically: legitimacy already drives compliance, and folding an action cost
+into it would mean every bill quietly reduced tax collection, which is a
+consequence no player would predict from the interface.
+
+**Decisions inside the decision:**
+
+- **Charged on absolute movement**, unlike the legitimacy cost, which falls only
+  on rises. Lowering a tax still takes a bill through. Together the two costs
+  close the last door on rate-oscillation as a way to farm the model.
+- **Refusal states a reason and a wait.** `canAffordPolicy` returns the
+  shortfall in days of accrual, and `enactPolicy` throws if a caller skips the
+  gate. A control that declines without explanation is the same failure the
+  modifier ledger exists to prevent, applied to actions instead of numbers.
+- **Wasted capital is counted.** `totalWasted` accumulates whatever accrues into
+  a full reserve. "Hoarding is not a strategy" is a design claim, and this is
+  the number that makes it falsifiable rather than merely asserted.
+- **The founding position is derived, not seeded.** Day-0 accrual and cap come
+  from the same formulas the monthly recompute uses, so the starting position
+  cannot drift from what the model would compute for it.
+
+---
+
+## D-021 — Administrative capacity is read from the historical office record
+
+**Context.** Brief §3 lists cabinet quality among the accrual drivers. Cabinet
+competence and loyalty are queue item 13, so the obvious move was an inert
+placeholder returning zero until then.
+
+**Decided.** Use what already exists and is already sourced: the real record of
+which executive departments existed and who held them
+(`src/content/government/cabinet.ts`). Capacity is how much of the government
+exists multiplied by how much of what exists is staffed.
+
+**Why this is better than a placeholder.** It is real from day one, it is
+grounded in cited historical fact rather than invented, and it produces a
+genuinely interesting opening position: capacity on 30 April 1789 is **zero**,
+because the Department of State was created on 27 July, War on 7 August, and the
+Treasury not until 2 September. The player begins holding an office in a
+government that does not yet exist, and watches the machinery get built. An
+inert placeholder would have thrown that away.
+
+Item 13 then replaces "how many offices are filled" with "how competent and
+loyal the people filling them are" without touching any of the plumbing.
+
+**The consequence that had to be handled.** The engine now reads offices, so
+`ContentPack` gained an `offices` field and `Office`/`Tenure` moved into
+`src/sim/types.ts` — content declares, the engine interprets, which is Rule 4
+working normally. It also meant threading the content pack into
+`projectPolicy`, which is an improvement on its own terms: the projection is now
+a pure function of state, proposal and content rather than of state and proposal
+with a hidden content pack inside it.
+
+**What it turned up.** Clamping the office census at the end of the record
+exposed that the cabinet data was **missing two real officers**: John Marshall
+as Secretary of State from 6 June 1800 and Samuel Dexter as Secretary of War
+from 12 June 1800. Both are documented and both are now in the record with
+citations. A modelling change surfacing a genuine content gap is the system
+working.
+
+---
+
+## D-022 — Fixtures are protected by the script, not by a comment
+
+**Context.** D-018 established that a save fixture must be generated once and
+never regenerated, because a fixture rebuilt from current code restates the new
+format instead of recording the old one and makes its own test pass by
+construction. That rule was written as a comment in a single-purpose script.
+
+**Decided.** `scripts/make-fixture.mts <version>` takes the version as an
+argument, knows how to downgrade through every released shape, and **refuses to
+overwrite a fixture that already exists**.
+
+**Why.** A comment saying "do not run this again" is obeyed by whoever reads it.
+The next person to need a v3 fixture will copy the script, and the copy is where
+the rule gets lost. Making the refusal executable means the rule survives being
+forgotten — which is the only kind of rule worth having in a project meant to be
+picked up by a session with no memory of this one.

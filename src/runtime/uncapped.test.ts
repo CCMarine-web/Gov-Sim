@@ -41,7 +41,7 @@ import { msPerDayAt } from './speeds';
  * behaviour and separately tested — but it would stop this file measuring the
  * thing it is here to measure.
  */
-const NO_EVENTS: ContentPack = { version: 'uncapped-test', events: [], laws: [] };
+const NO_EVENTS: ContentPack = { version: 'uncapped-test', events: [], laws: [], offices: [] };
 
 const NEW_GAME = {
   governmentType: 'republic' as const,

@@ -18,6 +18,11 @@ import {
   seedPopulation,
 } from '@/content/regions/regions1790';
 import { START, START_DEBT_RATE, START_TRADE_CAPACITY } from './calibration';
+import {
+  capitalAccrualTarget,
+  capitalCapTarget,
+  eliteSupport,
+} from './economy/politics';
 import { taxBurden } from './economy/fiscal';
 import {
   computeGdp,
@@ -278,6 +283,29 @@ export function createGame(options: NewGameOptions): GameState {
       ? START.legitimacy.monarchy
       : START.legitimacy.republic;
 
+  /*
+    Day-0 political capital rate and ceiling, from the same formulas the monthly
+    recompute uses. Derived rather than seeded, so the founding position cannot
+    drift away from what the model would compute for it — the same discipline
+    the tax burden gets above.
+
+    Administrative capacity is 0: the executive departments did not exist on
+    30 April 1789. That is not a placeholder, it is the date.
+  */
+  const meanSentimentAtFounding =
+    regions.reduce((sum, r) => sum + r.sentiment, 0) / (regions.length || 1);
+
+  const startingAccrual = capitalAccrualTarget({
+    governmentType,
+    legitimacy,
+    stability,
+    popularSupport: meanSentimentAtFounding,
+    eliteSupport: eliteSupport(regions),
+    administrativeCapacity: 0,
+  });
+
+  const startingCap = capitalCapTarget({ governmentType, legitimacy });
+
   return {
     schemaVersion: SCHEMA_VERSION,
     gameId,
@@ -310,6 +338,15 @@ export function createGame(options: NewGameOptions): GameState {
       legitimacy,
       legitimacyBase: legitimacy,
       sectionalTension: START.sectionalTension,
+      /*
+        Zero, and correct. On 30 April 1789 there was a President, a Congress
+        and essentially no administration: State was created on 27 July, War on
+        7 August, the Treasury not until 2 September. The player begins holding
+        an office in a government that does not yet exist, and it climbs from
+        here as the machinery is built. Computed from the office record at the
+        first monthly recompute. (ECONOMY.md §7.17)
+      */
+      administrativeCapacity: 0,
       // Day 0 is an equilibrium by construction, so the model targets equal
       // the starting values until the first monthly recompute.
       modelTargets: {
@@ -353,6 +390,33 @@ export function createGame(options: NewGameOptions): GameState {
       programs: foundingPrograms(),
       enactedLawIds: [],
       cumulativeInfrastructure: 0,
+    },
+
+    /*
+      POLITICAL CAPITAL AT THE FOUNDING.
+
+      The rate and cap are DERIVED here rather than left at zero for the first
+      monthly recompute to fill in, because a government that can neither act
+      nor accrue for its first thirty-one days is not a playable starting
+      position — and because every input the formula needs is already known at
+      day 0. Administrative capacity is genuinely zero: the departments do not
+      exist yet, which is a fact about 30 April 1789 rather than a placeholder.
+
+      The stock starts at START.politicalCapital: enough for one substantial
+      first budget, not enough to make the founding free.
+    */
+    politicalCapital: {
+      current: START.politicalCapital,
+      modelTargets: {
+        accrual: startingAccrual,
+        cap: startingCap,
+      },
+      accrualPerDay: startingAccrual,
+      cap: startingCap,
+      emergency: null,
+      totalAccrued: 0,
+      totalSpent: 0,
+      totalWasted: 0,
     },
 
     activeModifiers: [],

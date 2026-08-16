@@ -13,7 +13,7 @@ import {
 } from './gameLoop';
 import { SPEEDS, isUncapped, msPerDayAt } from './speeds';
 
-const EMPTY: ContentPack = { version: 'perf', events: [], laws: [] };
+const EMPTY: ContentPack = { version: 'perf', events: [], laws: [], offices: [] };
 
 /** Play the whole span, answering every decision, as a real session would. */
 function playFullRun(): GameState {

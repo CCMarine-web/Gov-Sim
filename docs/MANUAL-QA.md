@@ -363,3 +363,44 @@ together.
 Expand "Historical context" under any tax. It should give the statute, its date
 and its citation. Under the impost that is the Tariff Act of 4 July 1789,
 1 Stat. 24.
+
+---
+
+## 12. Political capital — Phase 2 brief §3
+
+Asserted in `src/sim/politicalCapital.test.ts` (30 tests) and in
+`treasuryInstances.test.tsx`. These are the parts to feel rather than assert.
+
+**12.1 — It is in the command bar, and it explains itself**
+A "Capital" stat should sit between Debt and Stability, reading something like
+"32 / 108". Hover it: the popover explains the **accrual rate**, not the stock,
+because the rate is what the player's decisions actually move. Base plus each
+contribution must sum to the total.
+
+**12.2 — It ticks up every day, not once a month**
+Press play at 1x and watch. The first number should rise continuously.
+*Problem if:* it jumps once a month — that would mean accrual has been folded
+into the monthly recompute.
+
+**12.3 — The ceiling is real**
+Let a game run an hour without spending anything. Capital should sit against its
+ceiling and stop. That is the mechanic: hoarding is not a strategy.
+
+**12.4 — Acting costs, and being unable to act is explained**
+On Treasury, drag the tariff a long way. A line should appear giving the price
+and your reserve. Drag it far enough and Enact should **disable**, with a
+sentence saying how many days of accrual short you are.
+*Problem if:* Enact stays enabled and then fails, or disables with no reason.
+
+**12.5 — The administration starts at nothing and grows**
+Start a new game and open Government. On 30 April 1789 no executive department
+exists — State was created 27 July, War 7 August, the Treasury 2 September. The
+capital accrual rate should be visibly lower in the first weeks than a year in.
+
+**12.6 — Emergency powers, and their end**
+Reach the Whiskey Rebellion of 1794 and call out the militia. A ⚡ should appear
+beside Capital, the ceiling should jump, and accrual should roughly double. Then
+keep playing: after about nine months the chronicle should record "Emergency
+powers lapse" and the ceiling should fall back.
+*Problem if:* the powers never end. Temporary powers the game forgets to end are
+not temporary, and that is the failure mode worth watching for.

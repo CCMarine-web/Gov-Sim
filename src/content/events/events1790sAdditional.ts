@@ -519,6 +519,19 @@ export const EVENTS_1790S_ADDITIONAL: GameEvent[] = [
           { kind: 'regionSentiment', regionId: 'new_england', delta: 12 },
           { kind: 'regionSentiment', regionId: 'south', delta: -6 },
           { kind: 'setFlag', key: 'quasi_war', value: true },
+          /*
+            The 1798 crisis is the clearest case of emergency powers in the
+            period: under the pressure of an undeclared naval war Congress
+            created the Navy Department, raised a provisional army, laid the
+            direct tax, passed the stamp duties, and passed the Alien and
+            Sedition Acts -- an extraordinary volume of legislation in a few
+            months. That capacity is what this models, and it lapses.
+          */
+          {
+            kind: 'grantEmergencyPowers',
+            reason: 'the undeclared naval war with France',
+            durationDays: 540,
+          },
         ],
       },
       {
@@ -555,6 +568,13 @@ export const EVENTS_1790S_ADDITIONAL: GameEvent[] = [
           },
           { kind: 'regionSentiment', regionId: 'south', delta: -16 },
           { kind: 'setFlag', key: 'quasi_war', value: true },
+          // A declared war grants more, and for longer, than an undeclared one.
+          {
+            kind: 'grantEmergencyPowers',
+            reason: 'the war with France',
+            durationDays: 900,
+            multiplier: 3,
+          },
         ],
       },
       {

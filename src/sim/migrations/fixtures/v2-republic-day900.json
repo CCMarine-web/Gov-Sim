@@ -1,0 +1,876 @@
+{
+  "schemaVersion": 2,
+  "gameId": "test-game",
+  "createdAtISO": "1789-04-30T00:00:00.000Z",
+  "contentVersion": "test",
+  "rng": {
+    "seed": 20260815,
+    "state": 20260815,
+    "calls": 0
+  },
+  "day": 900,
+  "governmentType": "republic",
+  "ruler": {
+    "name": "George Washington",
+    "houseName": "Federalist",
+    "title": "President",
+    "birthYear": 1732,
+    "heirName": null,
+    "portraitId": null
+  },
+  "nation": {
+    "population": 4238605.962919386,
+    "laborForce": 1525590.7433108427,
+    "agriculturalOutput": 133765064.35761024,
+    "manufacturingOutput": 37049797.032567404,
+    "tradeVolume": 45268032.45560023,
+    "tradeCapacity": 49038274.13824203,
+    "gdp": 206522596.21705997,
+    "stability": 48.632542290597605,
+    "legitimacy": 68.90169242722561,
+    "legitimacyBase": 62.90169242722562,
+    "sectionalTension": 32.78176490153098,
+    "modelTargets": {
+      "stability": 42.65704021034282,
+      "sectionalTension": 33.700139577122386
+    }
+  },
+  "regions": [
+    {
+      "id": "new_england",
+      "name": "New England",
+      "states": [
+        {
+          "code": "VT",
+          "name": "Vermont",
+          "population1790": 85539,
+          "enslavedPopulation1790": 16
+        },
+        {
+          "code": "NH",
+          "name": "New Hampshire",
+          "population1790": 141885,
+          "enslavedPopulation1790": 158
+        },
+        {
+          "code": "ME",
+          "name": "Maine (District of Massachusetts)",
+          "population1790": 96540,
+          "enslavedPopulation1790": 0
+        },
+        {
+          "code": "MA",
+          "name": "Massachusetts",
+          "population1790": 378787,
+          "enslavedPopulation1790": 0
+        },
+        {
+          "code": "RI",
+          "name": "Rhode Island",
+          "population1790": 68825,
+          "enslavedPopulation1790": 948
+        },
+        {
+          "code": "CT",
+          "name": "Connecticut",
+          "population1790": 237946,
+          "enslavedPopulation1790": 2764
+        }
+      ],
+      "population": 1089160.5835551578,
+      "enslavedPopulation": 4192.5565046579895,
+      "laborForce": 348619.76142673026,
+      "agriculturalOutput": 25867072.128393475,
+      "manufacturingOutput": 14698142.853327984,
+      "tradeVolume": 10750279.298980018,
+      "prosperity": 51.839724628496796,
+      "prosperityTrend": -0.28973129702261247,
+      "sentiment": 13.772949393389336,
+      "compliance": 93.84322813739306,
+      "dominantIndustry": "Shipping, fishing, and nascent manufacturing",
+      "tariffExposure": 1.3,
+      "exciseExposure": 0.4,
+      "landExposure": 0.8,
+      "baselineOutputPerCapita": 37.67659249671723,
+      "baseProsperity": 55,
+      "baseSentiment": 20,
+      "modelTargets": {
+        "prosperity": 48.5058029226753,
+        "sentiment": 7.944909589007628,
+        "compliance": 92.29071907979537
+      },
+      "baselineTaxBurden": 0.13
+    },
+    {
+      "id": "mid_atlantic",
+      "name": "Mid-Atlantic",
+      "states": [
+        {
+          "code": "NY",
+          "name": "New York",
+          "population1790": 340120,
+          "enslavedPopulation1790": 21324
+        },
+        {
+          "code": "NJ",
+          "name": "New Jersey",
+          "population1790": 184139,
+          "enslavedPopulation1790": 11423
+        },
+        {
+          "code": "PA",
+          "name": "Pennsylvania",
+          "population1790": 434373,
+          "enslavedPopulation1790": 3737
+        },
+        {
+          "code": "DE",
+          "name": "Delaware",
+          "population1790": 59094,
+          "enslavedPopulation1790": 8887
+        }
+      ],
+      "population": 1098440.557637951,
+      "enslavedPopulation": 48969.31643742173,
+      "laborForce": 361853.3337735445,
+      "agriculturalOutput": 29917438.956270024,
+      "manufacturingOutput": 11187794.149494441,
+      "tradeVolume": 10893390.722464139,
+      "prosperity": 52.63696831401443,
+      "prosperityTrend": -0.4917136793374084,
+      "sentiment": 12.215243762550129,
+      "compliance": 94.13213867919161,
+      "dominantIndustry": "Mixed farming, milling, and commerce",
+      "tariffExposure": 1,
+      "exciseExposure": 0.7,
+      "landExposure": 1,
+      "baselineOutputPerCapita": 37.85576377235076,
+      "baseProsperity": 58,
+      "baseSentiment": 25,
+      "modelTargets": {
+        "prosperity": 46.978846718457596,
+        "sentiment": 4.065326271059024,
+        "compliance": 91.90129267208556
+      },
+      "baselineTaxBurden": 0.1
+    },
+    {
+      "id": "south",
+      "name": "The South",
+      "states": [
+        {
+          "code": "MD",
+          "name": "Maryland",
+          "population1790": 319728,
+          "enslavedPopulation1790": 103036
+        },
+        {
+          "code": "VA",
+          "name": "Virginia",
+          "population1790": 747610,
+          "enslavedPopulation1790": 292627
+        },
+        {
+          "code": "NC",
+          "name": "North Carolina",
+          "population1790": 393751,
+          "enslavedPopulation1790": 100572
+        },
+        {
+          "code": "SC",
+          "name": "South Carolina",
+          "population1790": 249073,
+          "enslavedPopulation1790": 107094
+        },
+        {
+          "code": "GA",
+          "name": "Georgia",
+          "population1790": 82548,
+          "enslavedPopulation1790": 29264
+        }
+      ],
+      "population": 1933308.4109234568,
+      "enslavedPopulation": 682205.9159547846,
+      "laborForce": 773630.9138031093,
+      "agriculturalOutput": 73802922.16852205,
+      "manufacturingOutput": 10872339.957908178,
+      "tradeVolume": 22439982.580731787,
+      "prosperity": 49.58273230007691,
+      "prosperityTrend": -0.22160299492018254,
+      "sentiment": -4.029305834559158,
+      "compliance": 88.40281029452032,
+      "dominantIndustry": "Staple-crop plantation agriculture",
+      "tariffExposure": 1.2,
+      "exciseExposure": 0.3,
+      "landExposure": 1.1,
+      "baselineOutputPerCapita": 44.305774497845036,
+      "baseProsperity": 52,
+      "baseSentiment": 5,
+      "modelTargets": {
+        "prosperity": 47.032759126892984,
+        "sentiment": -4.086772599634584,
+        "compliance": 87.84015527280823
+      },
+      "baselineTaxBurden": 0.12
+    },
+    {
+      "id": "frontier",
+      "name": "The Frontier",
+      "states": [
+        {
+          "code": "KY",
+          "name": "Kentucky",
+          "population1790": 73677,
+          "enslavedPopulation1790": 12430
+        },
+        {
+          "code": "SW",
+          "name": "Southwest Territory",
+          "population1790": 35691,
+          "enslavedPopulation1790": 3417
+        }
+      ],
+      "population": 117696.41080282071,
+      "enslavedPopulation": 17053.754498503222,
+      "laborForce": 41486.734307458515,
+      "agriculturalOutput": 4177631.104424703,
+      "manufacturingOutput": 291520.071836799,
+      "tradeVolume": 1184379.8534242937,
+      "prosperity": 23.767653593021898,
+      "prosperityTrend": -1.4884117089526576,
+      "sentiment": -61.89222459767994,
+      "compliance": 78.58641515787745,
+      "dominantIndustry": "Subsistence farming and distilling",
+      "tariffExposure": 0.4,
+      "exciseExposure": 2.2,
+      "landExposure": 1.3,
+      "baselineOutputPerCapita": 38.407096403859185,
+      "baseProsperity": 40,
+      "baseSentiment": -10,
+      "modelTargets": {
+        "prosperity": 6.6405839437638505,
+        "sentiment": -75.1930546799975,
+        "compliance": 73.37442558202804
+      },
+      "baselineTaxBurden": 0.04000000000000001
+    }
+  ],
+  "treasury": {
+    "balance": 1229856.9097625876,
+    "debtPrincipal": 91873110.68952394,
+    "debtWeightedRate": 0.04537528492547326,
+    "creditRating": 41.48388739441155,
+    "emergencyBorrowing": false,
+    "missedPayments": 0,
+    "receiptsYTD": {
+      "customs": 3550874.068375235,
+      "excise": 1617512.73153515,
+      "land": 0,
+      "other": 95013.6986301376
+    },
+    "outlaysYTD": {
+      "debtService": 3299776.5648630573,
+      "military": 490904.10958904325,
+      "civil": 245452.05479452162,
+      "infrastructure": 102931.50684931465
+    },
+    "annualisedReceipts": {
+      "customs": 4526803.245560023,
+      "excise": 2511279.2531871675,
+      "land": 0,
+      "other": 120000
+    },
+    "annualisedOutlays": {
+      "debtService": 4168768.574526692,
+      "military": 620000,
+      "civil": 310000,
+      "infrastructure": 130000
+    },
+    "receiptLines": [
+      {
+        "taxId": "tax_impost",
+        "name": "Impost of 1789",
+        "createdByBillId": null,
+        "base": "imports",
+        "bucket": "customs",
+        "rate": 0.1,
+        "assessedBase": 45268032.45560023,
+        "gross": 4526803.245560023,
+        "lostToCollection": 0,
+        "lostToNonCompliance": 0,
+        "net": 4526803.245560023
+      },
+      {
+        "taxId": "tax_spirits",
+        "name": "Whiskey Excise of 1791",
+        "createdByBillId": "whiskey_excise_1791",
+        "base": "spirits",
+        "bucket": "excise",
+        "rate": 0.25,
+        "assessedBase": 11500000,
+        "gross": 2875000,
+        "lostToCollection": 0,
+        "lostToNonCompliance": 363720.74681283254,
+        "net": 2511279.2531871675
+      },
+      {
+        "taxId": "tax_land",
+        "name": "Direct tax on land",
+        "createdByBillId": null,
+        "base": "land",
+        "bucket": "land",
+        "rate": 0,
+        "assessedBase": 95000000,
+        "gross": 0,
+        "lostToCollection": 0,
+        "lostToNonCompliance": 0,
+        "net": 0
+      }
+    ],
+    "outlayLines": [
+      {
+        "programId": "debt_service",
+        "name": "Debt service",
+        "createdByBillId": null,
+        "category": "debtService",
+        "annualAmount": 4168768.574526692
+      },
+      {
+        "programId": "prog_military",
+        "name": "Army and militia",
+        "createdByBillId": null,
+        "category": "military",
+        "annualAmount": 620000
+      },
+      {
+        "programId": "prog_civil",
+        "name": "Civil establishment",
+        "createdByBillId": null,
+        "category": "civil",
+        "annualAmount": 310000
+      },
+      {
+        "programId": "prog_infrastructure",
+        "name": "Roads, posts and lighthouses",
+        "createdByBillId": null,
+        "category": "infrastructure",
+        "annualAmount": 130000
+      }
+    ],
+    "lastYearReceipts": 4514165.132431954,
+    "lastYearOutlays": 4560066.499246835
+  },
+  "policies": {
+    "taxes": [
+      {
+        "id": "tax_impost",
+        "name": "Impost of 1789",
+        "createdByBillId": null,
+        "base": "imports",
+        "rate": 0.1,
+        "exemptions": [
+          "Goods carried in American-built and American-owned vessels paid a reduced duty"
+        ],
+        "collectionEfficiency": 1,
+        "enactedDay": 0,
+        "repealedDay": null
+      },
+      {
+        "id": "tax_spirits",
+        "name": "Whiskey Excise of 1791",
+        "createdByBillId": "whiskey_excise_1791",
+        "base": "spirits",
+        "rate": 0.25,
+        "exemptions": [
+          "Spirits distilled from domestic materials in small private stills paid a lower flat rate"
+        ],
+        "collectionEfficiency": 1,
+        "enactedDay": 661,
+        "repealedDay": null
+      },
+      {
+        "id": "tax_land",
+        "name": "Direct tax on land",
+        "createdByBillId": null,
+        "base": "land",
+        "rate": 0,
+        "exemptions": [],
+        "collectionEfficiency": 1,
+        "enactedDay": 0,
+        "repealedDay": null
+      }
+    ],
+    "programs": [
+      {
+        "id": "prog_military",
+        "name": "Army and militia",
+        "createdByBillId": null,
+        "category": "military",
+        "annualAmount": 620000,
+        "enactedDay": 0,
+        "repealedDay": null
+      },
+      {
+        "id": "prog_civil",
+        "name": "Civil establishment",
+        "createdByBillId": null,
+        "category": "civil",
+        "annualAmount": 310000,
+        "enactedDay": 0,
+        "repealedDay": null
+      },
+      {
+        "id": "prog_infrastructure",
+        "name": "Roads, posts and lighthouses",
+        "createdByBillId": null,
+        "category": "infrastructure",
+        "annualAmount": 130000,
+        "enactedDay": 0,
+        "repealedDay": null
+      }
+    ],
+    "enactedLawIds": [],
+    "cumulativeInfrastructure": 0
+  },
+  "activeModifiers": [
+    {
+      "id": "event:quaker_petitions_1790:nation.sectionalTension",
+      "source": "Antislavery petitions tabled",
+      "sourceType": "event",
+      "target": "nation.sectionalTension",
+      "value": 5,
+      "isPercentage": false,
+      "startDay": 287,
+      "endDay": null
+    },
+    {
+      "id": "law:assumption_1790:nation.legitimacy",
+      "source": "Funding Act of 1790",
+      "sourceType": "law",
+      "target": "nation.legitimacy",
+      "value": 6,
+      "isPercentage": false,
+      "startDay": 416,
+      "endDay": null
+    },
+    {
+      "id": "law:bank_1791:nation.stability",
+      "source": "Bank of the United States",
+      "sourceType": "law",
+      "target": "nation.stability",
+      "value": 4,
+      "isPercentage": false,
+      "startDay": 620,
+      "endDay": null
+    }
+  ],
+  "eventState": {
+    "firedEventIds": [
+      "quaker_petitions_1790",
+      "assumption_1790",
+      "bank_1791",
+      "whiskey_excise_1791"
+    ],
+    "chosenOptions": {
+      "quaker_petitions_1790": "table_petitions",
+      "assumption_1790": "assume_full",
+      "bank_1791": "charter_bank",
+      "whiskey_excise_1791": "enact_full"
+    },
+    "pendingDecisions": [],
+    "scheduledEvents": [
+      {
+        "eventId": "whiskey_rebellion_1794",
+        "fireOnDay": 1891
+      }
+    ]
+  },
+  "flags": {
+    "petitions_tabled": true,
+    "assumption_passed": true,
+    "law_unlocked:bank_of_the_united_states": true,
+    "bank_chartered": true,
+    "excise_enacted": true
+  },
+  "log": [
+    {
+      "id": "founding",
+      "day": 0,
+      "tier": "enactment",
+      "category": "system",
+      "title": "The United States is founded",
+      "body": "George Washington takes the oath of office as President of the United States.",
+      "relatedEventId": null
+    },
+    {
+      "id": "287:quaker_petitions_1790:decision",
+      "day": 287,
+      "tier": "decision",
+      "category": "event",
+      "title": "The Antislavery Petitions",
+      "body": "You chose: Accept the committee report and table the petitions",
+      "relatedEventId": "quaker_petitions_1790"
+    },
+    {
+      "id": "416:assumption_1790:decision",
+      "day": 416,
+      "tier": "decision",
+      "category": "event",
+      "title": "The Assumption of State Debts",
+      "body": "You chose: Assume the state debts in full",
+      "relatedEventId": "assumption_1790"
+    },
+    {
+      "id": "620:bank_1791:decision",
+      "day": 620,
+      "tier": "decision",
+      "category": "event",
+      "title": "A Bank of the United States",
+      "body": "You chose: Charter the Bank",
+      "relatedEventId": "bank_1791"
+    },
+    {
+      "id": "661:whiskey_excise_1791:decision",
+      "day": 661,
+      "tier": "decision",
+      "category": "event",
+      "title": "The Excise on Distilled Spirits",
+      "body": "You chose: Enact the excise at the full proposed rate",
+      "relatedEventId": "whiskey_excise_1791"
+    }
+  ],
+  "series": {
+    "days": [
+      0,
+      1,
+      32,
+      62,
+      93,
+      124,
+      154,
+      185,
+      215,
+      246,
+      277,
+      305,
+      336,
+      366,
+      397,
+      427,
+      458,
+      489,
+      519,
+      550,
+      580,
+      611,
+      642,
+      670,
+      701,
+      731,
+      762,
+      792,
+      823,
+      854,
+      884
+    ],
+    "population": [
+      3929326,
+      3939294.5936524225,
+      3949282.82639992,
+      3959292.3696583705,
+      3969324.4128917516,
+      3979379.8043675744,
+      3989459.151375855,
+      3999562.8914944697,
+      4009691.34319131,
+      4019844.741692679,
+      4030023.2643560157,
+      4040227.2251492185,
+      4050456.1131057846,
+      4060709.649435147,
+      4070987.7119432054,
+      4081291.115806985,
+      4091622.7993255267,
+      4101981.6175037334,
+      4112366.8596477215,
+      4122778.109036712,
+      4133215.14552139,
+      4143677.878311687,
+      4154179.2222485626,
+      4164695.8369151363,
+      4175224.5211146483,
+      4185763.5346731762,
+      4196312.130599139,
+      4206870.222889252,
+      4217438.138306603,
+      4228016.467830434,
+      4238605.962919386
+    ],
+    "gdp": [
+      193044376.7669031,
+      193082585.41597006,
+      193315703.46878228,
+      193613873.21142972,
+      193958287.9351589,
+      194335618.06971923,
+      194736434.09035423,
+      195154080.5337771,
+      195583872.5589816,
+      196022523.05234286,
+      196467734.45593703,
+      196917908.23874876,
+      197376641.02309278,
+      197821895.45616862,
+      198259959.36632833,
+      199988563.37646893,
+      200448678.04144576,
+      200988370.35296994,
+      201496928.90866512,
+      201986485.5830443,
+      202464765.22483563,
+      202937364.67606968,
+      203407629.24567485,
+      204221582.88314402,
+      204724480.4288941,
+      205118506.92215502,
+      205445026.6539071,
+      205732535.3697371,
+      206000355.9249764,
+      206260942.28772932,
+      206522596.21705997
+    ],
+    "debt": [
+      71060508.5,
+      71072803.79696165,
+      71072803.79696165,
+      71072803.79696165,
+      71072803.79696165,
+      71072803.79696165,
+      71072803.79696165,
+      71072803.79696165,
+      71072803.79696165,
+      71072803.79696165,
+      71072803.79696165,
+      71072803.79696165,
+      71072803.79696165,
+      71072803.79696165,
+      71072803.79696165,
+      91382730.0495192,
+      91430042.13383213,
+      91495991.80107245,
+      91559465.50528818,
+      91624663.54453458,
+      91687377.71846427,
+      91751761.94510818,
+      91815726.40119112,
+      91873110.68952394,
+      91873110.68952394,
+      91873110.68952394,
+      91873110.68952394,
+      91873110.68952394,
+      91873110.68952394,
+      91873110.68952394,
+      91873110.68952394
+    ],
+    "treasuryBalance": [
+      0,
+      0,
+      44364.90414256905,
+      87755.14374393072,
+      133069.13999149494,
+      178870.41980967944,
+      223677.92922107968,
+      270493.00043165684,
+      316309.90712197963,
+      364198.6292961411,
+      412647.5543947693,
+      456927.85651490727,
+      506543.3922724904,
+      555145.0913456947,
+      605986.351965216,
+      16604.105514109768,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0,
+      167114.25452437976,
+      328619.3414880134,
+      495124.4653881688,
+      655791.1079221334,
+      821276.4146585818,
+      986205.853092198,
+      1145284.2445912773
+    ],
+    "receipts": [
+      0,
+      4425559.2930454975,
+      4431112.906731814,
+      4436734.087184955,
+      4442471.458258388,
+      4448356.3560872795,
+      4454408.034330109,
+      4460637.356314179,
+      4467049.408578774,
+      4473645.346237816,
+      4480423.69183848,
+      4487381.245931962,
+      4494518.99697256,
+      4501813.167693463,
+      4509248.176180255,
+      4516813.915550288,
+      4524528.772242392,
+      4532473.467521834,
+      4540602.188248481,
+      4548884.627539835,
+      4557300.909894042,
+      4565838.089309256,
+      4574487.749793499,
+      7196404.151991164,
+      7193747.13258423,
+      7189232.13012529,
+      7183546.05868994,
+      7177224.605455876,
+      7170679.704470908,
+      7164222.337765496,
+      7158082.49874719
+    ],
+    "outlays": [
+      3902420.34,
+      3903198.324915248,
+      3903198.324915248,
+      3903198.324915248,
+      3903198.324915248,
+      3903198.324915248,
+      3903198.324915248,
+      3903198.324915248,
+      3903198.324915248,
+      3903198.324915248,
+      3903198.324915248,
+      3903198.324915248,
+      3903198.324915248,
+      3903198.324915248,
+      3903198.324915248,
+      5196715.2918135,
+      5199749.769232514,
+      5204006.859950861,
+      5208127.695258088,
+      5212382.409692337,
+      5216494.254216574,
+      5220733.642473843,
+      5224961.825614003,
+      5228768.574526692,
+      5228768.574526692,
+      5228768.574526692,
+      5228768.574526692,
+      5228768.574526692,
+      5228768.574526692,
+      5228768.574526692,
+      5228768.574526692
+    ],
+    "stability": [
+      55,
+      54.184952001423056,
+      53.620357247960065,
+      53.230373670985166,
+      52.961482400373136,
+      52.77600965343711,
+      52.64751491104533,
+      52.55750975695866,
+      52.49312517418028,
+      52.445454612867906,
+      52.40837832128101,
+      52.39531851796459,
+      52.32380892604727,
+      52.218341453858855,
+      52.095231521723534,
+      52.04732518949221,
+      52.28164167063602,
+      52.39084496172715,
+      52.42072649862136,
+      52.40203849865241,
+      52.35515424457333,
+      52.29333142388409,
+      53.47704876865079,
+      53.524395041450994,
+      53.17212197179415,
+      52.57605619247769,
+      51.84268177269636,
+      51.04349355605845,
+      50.22401569257211,
+      49.414075459329815,
+      48.632542290597605
+    ],
+    "legitimacy": [
+      70,
+      69.82,
+      69.63865690018443,
+      69.45649080532394,
+      69.27385525641748,
+      69.09098733430797,
+      68.90804308209616,
+      68.7251224956107,
+      68.54228710879748,
+      68.35957232904734,
+      68.17699605582327,
+      67.99456467282087,
+      67.81230617150472,
+      67.63011041088691,
+      67.44791641604812,
+      73.26569497317959,
+      73.08357220327625,
+      72.9020052857005,
+      72.72074360565773,
+      72.53963204511408,
+      72.35857856449691,
+      72.1775320559997,
+      71.99646734522453,
+      71.54758828538476,
+      71.12028562905843,
+      70.71217569827618,
+      70.32132218674468,
+      69.94611907944827,
+      69.58520658603501,
+      69.23740865724017,
+      68.90169242722561
+    ],
+    "sectionalTension": [
+      20,
+      19.501065605894496,
+      19.078582744592783,
+      18.720728115159368,
+      18.41753217707963,
+      18.16058152508475,
+      17.94277098105157,
+      17.758096573338882,
+      17.601482278891176,
+      17.46863474563475,
+      17.355921276860354,
+      18.027858584383644,
+      18.596416050446294,
+      19.077471269121386,
+      19.48445769198563,
+      20.19260450528242,
+      20.735968248622182,
+      21.148481112428172,
+      21.457522042507083,
+      21.68513553922206,
+      21.849028665126998,
+      21.963386242311707,
+      22.403398153789972,
+      23.93711193885768,
+      25.40820315222969,
+      26.807540390475694,
+      28.12959722989659,
+      29.37605689230391,
+      30.57159994345001,
+      31.708406026872133,
+      32.78176490153098
+    ]
+  },
+  "lastEconomyRecomputeDay": 884,
+  "paused": true
+}

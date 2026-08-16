@@ -27,7 +27,12 @@
  */
 
 import { advanceDay } from './advanceDay';
-import { currentPolicy, enactPolicy, type ProposedPolicy } from './policy';
+import {
+  currentPolicy,
+  enactPolicy,
+  policyCapitalCost,
+  type ProposedPolicy,
+} from './policy';
 import type {
   ContentPack,
   GameState,
@@ -38,8 +43,27 @@ import type {
 export type { ProposedPolicy };
 export { currentPolicy, policyDiffers } from './policy';
 
-/** Content pack used for projections: the engine, with history switched off. */
-const NO_EVENTS: ContentPack = { version: 'projection', events: [], laws: [] };
+/**
+ * The content a projection runs against: the real pack with history switched
+ * off.
+ *
+ * EVENTS are dropped for the reasons in the header. OFFICES are kept, because
+ * the administration drives political capital accrual (ECONOMY.md §7.17) and a
+ * projection run against a country with no government would diverge from the
+ * played-out result — which is exactly the drift D-002 exists to prevent.
+ *
+ * Laws are dropped with the events: a projection answers "what does this policy
+ * do", and an unrelated statute unlocking mid-run would make the number
+ * unreadable.
+ */
+export function projectionContent(content: ContentPack): ContentPack {
+  return {
+    version: `${content.version}:projection`,
+    events: [],
+    laws: [],
+    offices: content.offices,
+  };
+}
 
 /** Default horizon. Long enough for lagged compliance and sentiment to register. */
 export const PROJECTION_DAYS = 365;
@@ -118,8 +142,10 @@ export function readProjection(state: GameState): PolicyProjection {
 export function projectPolicy(
   state: GameState,
   proposed: ProposedPolicy,
+  content: ContentPack,
   days: number = PROJECTION_DAYS,
 ): PolicyProjection {
+  const simContent = projectionContent(content);
   const clone: GameState = JSON.parse(JSON.stringify(state));
 
   // Clear anything that would halt the run. A projection must always finish.
@@ -136,10 +162,23 @@ export function projectPolicy(
   // produced a projection about 0.02% optimistic — small, but it was drift
   // between two code paths, which is exactly what this module exists to
   // prevent. One path means they cannot disagree.
+  /*
+    The projection must not be blocked by affordability. It answers "what would
+    this do", not "may I do this" — the second question is `canAffordPolicy`,
+    asked separately by the screen. So the clone is given whatever capital the
+    proposal costs before enacting it, and the cost is then charged normally, so
+    everything downstream of the spend still behaves identically.
+  */
+  const cost = policyCapitalCost(clone, proposed);
+  clone.politicalCapital = {
+    ...clone.politicalCapital,
+    current: Math.max(clone.politicalCapital.current, cost),
+  };
+
   let current = enactPolicy(clone, proposed).state;
 
   for (let i = 0; i < days; i++) {
-    current = advanceDay(current, NO_EVENTS).state;
+    current = advanceDay(current, simContent).state;
   }
 
   const projection = readProjection(current);
@@ -157,11 +196,12 @@ export function projectPolicy(
 export function comparePolicies(
   state: GameState,
   proposed: ProposedPolicy,
+  content: ContentPack,
   days: number = PROJECTION_DAYS,
 ): { current: PolicyProjection; proposed: PolicyProjection } {
   return {
-    current: projectPolicy(state, currentPolicy(state), days),
-    proposed: projectPolicy(state, proposed, days),
+    current: projectPolicy(state, currentPolicy(state), content, days),
+    proposed: projectPolicy(state, proposed, content, days),
   };
 }
 

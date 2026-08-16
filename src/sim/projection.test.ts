@@ -17,7 +17,7 @@ import {
   type GameState,
 } from './types';
 
-const EMPTY: ContentPack = { version: 'test', events: [], laws: [] };
+const EMPTY: ContentPack = { version: 'test', events: [], laws: [], offices: [] };
 
 const policyOf = currentPolicy;
 
@@ -29,6 +29,22 @@ function withRate(
 ): ProposedPolicy {
   const p = currentPolicy(state);
   return { ...p, rates: { ...p.rates, [taxId]: rate } };
+}
+
+/**
+ * A state with capital to burn.
+ *
+ * These tests are about the economy, not about affordability — political
+ * capital is gated separately and tested in politicalCapital.test.ts. Topping
+ * the reserve up keeps each test asking one question. A test that failed here
+ * because a government could not afford the change would be reporting the wrong
+ * thing.
+ */
+function funded(state: GameState): GameState {
+  return {
+    ...state,
+    politicalCapital: { ...state.politicalCapital, current: 500, cap: 500 },
+  };
 }
 
 function withTariff(state: GameState, rate: number): ProposedPolicy {
@@ -49,7 +65,7 @@ describe('the projection uses the real engine', () => {
     const state = createTestGame();
     const proposed = withTariff(state, 0.2);
 
-    const projected = projectPolicy(state, proposed, 200);
+    const projected = projectPolicy(state, proposed, EMPTY, 200);
 
     // Now actually play it: enact, then run the same 200 days.
     let played = enactPolicy(state, proposed).state;
@@ -70,7 +86,7 @@ describe('the projection uses the real engine', () => {
   it('does not mutate the state it projects from', () => {
     const state = createTestGame();
     const before = JSON.parse(JSON.stringify(state));
-    projectPolicy(state, withTariff(state, 0.35), 120);
+    projectPolicy(state, withTariff(state, 0.35), EMPTY, 120);
     expect(state).toEqual(before);
   });
 
@@ -78,15 +94,15 @@ describe('the projection uses the real engine', () => {
     const state = createTestGame();
     // Day 400+ is well past the first event trigger. A projection that fired
     // it would block forever on a pending decision.
-    const projection = projectPolicy(state, policyOf(state), 500);
+    const projection = projectPolicy(state, policyOf(state), EMPTY, 500);
     expect(projection.daysSimulated).toBe(500);
     expect(Number.isFinite(projection.totalReceipts)).toBe(true);
   });
 
   it('is deterministic', () => {
     const state = createTestGame();
-    const a = projectPolicy(state, withTariff(state, 0.18), 300);
-    const b = projectPolicy(state, withTariff(state, 0.18), 300);
+    const a = projectPolicy(state, withTariff(state, 0.18), EMPTY, 300);
+    const b = projectPolicy(state, withTariff(state, 0.18), EMPTY, 300);
     expect(a).toEqual(b);
   });
 });
@@ -95,14 +111,14 @@ describe('the projection reproduces the tariff curve (ECONOMY.md §7.5)', () => 
   const state = createTestGame();
 
   it('raising the tariff from 5% to 20% increases projected customs revenue', () => {
-    const low = projectPolicy(state, withTariff(state, 0.05), 120);
-    const high = projectPolicy(state, withTariff(state, 0.2), 120);
+    const low = projectPolicy(state, withTariff(state, 0.05), EMPTY, 120);
+    const high = projectPolicy(state, withTariff(state, 0.2), EMPTY, 120);
     expect(high.receipts.customs).toBeGreaterThan(low.receipts.customs);
   });
 
   it('raising the tariff from 25% to 40% DECREASES projected customs revenue', () => {
-    const peak = projectPolicy(state, withTariff(state, 0.25), 120);
-    const punitive = projectPolicy(state, withTariff(state, 0.4), 120);
+    const peak = projectPolicy(state, withTariff(state, 0.25), EMPTY, 120);
+    const punitive = projectPolicy(state, withTariff(state, 0.4), EMPTY, 120);
     expect(punitive.receipts.customs).toBeLessThan(peak.receipts.customs);
   });
 
@@ -110,7 +126,7 @@ describe('the projection reproduces the tariff curve (ECONOMY.md §7.5)', () => 
     let bestRate = 0;
     let best = -Infinity;
     for (let rate = 0.05; rate <= 0.45001; rate += 0.025) {
-      const revenue = projectPolicy(state, withTariff(state, rate), 60).receipts
+      const revenue = projectPolicy(state, withTariff(state, rate), EMPTY, 60).receipts
         .customs;
       if (revenue > best) {
         best = revenue;
@@ -131,16 +147,16 @@ describe('the projection includes lagged compliance (ECONOMY.md §7.7)', () => {
   const state = createTestGame();
 
   it('a heavy excise shows frontier compliance collapsing in the projection', () => {
-    const modest = projectPolicy(state, withExcise(state, 0.05), 365);
-    const heavy = projectPolicy(state, withExcise(state, 0.3), 365);
+    const modest = projectPolicy(state, withExcise(state, 0.05), EMPTY, 365);
+    const heavy = projectPolicy(state, withExcise(state, 0.3), EMPTY, 365);
     expect(heavy.regionCompliance.frontier).toBeLessThan(
       modest.regionCompliance.frontier,
     );
   });
 
   it('projected excise revenue rises by less than the rate multiple implies', () => {
-    const modest = projectPolicy(state, withExcise(state, 0.05), 365);
-    const heavy = projectPolicy(state, withExcise(state, 0.3), 365);
+    const modest = projectPolicy(state, withExcise(state, 0.05), EMPTY, 365);
+    const heavy = projectPolicy(state, withExcise(state, 0.3), EMPTY, 365);
 
     const rateMultiple = 0.3 / 0.05; // 6x
     const revenueMultiple = heavy.receipts.excise / modest.receipts.excise;
@@ -150,7 +166,7 @@ describe('the projection includes lagged compliance (ECONOMY.md §7.7)', () => {
   });
 
   it('hits the frontier harder than any other region', () => {
-    const heavy = projectPolicy(state, withExcise(state, 0.3), 365);
+    const heavy = projectPolicy(state, withExcise(state, 0.3), EMPTY, 365);
     for (const id of ['new_england', 'mid_atlantic', 'south']) {
       expect(heavy.regionCompliance.frontier).toBeLessThan(
         heavy.regionCompliance[id],
@@ -162,14 +178,14 @@ describe('the projection includes lagged compliance (ECONOMY.md §7.7)', () => {
 describe('comparing policies', () => {
   it('simulates both columns over the same horizon so they are comparable', () => {
     const state = createTestGame();
-    const { current, proposed } = comparePolicies(state, withTariff(state, 0.2), 200);
+    const { current, proposed } = comparePolicies(state, withTariff(state, 0.2), EMPTY, 200);
     expect(current.daysSimulated).toBe(200);
     expect(proposed.daysSimulated).toBe(200);
   });
 
   it('an unchanged policy projects identically to the current one', () => {
     const state = createTestGame();
-    const { current, proposed } = comparePolicies(state, policyOf(state), 150);
+    const { current, proposed } = comparePolicies(state, policyOf(state), EMPTY, 150);
     expect(proposed.totalReceipts).toBeCloseTo(current.totalReceipts, 6);
     expect(proposed.annualBalance).toBeCloseTo(current.annualBalance, 6);
   });
@@ -211,7 +227,7 @@ describe('enacting policy', () => {
   });
 
   it('does not mutate the input state', () => {
-    const state = createTestGame();
+    const state = funded(createTestGame());
     const before = JSON.parse(JSON.stringify(state));
     enactPolicy(state, withTariff(state, 0.3));
     expect(state).toEqual(before);
@@ -282,7 +298,7 @@ describe('enacting policy', () => {
     });
 
     it('the cost is visible in the ledger and expires on schedule', () => {
-      const state = createTestGame();
+      const state = funded(createTestGame());
       const enacted = enactPolicy(state, withTariff(state, 0.3)).state;
       const modifier = enacted.activeModifiers[0];
 
@@ -305,7 +321,7 @@ describe('the causal chain is observable end to end', () => {
    * through the economy over subsequent weeks and months in a traceable way.
    */
   it('receipts move within weeks, sentiment moves over months', () => {
-    const state = createTestGame();
+    const state = funded(createTestGame());
     const enacted = enactPolicy(state, withExcise(state, 0.25)).state;
 
     const at = (days: number) => {

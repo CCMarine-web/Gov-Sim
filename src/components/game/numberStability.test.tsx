@@ -74,9 +74,12 @@ describe('displayed numbers under a running clock', () => {
     expect(seen.length).toBeGreaterThan(0);
 
     for (const frame of seen) {
-      // The command bar renders six stats. A frame missing any of them is a
-      // number that dropped out.
-      expect(Object.keys(frame).length).toBe(6);
+      // The command bar renders seven stats — Treasury, Debt, Capital,
+      // Stability, Legitimacy, Population, GDP. A frame missing any of them is
+      // a number that dropped out. The count is asserted rather than a subset
+      // checked, so a stat losing its label (and colliding on the empty key)
+      // fails here rather than passing quietly.
+      expect(Object.keys(frame).length).toBe(7);
       for (const [label, value] of Object.entries(frame)) {
         expect(value, `${label} was blank`).not.toBe('');
         expect(value, `${label} showed NaN`).not.toMatch(/NaN/);

@@ -1,0 +1,107 @@
+/**
+ * GENERATE A SAVE FIXTURE FOR AN OLD SCHEMA VERSION
+ *
+ *   npx tsx scripts/make-fixture.mts <version>
+ *
+ * Writes `src/sim/migrations/fixtures/v<version>-republic-day900.json`, a real
+ * save in that version's format, and REFUSES TO OVERWRITE ONE THAT EXISTS.
+ *
+ * That refusal is the important part. A fixture rebuilt from current code stops
+ * being a record of the old format and becomes a restatement of the new one,
+ * which makes its migration test pass by construction and prove nothing. The
+ * rule used to be a comment; it is now behaviour.
+ *
+ * HOW AN OLD SHAPE IS PRODUCED
+ * A current game is simulated to day 900 — 16 October 1791, past the whiskey
+ * excise, so the fixture carries a non-zero excise rate and tests something —
+ * and then DOWNGRADED by hand. Each downgrade below is written at the moment
+ * the corresponding fields were removed, so the old shape is known precisely
+ * rather than reconstructed later from memory.
+ */
+
+import { existsSync, writeFileSync } from 'node:fs';
+import { advanceDay, resolveDecision } from '../src/sim/advanceDay.js';
+import { createTestGame } from '../src/sim/createGame.js';
+import { PHASE_1_CONTENT } from '../src/content/index.js';
+import { aggregateRate, spendingFor } from '../src/sim/taxes.js';
+import type { GameState } from '../src/sim/types.js';
+
+const version = Number(process.argv[2]);
+if (!Number.isInteger(version) || version < 1) {
+  console.error('usage: npx tsx scripts/make-fixture.mts <schema version>');
+  process.exit(1);
+}
+
+const path = `src/sim/migrations/fixtures/v${version}-republic-day900.json`;
+if (existsSync(path)) {
+  console.error(
+    `${path} already exists and will NOT be regenerated.\n` +
+      'A fixture rebuilt from current code restates the new format instead of\n' +
+      'recording the old one, and its migration test would pass by construction.\n' +
+      'Delete it deliberately if you are certain.',
+  );
+  process.exit(1);
+}
+
+// --- Play a real game to day 900 -------------------------------------------
+let state: GameState = createTestGame();
+for (let i = 0; i < 900; i++) {
+  state = advanceDay(state, PHASE_1_CONTENT).state;
+  while (state.eventState.pendingDecisions.length > 0) {
+    const pending = state.eventState.pendingDecisions[0];
+    const event = PHASE_1_CONTENT.events.find((e) => e.id === pending.eventId)!;
+    state = resolveDecision(
+      state,
+      PHASE_1_CONTENT,
+      pending.eventId,
+      event.options[0].id,
+    ).state;
+  }
+}
+
+// --- Downgrade to the requested format --------------------------------------
+type Loose = Record<string, unknown>;
+
+/** v3 → v2: political capital and administrative capacity did not exist. */
+function downgradeToV2(current: Loose): Loose {
+  const nation = { ...(current.nation as Loose) };
+  delete nation.administrativeCapacity;
+
+  const out = { ...current, schemaVersion: 2, nation };
+  delete (out as Loose).politicalCapital;
+  return out;
+}
+
+/** v2 → v1: three tax rates and three spending lines, no attribution lines. */
+function downgradeToV1(current: Loose, played: GameState): Loose {
+  const treasury = { ...(current.treasury as Loose) };
+  delete treasury.receiptLines;
+  delete treasury.outlayLines;
+
+  return {
+    ...current,
+    schemaVersion: 1,
+    policies: {
+      taxRates: {
+        tariffAvg: aggregateRate(played.policies, played.day, 'imports'),
+        excise: aggregateRate(played.policies, played.day, 'spirits'),
+        landTax: aggregateRate(played.policies, played.day, 'land'),
+      },
+      spending: {
+        military: spendingFor(played.policies, played.day, 'military'),
+        civil: spendingFor(played.policies, played.day, 'civil'),
+        infrastructure: spendingFor(played.policies, played.day, 'infrastructure'),
+      },
+      enactedLawIds: played.policies.enactedLawIds,
+      cumulativeInfrastructure: played.policies.cumulativeInfrastructure,
+    },
+    treasury,
+  };
+}
+
+let fixture: Loose = JSON.parse(JSON.stringify(state));
+if (version <= 2) fixture = downgradeToV2(fixture);
+if (version <= 1) fixture = downgradeToV1(fixture, state);
+
+writeFileSync(path, JSON.stringify(fixture, null, 2) + '\n', 'utf8');
+console.log(`wrote ${path} — schemaVersion ${fixture.schemaVersion}, day ${fixture.day}`);

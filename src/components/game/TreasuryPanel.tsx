@@ -23,9 +23,10 @@
  */
 
 import { useEffect, useMemo, useRef, useState } from 'react';
+import { PHASE_1_CONTENT } from '@/content';
 import { formatLongDate } from '@/sim/calendar';
 import { TARIFF_REVENUE_PEAK } from '@/sim/calibration';
-import { policyLegitimacyCost } from '@/sim/policy';
+import { canAffordPolicy, policyLegitimacyCost } from '@/sim/policy';
 import {
   PROJECTION_DAYS,
   comparePolicies,
@@ -132,7 +133,7 @@ export function TreasuryPanel({ state }: { state: GameState }) {
           forDraft: draft,
           forBasis: projectionBasisKey(from),
           asAtDay: from.day,
-          ...comparePolicies(from, draft),
+          ...comparePolicies(from, draft, PHASE_1_CONTENT),
         });
       },
       computedOnce.current ? DEBOUNCE_MS : 0,
@@ -146,6 +147,19 @@ export function TreasuryPanel({ state }: { state: GameState }) {
     [state, draft],
   );
 
+  /**
+   * Whether the government can afford to act, and why not if it cannot.
+   *
+   * The reason is computed in `src/sim/` rather than here (Rule 7), and it is a
+   * sentence rather than a boolean, because a control that refuses without
+   * saying why is the same failure the modifier ledger exists to prevent —
+   * applied to actions instead of numbers. (brief §2.2)
+   */
+  const affordability = useMemo(
+    () => canAffordPolicy(state, draft),
+    [state, draft],
+  );
+
   function setRate(taxId: string, value: number) {
     setDraft((d) => ({ ...d, rates: { ...d.rates, [taxId]: value } }));
   }
@@ -154,8 +168,11 @@ export function TreasuryPanel({ state }: { state: GameState }) {
     setDraft((d) => ({ ...d, amounts: { ...d.amounts, [programId]: value } }));
   }
 
+  /** Both gates. `enactPolicy` throws if the second is skipped, deliberately. */
+  const canEnact = dirty && affordability.ok;
+
   function enact() {
-    if (!dirty) return;
+    if (!canEnact) return;
     enactBudget(draft);
   }
 
@@ -328,13 +345,30 @@ export function TreasuryPanel({ state }: { state: GameState }) {
           </p>
         )}
 
+        {/* The price of acting, stated before the player commits. */}
+        {dirty && (
+          <p
+            className={`mt-2 text-small ${
+              affordability.ok ? 'text-content-secondary' : 'text-oxblood-300'
+            }`}
+            data-testid="capital-cost"
+          >
+            Political capital:{' '}
+            <span className="tabular">{affordability.cost.toFixed(1)}</span> of{' '}
+            <span className="tabular">{affordability.available.toFixed(1)}</span>{' '}
+            available.
+            {affordability.reason && ` ${affordability.reason}`}
+          </p>
+        )}
+
         <div className="mt-3 flex items-center gap-2 border-t border-ink-400 pt-3">
           <button
             type="button"
             onClick={enact}
-            disabled={!dirty}
+            disabled={!canEnact}
+            title={affordability.reason ?? undefined}
             className={`rounded-card border px-4 py-2 text-body transition-colors ${
-              dirty
+              canEnact
                 ? 'border-brass-400 bg-brass-400 text-ink-900 hover:bg-brass-300'
                 : 'cursor-not-allowed border-ink-400 text-content-disabled'
             }`}

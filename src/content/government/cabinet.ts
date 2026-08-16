@@ -19,27 +19,21 @@
  * Dates verified 2026-08-15. Sources listed on each office.
  */
 
-export interface Tenure {
-  name: string;
-  /** ISO date the holder took office. */
-  from: string;
-  /** ISO date they left, or null if still in office at the end of Phase 1. */
-  to: string | null;
-  note?: string;
-}
+/*
+  `Office` and `Tenure` moved to src/sim/types.ts in Phase 2 item 4, because the
+  ENGINE now reads them: how much of the administration exists and is staffed
+  drives political capital accrual (ECONOMY.md §7.17). Content still declares
+  the tenures; the engine interprets them. Re-exported here so nothing that
+  imported them from this file had to change.
+*/
+import type { Office, Tenure } from '@/sim/types';
 
-export interface Office {
-  id: string;
-  title: string;
-  /** Shown when no holder is in office — the department did not yet exist. */
-  createdOn: string;
-  tenures: Tenure[];
-  sources: string[];
-}
+export type { Office, Tenure } from '@/sim/types';
 
 const CABINET_SOURCES = [
   'US Senate, "First Cabinet Confirmation"',
   'Mount Vernon Ladies’ Association, "Cabinet Members"',
+  'US Department of State, Office of the Historian, "Secretaries of State"',
 ];
 
 export const OFFICES: Office[] = [
@@ -76,17 +70,35 @@ export const OFFICES: Office[] = [
       },
       { name: 'Edmund Randolph', from: '1794-01-02', to: '1795-08-20' },
       { name: 'Timothy Pickering', from: '1795-08-20', to: '1800-05-12' },
+      {
+        name: 'John Marshall',
+        from: '1800-06-06',
+        to: '1800-12-31',
+        note:
+          'Adams dismissed Pickering and appointed Marshall, who entered on ' +
+          'duty 6 June 1800 and served until 4 February 1801 — overlapping his ' +
+          'own first weeks as Chief Justice.',
+      },
     ],
   },
   {
     id: 'war',
     title: 'Secretary of War',
     createdOn: '1789-08-07',
-    sources: CABINET_SOURCES,
+    sources: [...CABINET_SOURCES, 'US Army Center of Military History, "Secretaries of War"'],
     tenures: [
       { name: 'Henry Knox', from: '1789-09-12', to: '1794-12-31' },
       { name: 'Timothy Pickering', from: '1795-01-02', to: '1796-02-05' },
       { name: 'James McHenry', from: '1796-02-06', to: '1800-05-31' },
+      {
+        name: 'Samuel Dexter',
+        from: '1800-06-12',
+        to: '1800-12-31',
+        note:
+          'Moved to the Treasury on 1 January 1801, holding both departments ' +
+          'briefly. Benjamin Stoddert of the Navy covered the War Department ad ' +
+          'interim in the weeks between McHenry and Dexter.',
+      },
     ],
   },
   {

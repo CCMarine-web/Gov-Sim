@@ -684,6 +684,19 @@ export const EVENTS_1790S: GameEvent[] = [
             durationDays: 1825,
           },
           { kind: 'setFlag', key: 'rebellion_suppressed', value: true },
+          /*
+            EMERGENCY POWERS. Not a game abstraction bolted onto the event: the
+            Militia Act of 1792 required a Supreme Court justice to certify that
+            ordinary judicial proceedings were obstructed before the President
+            could call out the militia against citizens. Justice James Wilson so
+            certified on 4 August 1794. That certification IS the historical
+            emergency-powers mechanism, and this is what it bought.
+          */
+          {
+            kind: 'grantEmergencyPowers',
+            reason: 'the insurrection in the western counties',
+            durationDays: 270,
+          },
         ],
       },
       {

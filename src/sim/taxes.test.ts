@@ -48,7 +48,7 @@ import {
   type GameState,
 } from './types';
 
-const EMPTY: ContentPack = { version: 'test', events: [], laws: [] };
+const EMPTY: ContentPack = { version: 'test', events: [], laws: [], offices: [] };
 
 function run(state: GameState, days: number): GameState {
   let current = state;
