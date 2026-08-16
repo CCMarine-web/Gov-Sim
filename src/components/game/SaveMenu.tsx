@@ -10,7 +10,8 @@
  * this browser only rather than implying a sync that is not happening.
  */
 
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
+import { useFocusTrap } from '@/components/primitives/useFocusTrap';
 import { formatLongDate } from '@/sim/calendar';
 import { getGameState, loadGame as adoptGame } from '@/runtime/gameLoop';
 import { PHASE_1_CONTENT } from '@/content';
@@ -37,6 +38,7 @@ export function SaveMenu({ onClose }: { onClose: () => void }) {
   const [email, setEmail] = useState('');
   const [signedInAs, setSignedInAs] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
+  const dialogRef = useRef<HTMLDivElement>(null);
 
   const refresh = useCallback(async () => {
     const result = await listSaves();
@@ -79,13 +81,9 @@ export function SaveMenu({ onClose }: { onClose: () => void }) {
     };
   }, []);
 
-  useEffect(() => {
-    function onKey(e: KeyboardEvent) {
-      if (e.key === 'Escape') onClose();
-    }
-    document.addEventListener('keydown', onKey);
-    return () => document.removeEventListener('keydown', onKey);
-  }, [onClose]);
+  // Unlike the event modal, this one closes on Escape: nothing here is
+  // blocking, so trapping the player inside it would be gratuitous.
+  useFocusTrap(dialogRef, { onEscape: onClose });
 
   async function doSave(slot: number) {
     const state = getGameState();
@@ -182,6 +180,7 @@ export function SaveMenu({ onClose }: { onClose: () => void }) {
   return (
     <div className="fixed inset-0 z-[110] flex items-center justify-center bg-ink-900/70 p-6">
       <div
+        ref={dialogRef}
         role="dialog"
         aria-modal="true"
         aria-labelledby="save-menu-title"

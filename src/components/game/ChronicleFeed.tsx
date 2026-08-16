@@ -18,7 +18,19 @@ import { formatLongDate } from '@/sim/calendar';
 import type { LogEntry } from '@/sim/types';
 import { useGameStore } from '@/store/gameStore';
 
-export function ChronicleFeed() {
+/** Number of decision entries needing attention, for the drawer badge. */
+export function usePendingCount(): number {
+  return useGameStore((s) => s.snapshot?.eventState.pendingDecisions.length ?? 0);
+}
+
+export function ChronicleFeed({
+  variant = 'column',
+  onClose,
+}: {
+  /** `column` is the fixed right zone; `drawer` is the collapsed form below 1280px. */
+  variant?: 'column' | 'drawer';
+  onClose?: () => void;
+}) {
   const snapshot = useGameStore((s) => s.snapshot);
   if (!snapshot) return null;
 
@@ -27,12 +39,27 @@ export function ChronicleFeed() {
 
   return (
     <aside
-      className="flex w-[320px] shrink-0 flex-col border-l border-ink-400 bg-ink-800"
+      className={
+        variant === 'column'
+          ? 'hidden w-[320px] shrink-0 flex-col border-l border-ink-400 bg-ink-800 xl:flex'
+          : 'flex h-full w-[min(320px,85vw)] flex-col border-l border-ink-400 bg-ink-800'
+      }
       aria-label="Chronicle"
     >
-      <h2 className="border-b border-ink-400 px-3 py-2 text-label uppercase tracking-wider text-content-muted">
-        Chronicle
-      </h2>
+      <div className="flex items-center justify-between border-b border-ink-400 px-3 py-2">
+        <h2 className="text-label uppercase tracking-wider text-content-muted">
+          Chronicle
+        </h2>
+        {onClose && (
+          <button
+            type="button"
+            onClick={onClose}
+            className="text-small text-content-secondary hover:text-content-primary"
+          >
+            Close
+          </button>
+        )}
+      </div>
 
       <div className="min-h-0 flex-1 overflow-y-auto">
         {/*

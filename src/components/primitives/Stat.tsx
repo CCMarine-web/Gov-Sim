@@ -86,9 +86,14 @@ export function Stat({
       onMouseEnter={() => interactive && setOpen(true)}
       onMouseLeave={() => setOpen(false)}
     >
-      <span className="text-label uppercase tracking-wider text-content-muted">
-        {label}
-      </span>
+      {/* Omitted entirely when empty — an empty label element would take up
+          space and be announced as a blank by a screen reader. Callers that
+          supply no label render their own alongside. */}
+      {label && (
+        <span className="text-label uppercase tracking-wider text-content-muted">
+          {label}
+        </span>
+      )}
 
       <button
         type="button"

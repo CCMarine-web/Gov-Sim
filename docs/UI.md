@@ -53,7 +53,7 @@ All values are Tailwind theme tokens. **No arbitrary hex values in components** 
 |---|---|---|---|
 | `text-primary` | `#E8E4DA` | **14.41:1** | Primary text and data |
 | `text-secondary` | `#A8A396` | **7.27:1** | Labels, supporting text |
-| `text-muted` | `#8A857A` | **4.98:1** | De-emphasized but still readable content |
+| `text-muted` | `#979286` | **5.90:1** | De-emphasized but still readable content |
 | `text-disabled` | `#6F6B61` | 3.44:1 | **Disabled states only** — never carries information |
 
 **Brass** — the player's authority, primary actions
@@ -69,7 +69,7 @@ All values are Tailwind theme tokens. **No arbitrary hex values in components** 
 
 | Token | Hex | Contrast | Use |
 |---|---|---|---|
-| `oxblood-300` | `#C86B60` | 4.99:1 on ink-800 | **Danger text on dark** |
+| `oxblood-300` | `#D07A6F` | 5.83:1 on ink-800 | **Danger text on dark** |
 | `oxblood-400` | `#A34A42` | 3.15:1 on ink-800 | Fills, borders, large text — **not body text** |
 | `oxblood-600` | `#6E2C26` | 8.30:1 on parchment-100 | Danger text on parchment |
 
@@ -88,6 +88,17 @@ All values are Tailwind theme tokens. **No arbitrary hex values in components** 
 | `steel-600` | `#45597A` | 5.75:1 on parchment-100 | Historical text on parchment |
 
 > **All contrast ratios above were computed, not estimated.** Every value used for text meets WCAG AA (≥4.5:1 for body, ≥3:1 for large text and UI components). `ink-400` borders sit at 1.87:1 against the background and are therefore **decorative only** — a border may never be the sole carrier of meaning.
+
+> **Audited against the surfaces actually in use, 2026-08-15.** The original check only measured text against `ink-800`, the app background. Re-running it against every ground a colour is really drawn on — `ink-700` panels, `ink-600` cards, `parchment-100`, and `brass-400` button fills — found **two failures**, both invisible to the first pass:
+>
+> | Token | On `ink-800` | On `ink-600` | Where it mattered |
+> |---|---:|---:|---|
+> | `text-muted` `#8A857A` | 4.98 ✓ | **4.02 ✗** | Save-menu rows, founding cards |
+> | `oxblood-300` `#C86B60` | 4.99 ✓ | **4.03 ✗** | Blocked event options stating their reason |
+>
+> Both were lightened — to `#979286` and `#D07A6F` — and **all 30 text-on-ground combinations now clear 4.5:1.**
+>
+> The lesson is worth keeping: checking a palette against one background proves considerably less than it appears to. Both failures were on the surfaces where the text carried the most important information — why a save is which, and why an option is unavailable.
 
 > **Steel is reserved.** No simulated value, and no UI chrome, may use a steel token. This makes "is this real history or my run?" answerable at a glance anywhere in the app. Paired with a text label in every case (§9) — never color alone.
 

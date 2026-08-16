@@ -16,7 +16,8 @@ import { setSpeed, toggle } from '@/runtime/gameLoop';
 import { useGameStore } from '@/store/gameStore';
 import { startAutosave, stopAutosave } from '@/lib/saves/autosave';
 import { CommandBar } from './CommandBar';
-import { ChronicleFeed } from './ChronicleFeed';
+import { ChronicleFeed, usePendingCount } from './ChronicleFeed';
+import { KeyboardHelp } from './KeyboardHelp';
 import { EventModal } from './EventModal';
 import { LeftNav, type SectionId } from './LeftNav';
 import { SaveMenu } from './SaveMenu';
@@ -39,6 +40,9 @@ export function GameShell() {
   const snapshot = useGameStore((s) => s.snapshot);
   const [section, setSection] = useState<SectionId>('desk');
   const [savesOpen, setSavesOpen] = useState(false);
+  const [feedOpen, setFeedOpen] = useState(false);
+  const [helpOpen, setHelpOpen] = useState(false);
+  const pendingCount = usePendingCount();
 
   // Autosave subscribes to the store, never to the tick. Idempotent, so Strict
   // Mode's double-invoke does not double-subscribe.
@@ -85,6 +89,16 @@ export function GameShell() {
       case '3':
         setSpeed(5);
         break;
+      case '?':
+        setHelpOpen(true);
+        break;
+      case 'Escape':
+        // The event modal handles its own Escape by refusing it; these are the
+        // dismissible overlays.
+        setHelpOpen(false);
+        setSavesOpen(false);
+        setFeedOpen(false);
+        break;
     }
   }, []);
 
@@ -117,13 +131,36 @@ export function GameShell() {
             <h1 className="font-serif text-h1 text-content-primary">
               {SECTION_TITLE[section]}
             </h1>
-            <button
-              type="button"
-              onClick={() => setSavesOpen(true)}
-              className="rounded-card border border-ink-400 px-3 py-1 text-small text-content-secondary hover:bg-ink-500"
-            >
-              Saved games
-            </button>
+            <div className="flex items-center gap-2">
+              {/* Only reachable below 1280px, where the feed is collapsed. */}
+              <button
+                type="button"
+                onClick={() => setFeedOpen(true)}
+                aria-label={
+                  pendingCount > 0
+                    ? `Open chronicle, ${pendingCount} decision${pendingCount === 1 ? '' : 's'} awaiting you`
+                    : 'Open chronicle'
+                }
+                className="flex items-center gap-1.5 rounded-card border border-ink-400 px-3 py-1 text-small text-content-secondary hover:bg-ink-500 xl:hidden"
+              >
+                Chronicle
+                {pendingCount > 0 && (
+                  <span
+                    aria-hidden
+                    className="rounded bg-brass-400 px-1 text-small text-ink-900"
+                  >
+                    {pendingCount}
+                  </span>
+                )}
+              </button>
+              <button
+                type="button"
+                onClick={() => setSavesOpen(true)}
+                className="rounded-card border border-ink-400 px-3 py-1 text-small text-content-secondary hover:bg-ink-500"
+              >
+                Saved games
+              </button>
+            </div>
           </div>
 
           {section === 'desk' && <Desk state={snapshot} />}
@@ -135,10 +172,29 @@ export function GameShell() {
           {section === 'chronicle' && <Chronicle state={snapshot} />}
         </main>
 
-        <ChronicleFeed />
+        {/* Fixed right zone at 1280px and above. */}
+        <ChronicleFeed variant="column" />
       </div>
 
+      {/*
+        Below 1280px the feed collapses to a drawer (UI.md §11). It is not
+        simply hidden: a decision entry is persistent and must stay reachable
+        at every width, which is what the badge on the toggle is for.
+      */}
+      {feedOpen && (
+        <div className="fixed inset-0 z-[90] flex justify-end xl:hidden">
+          <button
+            type="button"
+            aria-label="Close chronicle"
+            onClick={() => setFeedOpen(false)}
+            className="flex-1 bg-ink-900/60"
+          />
+          <ChronicleFeed variant="drawer" onClose={() => setFeedOpen(false)} />
+        </div>
+      )}
+
       {savesOpen && <SaveMenu onClose={() => setSavesOpen(false)} />}
+      {helpOpen && <KeyboardHelp onClose={() => setHelpOpen(false)} />}
 
       {/* Rendered last so a decision always sits above the save menu. */}
       {pendingEvent && <EventModal event={pendingEvent} state={snapshot} />}

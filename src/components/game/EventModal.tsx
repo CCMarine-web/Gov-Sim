@@ -15,7 +15,8 @@
  * backbone of the game, not a footnote. (UI.md §5.10)
  */
 
-import { useEffect, useRef } from 'react';
+import { useRef } from 'react';
+import { useFocusTrap } from '@/components/primitives/useFocusTrap';
 import { evaluateAll, describeUnmet } from '@/sim/conditions';
 import { formatLongDate } from '@/sim/calendar';
 import type { GameEvent, GameState } from '@/sim/types';
@@ -30,38 +31,8 @@ export function EventModal({
 }) {
   const dialogRef = useRef<HTMLDivElement>(null);
 
-  // Trap focus. Escape is deliberately not handled: a decision cannot be
-  // dismissed, only answered.
-  useEffect(() => {
-    const node = dialogRef.current;
-    if (!node) return;
-
-    const previouslyFocused = document.activeElement as HTMLElement | null;
-    const focusables = node.querySelectorAll<HTMLElement>('button:not([disabled])');
-    focusables[0]?.focus();
-
-    function onKeyDown(e: KeyboardEvent) {
-      if (e.key !== 'Tab' || !node) return;
-      const items = node.querySelectorAll<HTMLElement>('button:not([disabled])');
-      if (items.length === 0) return;
-      const first = items[0];
-      const last = items[items.length - 1];
-
-      if (e.shiftKey && document.activeElement === first) {
-        e.preventDefault();
-        last.focus();
-      } else if (!e.shiftKey && document.activeElement === last) {
-        e.preventDefault();
-        first.focus();
-      }
-    }
-
-    document.addEventListener('keydown', onKeyDown);
-    return () => {
-      document.removeEventListener('keydown', onKeyDown);
-      previouslyFocused?.focus();
-    };
-  }, []);
+  // No onEscape: a decision cannot be dismissed, only answered.
+  useFocusTrap(dialogRef);
 
   function choose(optionId: string) {
     // Answering clears the pending decision, which unmounts this modal. The

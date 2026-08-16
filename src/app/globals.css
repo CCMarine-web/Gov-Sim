@@ -33,7 +33,12 @@
   /* --- Text. Contrast measured against ink-800. -------------------------- */
   --color-content-primary: #e8e4da; /* 14.41:1  AA body */
   --color-content-secondary: #a8a396; /*  7.27:1  AA body */
-  --color-content-muted: #8a857a; /*  4.98:1  AA body */
+  /* Lightened from #8a857a during the accessibility audit. The old value was
+     4.98:1 on ink-800 but only 4.02:1 on ink-600 — below AA — and ink-600 is
+     the ground for save-menu rows and founding cards. This value clears 4.5
+     on every surface muted text actually appears on:
+       ink-800 5.90 · ink-700 5.38 · ink-600 4.76                          */
+  --color-content-muted: #979286;
   --color-content-disabled: #6f6b61; /*  3.44:1  DISABLED STATES ONLY */
 
   /* --- Brass. The player's authority; primary actions. ------------------- */
@@ -43,7 +48,11 @@
   --color-brass-focus: #e0c060; /* 10.35:1 on ink-800 — focus ring */
 
   /* --- Oxblood. Danger, deficit, crisis. --------------------------------- */
-  --color-oxblood-300: #c86b60; /*  4.99:1 on ink-800 — danger TEXT */
+  /* Lightened from #c86b60 during the accessibility audit, for the same reason
+     as content-muted: 4.99 on ink-800 but 4.03 on ink-600, which is the ground
+     for event-modal option cards where a blocked option states its reason.
+       ink-800 5.83 · ink-700 5.32 · ink-600 4.71                          */
+  --color-oxblood-300: #d07a6f; /* danger TEXT on dark */
   --color-oxblood-400: #a34a42; /*  3.15:1 — fills/borders, NOT body text */
   --color-oxblood-600: #6e2c26; /*  8.30:1 on parchment-100 */
 
