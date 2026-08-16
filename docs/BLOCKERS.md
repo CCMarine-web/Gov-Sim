@@ -41,28 +41,23 @@ output and is now built and shipping.
 
 ---
 
-## B-002 — Price index for 1789–1800
+## B-002 — Price index for 1789–1800 — ✅ CLEARED
 
-**Status:** open. Needed to complete decision (b) recorded in `ECONOMY.md`
-§11.7 — comparing GDP in real rather than nominal terms.
+**Status:** resolved during the autonomous run, 2026-08-15.
 
-**What is needed.** An annual price index or deflator covering 1789–1800 with a
-citation, to convert the nominal MeasuringWorth GDP benchmark to constant 1790
-dollars.
+Sourced the MeasuringWorth annual consumer price index for 1789–1801 and
+stored it in `src/content/history/benchmarks.ts` with its citation. Decision (b)
+from `ECONOMY.md` §11.7 is now implemented: the History view deflates the
+nominal GDP benchmark to constant 1790 dollars and states the basis on screen.
 
-**Why it matters.** The simulation has no price level, so it is effectively a
-constant-dollar series. The benchmark is nominal. Real per-capita growth in the
-1790s was near zero; nominal per-capita growth was 6.42%/yr. Comparing the two
-directly reports a 45% shortfall as though it were the player's failure.
+Effect: the apparent GDP shortfall against 1800 fell from **45% to about 24%**.
+The 1800 benchmark of $486M nominal is $353.8M in 1790 dollars, against the
+model's $268.8M. What remains is largely the exogenous post-1793 shipping boom,
+which the model cannot produce because it has no diplomacy system — a known and
+documented limitation rather than a calibration error.
 
-**Current state.** The History view labels the GDP comparison explicitly and
-shows both figures with their basis stated, which is honest but weaker than a
-like-for-like comparison. MeasuringWorth publishes a suitable series; it was
-not retrieved during this run because the GDP dataset page was the only one
-fetched successfully.
-
-**What would clear it.** The MeasuringWorth annual price index (or the
-Historical Statistics consumer price series) for 1789–1800, with citation.
+Source: Samuel H. Williamson, "The Annual Consumer Price Index for the United
+States, 1774–Present", MeasuringWorth. Retrieved 2026-08-15.
 
 ---
 

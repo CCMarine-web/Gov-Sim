@@ -502,11 +502,3 @@ export function Government() {
   );
 }
 
-export function History() {
-  return (
-    <NotBuilt
-      what="History"
-      when="The comparison against real 1790s data. Blocked on two things: sourcing a price index so the comparison is made in real terms rather than nominal (ECONOMY.md §11.7), and extracting annual federal receipts and outlays, which no accessible source publishes for this period (ECONOMY.md §3.1). Population, GDP and federal debt are already sourced and cited."
-    />
-  );
-}

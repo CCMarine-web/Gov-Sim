@@ -20,14 +20,8 @@ import { ChronicleFeed } from './ChronicleFeed';
 import { EventModal } from './EventModal';
 import { LeftNav, type SectionId } from './LeftNav';
 import { SaveMenu } from './SaveMenu';
-import {
-  Chronicle,
-  Desk,
-  Government,
-  History,
-  Legislation,
-  Regions,
-} from './sections';
+import { Chronicle, Desk, Government, Legislation, Regions } from './sections';
+import { HistoryPanel } from './HistoryPanel';
 import { TreasuryPanel } from './TreasuryPanel';
 
 const SECTION_TITLE: Record<SectionId, string> = {
@@ -136,7 +130,7 @@ export function GameShell() {
           {section === 'legislation' && <Legislation state={snapshot} />}
           {section === 'regions' && <Regions state={snapshot} />}
           {section === 'government' && <Government />}
-          {section === 'history' && <History />}
+          {section === 'history' && <HistoryPanel state={snapshot} />}
           {section === 'chronicle' && <Chronicle state={snapshot} />}
         </main>
 

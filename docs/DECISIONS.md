@@ -107,6 +107,58 @@ design problem. It was, both times: one fact held in two places.
 
 ---
 
+## D-007 — Sourced the price index and implemented the real-terms comparison
+
+**Context.** `ECONOMY.md` §11.7 recorded decision (b) — compare GDP in real
+terms — but the price index had not been sourced, and `BLOCKERS.md` B-002 was
+open.
+
+**Decided.** Retrieved the MeasuringWorth annual consumer price index for
+1789–1801, stored it as benchmark data with its citation, and implemented
+deflation to constant 1790 dollars in the History view.
+
+**Why.** The recorded decision turned out to be workable after all — the index
+was one fetch away. The apparent GDP shortfall fell from 45% to about 24%, and
+the residual is attributable to the exogenous post-1793 shipping boom rather
+than to a modelling error.
+
+**Design note.** Deflation happens at read time and is labelled on screen as a
+derivation. The data files keep the nominal figures exactly as published,
+because a converted figure is not the figure the source printed.
+
+---
+
+## D-008 — GDP per head is derived from two rows, and says so
+
+**Decided.** The History view computes historical GDP per head by dividing the
+GDP figure by the population figure, rather than sourcing it separately. The
+resulting cell carries a note naming both source years and stating it is not
+separately sourced.
+
+**Why.** No separate per-capita series was available, and deriving one is
+arithmetic rather than invention — provided the derivation is disclosed. The
+subtlety is that the two inputs are often from different years (population is
+decennial), so the note names both.
+
+**Alternative rejected.** Rendering the row as unavailable. That would have
+been over-cautious: the inputs are both sourced and the division is not an
+estimate.
+
+---
+
+## D-009 — The historical trajectory line is broken across data gaps
+
+**Decided.** In the trajectory charts, the historical line is drawn only
+between figures in **consecutive years**. Population, which exists only for
+1790 and 1800, renders as two open markers with no line joining them, and the
+chart is annotated "gaps: no annual data".
+
+**Why.** Drawing a line between 1790 and 1800 would assert nine years of values
+that no source provides. A line is a claim about the points between its
+endpoints. This is the charting equivalent of the no-interpolation rule.
+
+---
+
 ## D-006 — Enslaved population growth (carried over, recorded here for completeness)
 
 Decided before this run but not previously logged. Enslaved population grows at

@@ -786,6 +786,22 @@ Wide tolerances are intentional. The goal is a model that lands in the right *re
 
    **DECIDED 2026-08-15: option (b) for Phase 1, option (a) later.** It makes the comparison correct now at low cost and does not foreclose adding a price level when inflation becomes a system the player can act on.
 
+   > ### ✅ IMPLEMENTED 2026-08-15
+   >
+   > The MeasuringWorth annual consumer price index for 1789–1801 is now sourced and stored in `src/content/history/benchmarks.ts` with its citation. The History view deflates the nominal GDP benchmark to **constant 1790 dollars** and states that basis on screen for both columns.
+   >
+   > **Result: the apparent gap fell from 45% to about 24%.**
+   >
+   > | | Nominal | Real (1790 dollars) |
+   > |---|---:|---:|
+   > | Verified 1800 GDP | $486M | **$353.8M** |
+   > | Model reaches | $268.8M | $268.8M |
+   > | Apparent shortfall | 45% | **24%** |
+   >
+   > The residual 24% is largely the exogenous shipping boom from the European wars after 1793, which the model cannot generate because Phase 1 has no diplomacy system. That is a known and documented limitation rather than a calibration error, and it is the right kind of gap to leave visible.
+   >
+   > Deflation is performed at read time as a labelled derivation. The data files keep the sourced nominal figures exactly as published — a converted figure is not the figure the source printed, and the interface says so.
+
    **What (b) requires:**
    1. Source a price index covering 1789–1800 with a citation, and store it in `/src/content/history/` like any other benchmark series.
    2. Convert the nominal GDP benchmark to constant 1790 dollars at load time, never in the data file — the file keeps the sourced nominal figures as published.
