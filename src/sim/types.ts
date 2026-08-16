@@ -31,7 +31,7 @@ import type { TaxBase } from './taxBases';
  * migrated forward or refused cleanly — never crashed, never silently loaded
  * into a broken state. (DESIGN.md Rule 8)
  */
-export const SCHEMA_VERSION = 9;
+export const SCHEMA_VERSION = 10;
 
 // ============================================================================
 // GOVERNMENT AND REGIONS
@@ -59,7 +59,9 @@ export type ModifierSourceType =
   | 'structural'
   | 'crisis'
   /** A treaty with a foreign power. Same ledger, same rules. (brief §7) */
-  | 'treaty';
+  | 'treaty'
+  /** A cabinet officer, good or bad at their department. (brief §5) */
+  | 'appointment';
 
 /**
  * A single tracked contribution to a stat.
@@ -835,6 +837,14 @@ export interface GameState {
    * through the modifier ledger, exactly as bills do.
    */
   diplomacy: DiplomacyState;
+  /**
+   * Who runs the departments. (brief §5, queue item 13)
+   *
+   * Only the offices the PLAYER has filled. Everything else falls back to the
+   * historical record, so a player who appoints nobody gets the cabinet history
+   * gave them and a player who appoints gets what they chose.
+   */
+  cabinet: CabinetState;
 
   // --- the ledger ---
   activeModifiers: Modifier[];
@@ -1439,4 +1449,32 @@ export interface DiplomacyState {
   treaties: TreatyRecord[];
   tributeDue: TributeObligation[];
   wars: WarRecord[];
+}
+
+// ============================================================================
+// THE CABINET (brief §5, queue item 13)
+// ============================================================================
+
+/** One office the player has filled themselves. */
+export interface Appointment {
+  officeId: string;
+  candidateId: string;
+  appointedDay: number;
+  /** The day they left, or null while still serving. */
+  leftDay: number | null;
+  /**
+   * 0–100, and it MOVES.
+   *
+   * Stored on the appointment rather than read from the candidate, because
+   * loyalty is a relationship with this government rather than a property of
+   * the man: it falls when the government carries measures his people hate.
+   */
+  loyalty: number;
+}
+
+export interface CabinetState {
+  /** By office id. At most one serving appointment per office. */
+  appointments: Record<string, Appointment>;
+  /** Everyone who has walked out, kept because a government's record is its own. */
+  resignations: Array<{ officeId: string; candidateId: string; day: number }>;
 }

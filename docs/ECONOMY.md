@@ -1275,6 +1275,76 @@ There is no combat this phase, so a war is something the country is IN:
 
 Victory is worth +12 legitimacy and +6 stability — the one route by which a war improves anything. A concession costs 14 legitimacy, which is more than most decrees.
 
+### 7.25 The cabinet — competence and loyalty
+
+*Phase 2 brief §5, queue item 13. Model in `src/sim/cabinet.ts`; the candidates are content, in `src/content/government/candidates.ts`.*
+
+#### What this replaced
+
+`administrativeCapacity` used to mean "how many offices exist and are filled". `types.ts` had promised since item 4 that item 13 would replace that with "how competent and loyal the people filling them are", and it now does:
+
+```
+capacity = existence × staffing × quality × 100
+quality  = 0.7 + (meanCompetence / 100) × 0.45          // 1.0 at the baseline
+```
+
+Quality is deliberately the narrowest of the three factors. **A brilliant Secretary cannot conjure a department that does not exist, and an incompetent one still has clerks.** Competence modulates the machine; it is not the machine.
+
+#### Whose cabinet is it
+
+`cabinet.appointments` holds **only what the player has done.** Every office without an entry falls back to the historical tenure record. So a player who appoints nobody governs with the cabinet history gave them — Hamilton, Jefferson, Knox, Randolph — and a player who appoints gets what they chose and pays for it. The Government screen says which is which on every row, because a player who believed they had chosen Hamilton would be misreading their own run.
+
+Past the end of the office record the last holder stands, the same clamp `censusOfOffices` applies. That consistency is not cosmetic: without it, capacity counted an office as staffed while competence found nobody in it, and the political-capital test caught the disagreement.
+
+#### Competence acts through the ledger
+
+There is no `competenceBonus` read by the tax code. A serving officer writes modifiers against the same targets a statute writes against, with `sourceType: 'appointment'`, and the Treasury popover names him.
+
+| Department | What it affects | Why that |
+|---|---|---|
+| Treasury | Regional compliance, trade capacity | The brief's own example: "tax collection efficiency drops" |
+| State | Trade capacity, stability | A department that can negotiate is worth trade and a quiet border |
+| War | Stability, frontier sentiment | An army supplied and led is a frontier that holds |
+| Attorney General | Legitimacy, stability | Law that runs is legitimacy |
+
+**The scale is signed about the baseline** — −1× at zero competence, 0 at `CABINET_COMPETENCE_BASELINE` (55), +1× at 100. So McHenry at 40 makes the war effort *worse*, which is what the brief asks for and what a purely additive bonus could never express.
+
+The baseline is 55 rather than 50 deliberately: the men actually appointed to these offices were better than the median person available, and 55 is also what an unrated historical holder is assumed to be — the honest reading of "the content knows his name and nothing else".
+
+#### Loyalty
+
+Loyalty is stored on the appointment rather than on the candidate, because it is a **relationship with this government** rather than a property of the man.
+
+```
+alignment  = clamp(Σ over blocs of (his affinity/100 × the measure's reaction/100), −1, +1)
+loyalty'   = loyalty + alignment × LOYALTY_PER_OPPOSITION      // 14
+```
+
+It falls when the government carries measures **his people** hate, measured through the same bloc affinities everything else uses. Jefferson did not resign over a personality; he resigned after four years of losing arguments about things the small farmers and the planters could not stomach.
+
+**The clamp matters.** Without it a measure touching three of an officer's strongest affinities produces an alignment near 2, and a single bill ejects a man who in reality served four years. A measure can be wholly against everything he stands for; it cannot be more than that.
+
+Each month loyalty drifts back toward the man's **own starting value** at 6% of the gap — toward where he started, not upward without limit. A man who came in sceptical does not become a partisan because a quiet year passed.
+
+**Below `RESIGNATION_THRESHOLD` (15) he goes, publicly**, at a cost of 7 legitimacy. That is not a die roll: it is a visible number crossing a visible line, so a player watching the Government screen can see it coming and either change course or let him go. The difference between a consequence and a punishment is whether it could have been foreseen.
+
+#### The Senate confirms
+
+On the republican path an appointment goes to the Senate — the same `whipCount` a bill and a declaration of war go through, on the candidate's own bloc reactions. Article II §2 is not decoration: **a president can be refused his own cabinet**, and the capital is spent either way.
+
+The model produces the right shape without being told to. The Senate of a farming republic will confirm Anthony Wayne, the frontier's own general, and refuse Alexander Hamilton, who is against the planters, the small farmers and the frontier all at once. A crown appoints either.
+
+#### The ratings are a model; the biographies are not
+
+The hardest content decision in this file. `note` and `sources` are benchmark data — what the person actually did, cited. `competence` and `loyalty` are **calibration constants**: nobody rated Alexander Hamilton out of a hundred.
+
+The rules followed, and stated in the file itself:
+
+- A rating must be defensible from what the person did **in office**, and the note must say what that was.
+- Where a reputation is genuinely contested — McHenry's administration of the War Department, Randolph's resignation — the note says it is contested rather than quietly picking a side.
+- A counterfactual appointment says it is one. Wayne was never Secretary of War; Gallatin did not take the Treasury until 1801.
+- The Government screen states on its face that the ratings are a model and not a verdict on anybody.
+
 ---
 
 ## 8. Government type differences

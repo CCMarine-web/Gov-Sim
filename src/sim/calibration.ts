@@ -1172,3 +1172,69 @@ export const WAR_WEARINESS_PER_MONTH = 2.8;
 
 /** Capital to bring a war to an end. Peace is also a negotiation. */
 export const PEACE_CAPITAL_COST = 40;
+
+// ============================================================================
+// THE CABINET (brief §5, ECONOMY.md §7.25)
+// ============================================================================
+
+/**
+ * The competence at which an officer neither helps nor harms his department.
+ *
+ * 55 rather than 50, deliberately. The men actually appointed to these offices
+ * were, on the whole, better than the median person available — Washington's
+ * first cabinet was extraordinary by any standard — so the neutral point sits
+ * above the midpoint of the scale. It is also what an unrated historical holder
+ * is assumed to be, which is the honest reading of "the content knows his name
+ * and nothing else".
+ */
+export const CABINET_COMPETENCE_BASELINE = 55;
+
+/**
+ * What an appointment costs.
+ *
+ * Below a bill and well below a war. An appointment is a serious act with a
+ * long tail rather than an expensive one-off, and on the republican path the
+ * Senate vote is the real gate.
+ */
+export const APPOINTMENT_CAPITAL_COST = 28;
+
+/**
+ * Loyalty moved per unit of alignment between a measure and an officer's own
+ * people.
+ *
+ * A measure his blocs hate at full strength costs about 14 points, so it takes
+ * three or four such measures to drive a sceptical appointee out — which is
+ * roughly what it took Jefferson, who served nearly four years of losing
+ * arguments before he went.
+ */
+export const LOYALTY_PER_OPPOSITION = 14;
+
+/**
+ * How much of the gap back to a man's STARTING loyalty closes each month.
+ *
+ * Toward where he started, not upward without limit: a man who came in sceptical
+ * does not become a partisan because a quiet year passed. Six per cent is a
+ * half-life of about a year, so a government that stops antagonising an officer
+ * recovers him over a season rather than instantly.
+ */
+export const LOYALTY_DECAY_PER_MONTH = 0.06;
+
+/**
+ * Below this he goes, publicly.
+ *
+ * 15 rather than something closer to the sceptics’ starting loyalty, so that a
+ * man who came in doubtful — Jefferson at 30 — survives ONE measure he hates
+ * and goes on the second or third. He served nearly four years of losing
+ * arguments before he resigned, and a threshold that ejected him on the first
+ * bill would model a tantrum rather than a resignation.
+ */
+export const RESIGNATION_THRESHOLD = 15;
+
+/**
+ * What a public resignation costs.
+ *
+ * Larger than it looks: a resignation with a statement is the government's own
+ * appointee telling the country the government is wrong, and there is no reply
+ * to it. Comparable to a lost division in Congress, and for the same reason.
+ */
+export const RESIGNATION_LEGITIMACY_COST = 7;

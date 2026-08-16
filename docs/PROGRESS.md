@@ -7,7 +7,7 @@ If you are resuming with no context: read `DESIGN.md` first, then this file,
 then `docs/DECISIONS.md` and `docs/BLOCKERS.md`. Then continue the **Phase 2
 queue** below, which is `gov-sim-phase2-brief.md` §9.
 
-**Last updated:** Phase 2 run of 2026-08-16, after queue item 12.
+**Last updated:** Phase 2 run of 2026-08-16, after queue item 13.
 
 ---
 
@@ -17,8 +17,8 @@ queue** below, which is `gov-sim-phase2-brief.md` §9.
 |---|---|
 | Production URL | <https://gov-sim.vercel.app> |
 | Deploy | auto-deploys from `main` on push |
-| Tests | 779 passing |
-| Save schema | version **9** — v1 to v8 saves migrate forward, all eight fixtures committed |
+| Tests | 826 passing |
+| Save schema | version **10** — v1 to v9 saves migrate forward, all nine fixtures committed |
 | Gates | tests, lint, typecheck, production build — all green |
 | Database | Supabase, `save_games` table migrated, verified reachable from production |
 | Phase | **2 — in progress.** Phase 1 shipped. |
@@ -41,7 +41,7 @@ queue** below, which is `gov-sim-phase2-brief.md` §9.
 | 10 — Remaining map modes and state detail panel | **complete** — see below and D-039 to D-041 |
 | 11 — Diplomacy tab | **complete** — see below and D-042 to D-044 |
 | 12 — War declaration paths | **complete** — see below and D-045 to D-047 |
-| 13 — Cabinet competence and loyalty | not started |
+| 13 — Cabinet competence and loyalty | **complete** — see below and D-048 to D-050 |
 | 14 — Theming, asset registry, audio abstraction | not started |
 | 15 — Causal web view | not started |
 
@@ -693,6 +693,70 @@ smallest migration in the project, and still a migration.
 **Tests:** 32 in `sim/war.test.ts`, 9 more in
 `components/game/diplomacy.test.tsx`, 3 in `migrations.test.ts`. Human-eye checks
 are `docs/MANUAL-QA.md` §20.
+
+---
+
+### Item 13 — cabinet competence and loyalty: complete
+
+**What it replaced.** `administrativeCapacity` meant "how many offices exist and
+are filled". `types.ts` had promised since item 4 that item 13 would replace that
+with "how competent and loyal the people filling them are", and it now does — a
+third factor, deliberately the narrowest of the three, because a brilliant
+Secretary cannot conjure a department that does not exist and an incompetent one
+still has clerks.
+
+**The historical cabinet is the DEFAULT, not the starting state.**
+`cabinet.appointments` holds only what the player has done; every office without
+an entry falls back to the historical record. A player who appoints nobody
+governs with Hamilton, Jefferson, Knox and Randolph, and the screen says "as
+history had it" on every such row — a player who believed they had chosen
+Hamilton would be misreading their own run (D-048).
+
+**Competence acts through the ledger, and it is signed.** An officer writes
+modifiers against the same targets a statute writes against, with
+`sourceType: 'appointment'`. The scale runs −1× at zero competence through 0 at
+the baseline of 55 to +1× at 100, so McHenry at 40 makes the war effort *worse*.
+The brief's own example demanded it: "a low-competence Treasury Secretary means
+tax collection efficiency drops".
+
+**Loyalty is a relationship, not a property.** It falls by the dot product of an
+officer's bloc affinities and a measure's bloc reactions, clamped to ±1 — without
+the clamp a single bill ejects a man who in reality served four years of losing
+arguments. It drifts back toward his *own* starting value, not upward without
+limit. **Below 15 he resigns publicly**, costing 7 legitimacy and handing the
+office back to history's holder.
+
+**No die roll anywhere.** A resignation is a visible number crossing a visible
+line, so a player watching the Government screen can see it coming and either
+change course or let him go. That is the difference between a consequence and a
+punishment (D-049).
+
+**The Senate confirms, and can refuse.** On the republican path an appointment
+goes through the same `whipCount` a bill and a declaration of war go through.
+The model gives the right shape unprompted: a farming republic's Senate confirms
+Anthony Wayne, the frontier's own general, and refuses Alexander Hamilton, who
+is against the planters, the small farmers and the frontier at once. A crown
+appoints either.
+
+**Rating real people, and where the line falls.** The biographies and sources are
+benchmark data — cited, nothing invented. The competence and loyalty numbers are
+calibration constants, because nobody rated Hamilton out of a hundred, and the
+Government screen says so on its face. Where a reputation is genuinely contested
+— McHenry's War Department, Randolph's resignation — the note says it is
+contested rather than quietly picking a side. Counterfactual appointments say
+they are counterfactual (D-050).
+
+**Schema version 10**, `migrations/v9ToV10.ts`, with a committed v9 fixture. It
+is behaviour-preserving **by construction**: an empty appointments map reproduces
+a v9 save exactly, because a v9 save's cabinet was the historical one throughout.
+
+**A bug the political-capital test caught.** `holderOf` did not apply the
+past-the-record clamp that `censusOfOffices` does, so capacity counted an office
+as staffed while competence found nobody in it. Two answers to one question,
+fixed by using the same clamp.
+
+**Tests:** 32 in `sim/cabinet.test.ts`, 12 in `components/game/cabinet.test.tsx`,
+3 more in `migrations.test.ts`. Human-eye checks are `docs/MANUAL-QA.md` §21.
 
 ---
 

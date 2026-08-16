@@ -61,17 +61,38 @@ export function administrativeCapacityTarget(params: {
   officesFilled: number;
   /** Offices the content pack describes in total, created or not. */
   officesTotal: number;
+  /**
+   * Mean competence of the men in post, 0–100, or null when nobody is.
+   *
+   * PHASE 2 ITEM 13. Until this existed, capacity asked only whether an office
+   * had a body in it. That is the first question and not the last: a department
+   * run by a man out of his depth is not the same government as one run by
+   * Hamilton, and the model now says so. (brief §5, ECONOMY.md §7.25)
+   */
+  competence?: number | null;
 }): number {
   if (params.officesTotal <= 0) return 0;
 
-  // Two factors, multiplied: how much of the government exists, and how much of
-  // what exists is staffed. A vacancy in a department that was never created is
-  // not a vacancy.
+  // Three factors now, multiplied: how much of the government exists, how much
+  // of what exists is staffed, and how well. A vacancy in a department that was
+  // never created is not a vacancy.
   const existence = params.officesCreated / params.officesTotal;
   const staffing =
     params.officesCreated > 0 ? params.officesFilled / params.officesCreated : 0;
 
-  return Math.min(100, Math.max(0, existence * staffing * 100));
+  /*
+    Quality runs from 0.7 at hopeless to 1.15 at superb, about 1.0 at the
+    baseline. Deliberately a narrower band than the other two factors: a
+    brilliant Secretary cannot conjure a department that does not exist, and an
+    incompetent one still has clerks. Competence modulates the machine; it is
+    not the machine.
+  */
+  const quality =
+    params.competence === null || params.competence === undefined
+      ? 1
+      : 0.7 + (params.competence / 100) * 0.45;
+
+  return Math.min(100, Math.max(0, existence * staffing * quality * 100));
 }
 
 /**

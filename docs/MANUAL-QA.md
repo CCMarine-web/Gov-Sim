@@ -976,3 +976,71 @@ one: it should fall.
 
 **20.13 — No treaties with a power you are fighting**
 While at war with Spain, Pinckney's Treaty should say there is a war on.
+
+---
+
+## 21. The cabinet
+
+*Phase 2, queue item 13. `DECISIONS.md` D-048 to D-050, `ECONOMY.md` §7.25.*
+
+**21.1 — The cabinet you inherit is history's, and the screen says so**
+Open Government at the start. Each office should name its holder and say "as
+history had it". Play to 1793 and the Treasury should read Hamilton.
+*Problem if:* it says "your appointment" for someone you never chose.
+
+**21.2 — Competence and loyalty are in words, not only numbers**
+Each holder should carry both, with a word — "The best available", "Out of his
+depth", "Openly at odds".
+*Problem if:* either is a bare number, or is only a colour.
+
+**21.3 — The ratings are labelled a model**
+Read the note under the cabinet. It should say the biographies are cited history
+and the ratings are a model, that nobody rated these men out of a hundred, and
+that they are not a verdict on anybody.
+*Problem if:* that note is missing. These are real people and the screen must
+not imply the numbers are historical fact.
+
+**21.4 — A bad appointment is a real cost**
+Play to 1797, when McHenry holds the War Department at 40. Compare the
+administration figure with 1794, when Hamilton and Bradford were in post. It
+should be lower. Open a stat the Treasury affects — regional compliance — and
+the Secretary should appear **by name** in the breakdown.
+*Problem if:* a weak officer merely fails to help. The brief asks for collection
+efficiency to drop, and it should drop.
+
+**21.5 — The Senate can refuse a president his own cabinet**
+As a republic, try appointing Hamilton to the Treasury. The Senate should refuse
+— he is against the planters, the small farmers and the frontier at once — the
+chronicle should record the division, and the capital should be gone anyway.
+Then try Anthony Wayne at War: the frontier's own general should be confirmed.
+*Problem if:* every appointment sails through. Article II §2 is not decoration.
+
+**21.6 — A crown appoints whom it likes**
+Do the same on a monarchy. Hamilton goes in without anybody being asked.
+
+**21.7 — Loyalty falls for a reason you can trace**
+Appoint Jefferson to State in 1791, then pass measures his people hate — the
+Bank, the excise. His loyalty should fall each time, and the word beside it
+should change.
+*Problem if:* loyalty moves at random, or never moves.
+
+**21.8 — And a resignation can be seen coming**
+Keep going. When his loyalty crosses the line he should resign **publicly**: a
+crisis entry in the chronicle, legitimacy down, and the office back to whoever
+history had in it.
+*Problem if:* he resigns without warning. A number you can watch crossing a line
+you can see is the whole difference between a consequence and a punishment.
+
+**21.9 — And a quiet spell brings him back, but only so far**
+Stop antagonising an officer and his loyalty should recover — toward the value he
+started at, not past it. A sceptic does not become a partisan because a quiet
+year passed.
+
+**21.10 — Candidates explain themselves before you choose**
+Click "Consider someone else". Each candidate should show a real biography with
+sources, competence and loyalty in words, and the price. A candidate you cannot
+appoint yet should say why rather than being hidden.
+
+**21.11 — An old save keeps the cabinet it had**
+Load a save from before this update. Every office should still show its
+historical holder, marked "as history had it", with nothing marked as yours.

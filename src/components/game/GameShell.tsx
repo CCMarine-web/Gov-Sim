@@ -13,6 +13,7 @@
 import { useCallback, useEffect, useState } from 'react';
 import { PHASE_1_CONTENT } from '@/content';
 import {
+  appointOfficer,
   concludeTreaty,
   declare,
   fabricate,
@@ -204,7 +205,9 @@ export function GameShell() {
             />
           )}
           {section === 'regions' && <Regions state={snapshot} />}
-          {section === 'government' && <GovernmentPanel state={snapshot} />}
+          {section === 'government' && (
+            <GovernmentPanel state={snapshot} onAppoint={appointOfficer} />
+          )}
           {section === 'history' && <HistoryPanel state={snapshot} />}
           {section === 'chronicle' && <Chronicle state={snapshot} />}
         </main>

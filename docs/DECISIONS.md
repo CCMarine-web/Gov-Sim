@@ -1497,3 +1497,106 @@ rather than from a shrug at the peace table.
 worse the case for the war was — twice as fast at zero justification as at full
 — so a badly justified war is not a single payment at the declaration. It gets
 worse every month, and it degrades the peace the player can eventually get.
+
+---
+
+## D-048 — The historical cabinet is the default, not the starting state
+
+**Date:** 2026-08-16 (Phase 2, queue item 13)
+**Status:** implemented
+
+`cabinet.appointments` holds **only what the player has done.** Every office
+without an entry falls back to the historical tenure record.
+
+**The alternative was to write the historical holders into state at game
+creation** and let the player replace them. It is the obvious implementation and
+it is worse in three ways:
+
+1. It would credit the player with appointing Hamilton, which they did not.
+2. It would subject historical holders to a loyalty they were never at risk of
+   losing, so Jefferson would resign from a government he never joined.
+3. It would make the migration from v9 a fabrication rather than a no-op — see
+   D-050.
+
+With the fallback, a player who appoints nobody governs the cabinet history gave
+them, a player who appoints gets what they chose, and the screen says which is
+which on every row. A player who believed they had chosen Hamilton would be
+misreading their own run.
+
+**One consistency this forced.** `holderOf` had to apply the same past-the-record
+clamp `censusOfOffices` applies. Without it, capacity counted an office as
+staffed while competence found nobody in it — two answers to one question. The
+political-capital test caught the disagreement, which is exactly what that test
+was for.
+
+---
+
+## D-049 — Competence is signed, and loyalty is a threshold rather than a roll
+
+**Date:** 2026-08-16 (Phase 2, queue item 13)
+**Status:** implemented
+
+**Competence scales about a baseline of 55, not from zero.** So the modifier an
+officer writes is NEGATIVE below it: McHenry at 40 makes the war effort worse
+rather than improving it less. The brief's own example demands this — "a
+low-competence Treasury Secretary means tax collection efficiency drops" — and a
+purely additive bonus could never express it. A model in which every appointment
+is at worst neutral is a model in which appointments do not matter.
+
+The baseline is 55 rather than 50 because the men actually appointed to these
+offices were better than the median person available, and because it is also
+what an unrated historical holder is assumed to be. Those two readings agreeing
+is a good sign rather than a coincidence: both say "an ordinary competent officer
+of this period".
+
+**Loyalty falls for a reason and ends at a visible line.** It moves by the dot
+product of an officer's bloc affinities and a measure's bloc reactions —
+clamped to ±1, because without the clamp a measure touching three of his
+strongest affinities ejects in one bill a man who in reality served four years of
+losing arguments.
+
+**No die roll anywhere.** A resignation happens when a number the player can see
+crosses a line the player can see. The difference between a consequence and a
+punishment is whether it could have been foreseen, and a random resignation from
+a cabinet the player assembled would be the second kind. Randomness in this
+project is for mortality, where the uncertainty is real; a man deciding he can no
+longer defend the government is not a coin.
+
+---
+
+## D-050 — Rating a real person, and where the line falls
+
+**Date:** 2026-08-16 (Phase 2, queue item 13)
+**Status:** implemented
+
+The most delicate content in the project. `candidates.ts` gives real historical
+figures a number out of a hundred, twice.
+
+**The line is drawn exactly where DESIGN.md §12.2 draws it.** `note` and
+`sources` are benchmark data: what the person actually did, cited, nothing
+invented. `competence` and `loyalty` are calibration constants — **nobody rated
+Alexander Hamilton out of a hundred** — and the Government screen says so on its
+face, in the same way the Congress screen says the party split is a model.
+
+**Four rules the file follows, and states:**
+
+1. A rating must be defensible from what the person did **in office**, and the
+   note must say what that was. Hamilton is 95 because assumption, the funding
+   system, the Bank, the Mint and the customs service were built in five years
+   by a department that did not exist when he took it.
+2. Where a reputation is genuinely contested, the note says it is contested
+   rather than quietly picking a side. McHenry's War Department was criticised at
+   the time by men with their own quarrels, and he was handed a sudden
+   mobilisation with no supply system; Randolph's resignation scandal was never
+   settled either way. Both notes say so.
+3. **Low loyalty is not disloyalty to the country.** It is a man with his own
+   view and the willingness to state it publicly. Jefferson at 30 and Pickering
+   at 22 are the two clearest cases in the period, and both were doing what they
+   thought right.
+4. A counterfactual appointment says it is one. Wayne was never Secretary of War;
+   Gallatin did not take the Treasury until 1801.
+
+**The migration is a no-op by construction**, which falls out of D-048: an empty
+appointments map reproduces a v9 save's behaviour exactly, because a v9 save's
+cabinet was the historical one throughout. Writing the historical holders in as
+though the player had chosen them would have been the fabrication.

@@ -1,6 +1,8 @@
 import { describe, expect, it } from 'vitest';
 import { advanceDay, resolveDecision } from '../advanceDay';
 import { POWERS } from '@/content/diplomacy/powers';
+import { OFFICES } from '@/content/government/cabinet';
+import { holderOf } from '../cabinet';
 import { driftBlocs } from '../blocs';
 import { BLOC_MEMBERSHIP_1790 } from '../calibration';
 import { createTestGame } from '../createGame';
@@ -15,6 +17,7 @@ import v5Fixture from './fixtures/v5-republic-day900.json';
 import v6Fixture from './fixtures/v6-republic-day900.json';
 import v7Fixture from './fixtures/v7-republic-day900.json';
 import v8Fixture from './fixtures/v8-republic-day900.json';
+import v9Fixture from './fixtures/v9-republic-day900.json';
 import { MIGRATIONS, migrateToCurrent, parseSave } from './index';
 
 describe('loading a save of the current version', () => {
@@ -930,5 +933,54 @@ describe('the v8 fixture gains a record of wars it never fought', () => {
     expect(outcome.state.diplomacy.relations).toEqual(before.relations);
     expect(outcome.state.diplomacy.treaties).toEqual(before.treaties);
     expect(outcome.state.diplomacy.tributeDue).toEqual(before.tributeDue);
+  });
+});
+
+/**
+ * THE v9 FIXTURE
+ *
+ * A real save in the version 9 format, at day 900. The cabinet was the
+ * historical one in v9 and could not be appointed, so `cabinet` did not exist.
+ *
+ * This is the rare migration that is behaviour-preserving BY CONSTRUCTION:
+ * `appointments` holds only what the player has done, and every office without
+ * an entry falls back to the historical record — which is exactly how a v9 save
+ * already behaved. (DECISIONS.md D-050)
+ */
+describe('the v9 fixture keeps the cabinet history gave it', () => {
+  const raw = JSON.parse(JSON.stringify(v9Fixture)) as Record<string, unknown>;
+
+  it('is genuinely a v9 save, with no cabinet state', () => {
+    expect(raw.schemaVersion).toBe(9);
+    expect(raw.cabinet).toBeUndefined();
+    // And it carries the war record, so v9 is what it says it is.
+    expect((raw.diplomacy as Record<string, unknown>).wars).toBeDefined();
+  });
+
+  it('adds an empty cabinet, which is the same cabinet it had', () => {
+    const outcome = migrateToCurrent(JSON.parse(JSON.stringify(raw)));
+    expect(outcome.ok).toBe(true);
+    if (!outcome.ok) return;
+
+    expect(outcome.state.cabinet.appointments).toEqual({});
+    expect(outcome.state.cabinet.resignations).toEqual([]);
+  });
+
+  it('still has the historical officers in post', () => {
+    const outcome = migrateToCurrent(JSON.parse(JSON.stringify(raw)));
+    expect(outcome.ok).toBe(true);
+    if (!outcome.ok) return;
+
+    /*
+      Day 900 is 16 October 1791: Hamilton at the Treasury. An empty
+      appointments map does not mean an empty government — the fallback is what
+      makes this migration lossless rather than merely small.
+    */
+    const treasury = OFFICES.find((o) => o.id === 'treasury')!;
+    const holder = holderOf(outcome.state, treasury);
+
+    expect(holder).not.toBeNull();
+    expect(holder!.name).toBe('Alexander Hamilton');
+    expect(holder!.appointed).toBe(false);
   });
 });

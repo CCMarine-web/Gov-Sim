@@ -30,6 +30,7 @@
 import { blocWeights, driftBlocs } from './blocs';
 import { annualTribute, decayRelations } from './diplomacy';
 import { accrueWeariness } from './war';
+import { cabinetCompetence, tickCabinet } from './cabinet';
 import {
   dayToDate,
   daysInYear,
@@ -567,6 +568,7 @@ export function recomputeEconomy(
     officesCreated: census.created,
     officesFilled: census.filled,
     officesTotal: census.total,
+    competence: cabinetCompetence(state, content.offices),
   });
 
   const accrualModelTarget = capitalAccrualTarget({
@@ -1195,6 +1197,14 @@ export function advanceDay(state: GameState, content: ContentPack): TickResult {
       single payment made at the declaration. (ECONOMY.md §7.24)
     */
     next = accrueWeariness(next);
+
+    /*
+      A MONTH IN THE CABINET. Loyalty drifts back toward where each man started,
+      and anyone below the threshold resigns publicly — which costs legitimacy,
+      hands the office back to whoever history had in it, and rebuilds the
+      ledger around the change. (ECONOMY.md §7.25)
+    */
+    next = tickCabinet(next, content.offices).state;
 
     const weights = blocWeights(next);
     const decayed = decayGrievance(next.grievance, weights);

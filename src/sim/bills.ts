@@ -35,6 +35,7 @@ import {
   LEGISLATION_GRIEVANCE_PER_OPPOSITION,
 } from './calibration';
 import { blocWeights, type BlocWeights } from './blocs';
+import { strainLoyalty } from './cabinet';
 import { isoToDay } from './calendar';
 import { describeUnmet, evaluateAll } from './conditions';
 import {
@@ -583,6 +584,17 @@ export function enactBill(
   );
 
   /*
+    THE MEN WHO SERVE THE GOVERNMENT FEEL IT TOO. (brief §5)
+
+    An officer’s loyalty falls when the government carries measures HIS people
+    hate, through the same bloc affinities the bloc reactions are written in.
+    Jefferson did not resign over a personality; he resigned after four years of
+    losing arguments about things the small farmers and the planters could not
+    stomach. (ECONOMY.md §7.25)
+  */
+  const cabinet = strainLoyalty(state.cabinet, bill.blocReactions);
+
+  /*
     A log-roll's votes arrive now and its price arrives later. The obligation is
     recorded here and settled by the tick when it comes due — in capital if the
     government has any, in standing if it does not.
@@ -600,6 +612,7 @@ export function enactBill(
       policies,
       regions,
       grievance,
+      cabinet,
       congress,
       activeModifiers,
       treasury: { ...state.treasury, balance: state.treasury.balance - money },

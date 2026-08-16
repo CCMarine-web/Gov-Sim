@@ -27,6 +27,7 @@
 import { TREATY_BY_ID } from '@/content/diplomacy/treaties';
 import { advanceDay, resolveDecision } from '@/sim/advanceDay';
 import { amendBill, enactBill, repealBill } from '@/sim/bills';
+import { appoint, type AppointmentOutcome } from '@/sim/cabinet';
 import { breachTreaty, sendEnvoy, signTreaty } from '@/sim/diplomacy';
 import {
   declareWar,
@@ -565,6 +566,34 @@ export function seekPeace(powerId: string): void {
   if (!result.ok) return;
   loop.game = result.state;
   publish(true);
+}
+
+/**
+ * Appoint someone to an office. (brief §5, queue item 13)
+ *
+ * Returns the outcome, because on the republican path the Senate can refuse and
+ * that is an ordinary result the interface has to be able to report.
+ */
+export function appointOfficer(
+  officeId: string,
+  candidateId: string,
+): AppointmentOutcome | null {
+  if (!loop.game || !loop.content) return null;
+  const office = loop.content.offices.find((o) => o.id === officeId);
+  if (!office) return null;
+
+  const outcome = appoint(
+    loop.game,
+    office,
+    candidateId,
+    loop.content.parties,
+    loop.content.offices,
+  );
+  if (outcome.kind !== 'refused') {
+    loop.game = outcome.state;
+    publish(true);
+  }
+  return outcome;
 }
 
 /** The authoritative state, for saving. */

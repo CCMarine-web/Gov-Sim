@@ -24,6 +24,7 @@ import {
 */
 import { PARTIES as partyData, STATE_SEATS as seatData } from '@/content/government/congress';
 import { seedBlocs } from './blocs';
+import { seedCabinet } from './cabinet';
 import { seedDiplomacy } from './diplomacy';
 import { seatCongress } from './congress';
 import { START, START_DEBT_RATE, START_TRADE_CAPACITY } from './calibration';
@@ -481,6 +482,14 @@ export function createGame(options: NewGameOptions): GameState {
       in src/content/diplomacy/powers.ts. (brief §7)
     */
     diplomacy: seedDiplomacy(),
+    /*
+      EMPTY, and deliberately. On 30 April 1789 no department existed — State was
+      created on 27 July and the Treasury not until 2 September — so a cabinet
+      pre-populated at the founding would be inventing a government the player
+      has not been given yet. Until the player appoints, the historical record
+      supplies every holder. (brief §5)
+    */
+    cabinet: seedCabinet(),
 
     activeModifiers: [],
 

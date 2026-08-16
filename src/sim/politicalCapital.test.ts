@@ -246,13 +246,23 @@ describe('administrative capacity follows the office record', () => {
   });
 
   it('does not collapse political capital accrual in 1801', () => {
-    const inPeriod = run(createTestGame(), 4_000, WITH_OFFICES);
-    const wellPast = run(createTestGame(), 4_000 + 1_500, WITH_OFFICES);
+    /*
+      COMPARED AGAINST THE LAST RECORDED DAY, not against an arbitrary earlier
+      one. Since queue item 13 the administration depends on WHO is in post and
+      not merely on how many posts are filled, and the cabinet of April 1800 is
+      genuinely not the cabinet of December 1800 — Marshall and Dexter replaced
+      Pickering and McHenry in between. So the honest claim is that the
+      administration is frozen at what the record last said, which is what the
+      clamp promises. (BLOCKERS.md B-005)
+    */
+    const atEnd = run(createTestGame(), recordEndDay(OFFICES)!, WITH_OFFICES);
+    const wellPast = run(createTestGame(), recordEndDay(OFFICES)! + 1_500, WITH_OFFICES);
 
     expect(wellPast.nation.administrativeCapacity).toBeCloseTo(
-      inPeriod.nation.administrativeCapacity,
+      atEnd.nation.administrativeCapacity,
       6,
     );
+    expect(wellPast.nation.administrativeCapacity).toBeGreaterThan(0);
     expect(wellPast.politicalCapital.accrualPerDay).toBeGreaterThan(0);
   });
 
