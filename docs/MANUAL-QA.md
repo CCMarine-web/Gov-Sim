@@ -197,16 +197,63 @@ Not verifiable until the Supabase auth variables are set. See
 ## 8. Responsiveness and accessibility
 
 **8.1 — Down to 1280px**
-Narrow the window to 1280px. Nothing should overlap or overflow horizontally.
-The command bar must not collapse.
+Narrow the window to exactly 1280px. Nothing should overlap or overflow
+horizontally. The command bar must not collapse, and the right feed should
+still be a fixed column.
 
 **8.2 — Below 1280px**
-Narrow further. The right chronicle feed should collapse into a drawer.
+Narrow further. The right feed should disappear and a **Chronicle** button
+should appear beside "Saved games". Click it: the feed slides in from the right
+over a dimmed backdrop. Clicking the backdrop or pressing Escape closes it.
+*Problem if:* the feed simply vanishes with no way to reach it — a pending
+decision must stay reachable at every width.
 
-**8.3 — Keyboard only**
+**8.3 — The drawer badge**
+With a decision pending and the window below 1280px, the Chronicle button
+should carry a brass count badge.
+
+**8.4 — Keyboard only**
 Unplug the mouse. Confirm you can reach every nav section, open a stat popover,
 operate the Treasury sliders, and answer an event modal.
 
-**8.4 — Reduced motion**
+**8.5 — Focus trapping**
+Open **Saved games** and press Tab repeatedly. Focus should cycle within the
+dialog and never reach the page behind. Press Escape: it closes and focus
+returns to the button that opened it. Repeat with an event modal — focus should
+cycle, and **Escape should do nothing**.
+
+**8.6 — Keyboard reference**
+Press `?`. A shortcut reference should open. Escape closes it. Now click into
+the Chronicle search box and press `?` again — it should type a question mark
+rather than opening the dialog.
+
+**8.7 — Reduced motion**
 Enable "reduce motion" in your OS. Number transitions should snap rather than
 interpolate; nothing should become unusable.
+
+**8.8 — Greyscale check**
+Take a screenshot of the History view and desaturate it. The simulated and
+historical columns must still be tellable apart — they carry different markers
+(▪ vs ▫), different line styles (solid vs dashed) and text labels, not just
+different colours.
+
+---
+
+## 9. Chronicle filtering
+
+**9.1 — Category and kind filters**
+Go to Chronicle. Click a category chip, then a kind chip. The count line should
+update, and only matching entries should show.
+
+**9.2 — Search**
+Type "whiskey" into the search box. Entries whose title or body contain it
+should remain.
+
+**9.3 — Empty states are distinguishable**
+Filter to something with no matches. It should read "No entries match these
+filters", **not** "Nothing has happened yet" — those are different situations
+and confusing them makes the player wonder whether the log is broken.
+
+**9.4 — Clear**
+The Clear button should appear only when a filter is active, and reset all
+three controls.

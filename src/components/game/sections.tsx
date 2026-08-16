@@ -16,7 +16,8 @@ import { RANGES, TAU_MONTHS } from '@/sim/calibration';
 import { describeUnmet, evaluateAll } from '@/sim/conditions';
 import { explainStat, type StatBreakdown } from '@/sim/modifiers';
 import { currentCrises, stateOfTheUnion } from '@/sim/narrative';
-import type { GameState, Region } from '@/sim/types';
+import { useMemo, useState } from 'react';
+import type { GameState, LogCategory, LogTier, Region } from '@/sim/types';
 import {
   complianceWord,
   direction,
@@ -486,41 +487,181 @@ export function Legislation({ state }: { state: GameState }) {
 // CHRONICLE
 // ============================================================================
 
+const CATEGORIES: Array<LogCategory | 'all'> = [
+  'all',
+  'treasury',
+  'legislation',
+  'region',
+  'event',
+  'system',
+];
+
+const TIERS: Array<LogTier | 'all'> = ['all', 'decision', 'enactment', 'crisis', 'info'];
+
 export function Chronicle({ state }: { state: GameState }) {
-  const entries = [...state.log].reverse();
+  const [category, setCategory] = useState<LogCategory | 'all'>('all');
+  const [tier, setTier] = useState<LogTier | 'all'>('all');
+  const [query, setQuery] = useState('');
+
+  const entries = useMemo(() => {
+    const needle = query.trim().toLowerCase();
+
+    return [...state.log]
+      .reverse()
+      .filter((entry) => category === 'all' || entry.category === category)
+      .filter((entry) => tier === 'all' || entry.tier === tier)
+      .filter(
+        (entry) =>
+          needle === '' ||
+          entry.title.toLowerCase().includes(needle) ||
+          entry.body.toLowerCase().includes(needle),
+      );
+  }, [state.log, category, tier, query]);
+
+  const filtering = category !== 'all' || tier !== 'all' || query.trim() !== '';
 
   return (
-    <div className="rounded-card border border-ink-400 bg-ink-700">
-      {entries.length === 0 ? (
-        <p className="p-4 text-small text-content-muted">
-          Nothing has happened yet.
-        </p>
-      ) : (
-        <ul className="divide-y divide-ink-400">
-          {entries.map((entry) => (
-            <li key={entry.id} className="px-4 py-2.5">
-              <p className="text-label uppercase tracking-wider text-content-muted">
-                <span className="tabular">{formatLongDate(entry.day)}</span>
-                {' · '}
-                {entry.category}
-              </p>
-              <p className="mt-0.5 text-body text-content-primary">{entry.title}</p>
-              {entry.body && (
-                <p
-                  className={`mt-0.5 text-small ${
-                    entry.tier === 'decision'
-                      ? 'text-brass-300'
-                      : 'text-content-secondary'
-                  }`}
-                >
-                  {entry.body}
-                </p>
-              )}
-            </li>
+    <div className="space-y-3">
+      <section className="rounded-card border border-ink-400 bg-ink-700 p-3">
+        <div className="flex flex-wrap items-center gap-1.5">
+          <span className="text-label uppercase tracking-wider text-content-muted">
+            Category
+          </span>
+          {CATEGORIES.map((value) => (
+            <FilterChip
+              key={value}
+              label={value === 'all' ? 'All' : value}
+              active={category === value}
+              onClick={() => setCategory(value)}
+            />
           ))}
-        </ul>
-      )}
+        </div>
+
+        <div className="mt-2 flex flex-wrap items-center gap-1.5">
+          <span className="text-label uppercase tracking-wider text-content-muted">
+            Kind
+          </span>
+          {TIERS.map((value) => (
+            <FilterChip
+              key={value}
+              label={value === 'all' ? 'All' : value}
+              active={tier === value}
+              onClick={() => setTier(value)}
+            />
+          ))}
+        </div>
+
+        <div className="mt-2 flex items-center gap-2">
+          <label htmlFor="chronicle-search" className="sr-only">
+            Search the chronicle
+          </label>
+          <input
+            id="chronicle-search"
+            type="search"
+            value={query}
+            onChange={(e) => setQuery(e.target.value)}
+            placeholder="Search titles and entries…"
+            className="flex-1 rounded border border-ink-400 bg-ink-800 px-2 py-1.5 text-body text-content-primary"
+          />
+          {filtering && (
+            <button
+              type="button"
+              onClick={() => {
+                setCategory('all');
+                setTier('all');
+                setQuery('');
+              }}
+              className="rounded border border-ink-400 px-2 py-1.5 text-small text-content-secondary hover:bg-ink-500"
+            >
+              Clear
+            </button>
+          )}
+        </div>
+
+        <p className="mt-2 text-small text-content-muted" role="status">
+          Showing <span className="tabular">{entries.length}</span> of{' '}
+          <span className="tabular">{state.log.length}</span> entries
+        </p>
+      </section>
+
+      <div className="rounded-card border border-ink-400 bg-ink-700">
+        {entries.length === 0 ? (
+          /* Two different empty states: nothing has happened, versus nothing
+             matches. Telling them apart saves the player wondering whether the
+             chronicle is broken. */
+          <p className="p-4 text-small text-content-muted">
+            {state.log.length === 0
+              ? 'Nothing has happened yet.'
+              : 'No entries match these filters.'}
+          </p>
+        ) : (
+          <ul className="divide-y divide-ink-400">
+            {entries.map((entry) => (
+              <li key={entry.id} className="px-4 py-2.5">
+                <p className="text-label uppercase tracking-wider text-content-muted">
+                  <span className="tabular">{formatLongDate(entry.day)}</span>
+                  {' · '}
+                  {entry.category}
+                  {entry.tier !== 'info' && (
+                    <>
+                      {' · '}
+                      <span
+                        className={
+                          entry.tier === 'crisis'
+                            ? 'text-oxblood-300'
+                            : entry.tier === 'decision'
+                              ? 'text-brass-300'
+                              : 'text-content-muted'
+                        }
+                      >
+                        {entry.tier}
+                      </span>
+                    </>
+                  )}
+                </p>
+                <p className="mt-0.5 text-body text-content-primary">{entry.title}</p>
+                {entry.body && (
+                  <p
+                    className={`mt-0.5 text-small ${
+                      entry.tier === 'decision'
+                        ? 'text-brass-300'
+                        : 'text-content-secondary'
+                    }`}
+                  >
+                    {entry.body}
+                  </p>
+                )}
+              </li>
+            ))}
+          </ul>
+        )}
+      </div>
     </div>
+  );
+}
+
+function FilterChip({
+  label,
+  active,
+  onClick,
+}: {
+  label: string;
+  active: boolean;
+  onClick: () => void;
+}) {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      aria-pressed={active}
+      className={`rounded border px-2 py-0.5 text-small capitalize transition-colors ${
+        active
+          ? 'border-brass-400 bg-brass-400 text-ink-900'
+          : 'border-ink-400 text-content-secondary hover:bg-ink-500'
+      }`}
+    >
+      {label}
+    </button>
   );
 }
 

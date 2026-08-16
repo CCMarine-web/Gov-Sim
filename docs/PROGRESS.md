@@ -17,7 +17,7 @@ then `docs/DECISIONS.md` and `docs/BLOCKERS.md`. Then continue the queue in
 |---|---|
 | Production URL | <https://gov-sim.vercel.app> |
 | Deploy | auto-deploys from `main` on push |
-| Tests | 282 passing |
+| Tests | 302 passing |
 | Gates | tests, lint, typecheck, production build — all green |
 | Database | Supabase, `save_games` table migrated, verified reachable from production |
 
@@ -32,7 +32,12 @@ then `docs/DECISIONS.md` and `docs/BLOCKERS.md`. Then continue the queue in
 | 3 — History comparison view | **complete** |
 | 4 — Government screen | **complete** |
 | 5 — Full acceptance pass | **complete** — table below |
-| Stretch 1–6 | in progress |
+| Stretch 1 — performance verification | **complete** |
+| Stretch 2 — more events (14 now, from 9) | **complete** |
+| Stretch 3 — accessibility audit | **complete** — two real contrast failures found and fixed |
+| Stretch 4 — responsive to 1280px | **complete** — feed collapses to a drawer |
+| Stretch 5 — documentation sweep | **complete** — done incrementally, reconciled at Item 5 |
+| Stretch 6 — chronicle filtering and search | **complete** |
 
 Every left-nav section is now built. The "not yet implemented" placeholder
 component has been deleted.
@@ -61,8 +66,8 @@ component has been deleted.
 - `projection.ts` — forward simulation for the Treasury screen.
 - `narrative.ts` — state-of-the-union prose and crisis lines.
 
-**Content** (`src/content/`) — nine events, six laws, region seed data, all
-with sourced historical context.
+**Content** (`src/content/`) — **fourteen events**, six laws, cabinet tenures,
+and region seed data, all with sourced historical context.
 
 **Runtime** (`src/runtime/gameLoop.ts`) — the authoritative state lives here in
 a module variable, NOT in Zustand. rAF accumulator, 10-day frame cap, publishes
